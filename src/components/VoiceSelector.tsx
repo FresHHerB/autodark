@@ -10,9 +10,9 @@ interface VoiceSelectorProps {
   className?: string;
 }
 
-export default function VoiceSelector({ 
-  selectedVoiceId, 
-  onVoiceSelect, 
+export default function VoiceSelector({
+  selectedVoiceId,
+  onVoiceSelect,
   label = "Selecionar Voz",
   className = ""
 }: VoiceSelectorProps) {
@@ -20,6 +20,8 @@ export default function VoiceSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+
+  console.log('🎨 VoiceSelector renderizado:', { selectedVoiceId, label });
 
   useEffect(() => {
     loadVoices();
@@ -41,7 +43,9 @@ export default function VoiceSelector({
 
   const handlePlayPreview = async (voice: VoiceData, event: React.MouseEvent) => {
     event.stopPropagation();
-    
+
+    console.log('🎵 Reproduzindo preview:', voice.nome_voz, `(${voice.plataforma})`);
+
     console.log('🎵 VoiceSelector: Iniciando preview de voz', {
       voice_id: voice.voice_id,
       nome_voz: voice.nome_voz,
@@ -105,6 +109,20 @@ export default function VoiceSelector({
     // Se temos um ID numérico do banco, precisamos encontrar a voz correspondente
     // Por enquanto, vamos usar o primeiro match por nome ou usar o voice_id diretamente
     return v.id === selectedVoiceId;
+  });
+
+  console.log('🔍 VoiceSelector RENDER DEBUG:', {
+    voices_total: voices.length,
+    selectedVoiceId,
+    selectedVoice: selectedVoice ? {
+      id: selectedVoice.id,
+      nome_voz: selectedVoice.nome_voz,
+      plataforma: selectedVoice.plataforma,
+      preview_url: selectedVoice.preview_url
+    } : null,
+    temSelectedVoice: !!selectedVoice,
+    podeTocarPreview: selectedVoice ? (selectedVoice.preview_url || selectedVoice.plataforma === 'Fish-Audio') : false,
+    primeiras_3_voices: voices.slice(0, 3).map(v => ({ id: v.id, nome: v.nome_voz, plataforma: v.plataforma }))
   });
 
   const groupedVoices = voices.reduce((acc, voice) => {
@@ -191,8 +209,8 @@ export default function VoiceSelector({
                 onClick={(e) => handlePlayPreview(selectedVoice, e)}
                 className={`
                   p-2 rounded transition-colors flex items-center gap-1
-                  ${playingVoiceId === selectedVoice.voice_id 
-                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  ${playingVoiceId === selectedVoice.voice_id
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                   }
                 `}

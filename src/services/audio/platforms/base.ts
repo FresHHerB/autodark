@@ -38,60 +38,53 @@ export abstract class BasePlatformService {
   async playPreview(voice: VoiceData): Promise<HTMLAudioElement | null> {
     try {
       if (!voice.preview_url) {
-        console.warn(`${this.platformName}: Voz ${voice.nome_voz} não possui preview disponível`, {
-          voice_id: voice.voice_id,
-          preview_url: voice.preview_url
-        });
+        console.warn(`❌ ${this.platformName}: Voz sem preview URL`, voice.nome_voz);
         return null;
       }
 
       // Verificar se a URL é válida
       if (!voice.preview_url.startsWith('http')) {
-        console.warn(`${this.platformName}: Preview URL inválida para ${voice.nome_voz}`, {
-          voice_id: voice.voice_id,
-          preview_url: voice.preview_url,
-          startsWithHttp: voice.preview_url.startsWith('http')
-        });
+        console.warn(`❌ ${this.platformName}: URL inválida para`, voice.nome_voz);
         return null;
       }
 
-      console.log(`${this.platformName}: Iniciando reprodução de preview`, {
-        voice_id: voice.voice_id,
-        nome_voz: voice.nome_voz,
-        preview_url: voice.preview_url,
-        urlValida: this.isValidAudioUrl(voice.preview_url)
-      });
-
       // Criar elemento de áudio
       const audio = new Audio(voice.preview_url);
-      
+
       // Configurar elemento específico da plataforma
       this.configureAudioElement(audio);
-      
-      console.log(`${this.platformName}: Elemento de áudio criado, tentando reproduzir...`, {
-        src: audio.src,
-        readyState: audio.readyState
-      });
-      
+
       // Reproduzir áudio
-      await audio.play();
-      
-      console.log(`${this.platformName}: Áudio iniciado com sucesso`, {
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-        paused: audio.paused
-      });
+      try {
+        await audio.play();
+        console.log(`✅ ${this.platformName}: Áudio iniciado para`, voice.nome_voz);
+      } catch (playError) {
+        console.warn(`⚠️ ${this.platformName}: Erro no play, tentando fallback...`);
+
+        // Tentar novamente sem CORS como fallback para Fish Audio
+        if (this.platformName === 'Fish-Audio' && playError.message.includes('no supported source')) {
+          console.log(`🔄 ${this.platformName}: Tentando sem CORS...`);
+          const audioFallback = new Audio(voice.preview_url);
+          audioFallback.crossOrigin = null; // Sem CORS
+          audioFallback.preload = 'auto';
+
+          try {
+            await audioFallback.play();
+            console.log(`✅ ${this.platformName}: Sucesso com fallback!`);
+            return audioFallback;
+          } catch (fallbackError) {
+            console.error(`❌ ${this.platformName}: Fallback falhou:`, fallbackError.message);
+            throw fallbackError;
+          }
+        }
+
+        throw playError; // Re-throw se não conseguiu resolver
+      }
       
       return audio;
 
     } catch (error) {
-      console.error(`${this.platformName}: Erro ao reproduzir preview:`, {
-        voice_id: voice.voice_id,
-        nome_voz: voice.nome_voz,
-        preview_url: voice.preview_url,
-        error: error.message,
-        stack: error.stack
-      });
+      console.error(`❌ ${this.platformName}: Erro ao reproduzir preview de ${voice.nome_voz}:`, error.message);
       return null;
     }
   }

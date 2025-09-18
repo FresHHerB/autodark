@@ -76,7 +76,24 @@ export class AudioService {
         fishAudioComPreview: voices.filter(v => v.plataforma === 'Fish-Audio' && v.preview_url).length,
         fishAudioSemPreview: voices.filter(v => v.plataforma === 'Fish-Audio' && !v.preview_url).length
       });
-      
+
+      // TESTE TEMPORÁRIO: Adicionar voz Fish Audio para debug
+      const testFishVoice: VoiceData = {
+        voice_id: 'beb44e5fac1e4b33a15dfcdcc2a9421d', // Voice ID que funciona
+        nome_voz: '[TESTE] Sleepless historian (Fish Audio)',
+        plataforma: 'Fish-Audio',
+        idioma: 'en',
+        genero: 'Não especificado',
+        preview_url: '', // Será buscado via API
+        description: 'Voz de teste do Fish Audio',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        id: 99999 // ID fictício para o VoiceSelector
+      };
+
+      voices.push(testFishVoice);
+      console.log('🐟 TESTE: Voz Fish Audio adicionada:', testFishVoice);
+
       return voices;
     } catch (error) {
       console.error('Erro ao buscar vozes do banco:', error);
@@ -142,11 +159,14 @@ export class AudioService {
         .select('api_key')
         .eq('plataforma', platform)
         .single();
-      
-      if (error) return null;
+
+      if (error) {
+        console.warn(`❌ AudioService: Erro ao buscar API key ${platform}:`, error.message);
+        return null;
+      }
       return data?.api_key || null;
     } catch (error) {
-      console.error(`Erro ao buscar API key ${platform}:`, error);
+      console.error(`❌ AudioService: Erro ao buscar API key ${platform}:`, error.message);
       return null;
     }
   }
@@ -158,10 +178,10 @@ export class AudioService {
     try {
       const service = this.getPlatformService(platform);
       const apiKey = await this.getApiKeyByPlatform(platform);
-      
+
       return await service.fetchVoiceDetails(voiceId, apiKey || undefined);
     } catch (error) {
-      console.error(`Erro ao buscar detalhes da voz ${platform}:`, error);
+      console.error(`❌ AudioService: Erro ao buscar detalhes da voz ${platform}:`, error.message);
       throw error;
     }
   }
@@ -226,6 +246,8 @@ export class AudioService {
    */
   async playVoicePreview(voice: VoiceData): Promise<HTMLAudioElement | null> {
     try {
+      console.log('🎵 AudioService: Reproduzindo preview', voice.nome_voz, `(${voice.plataforma})`);
+
       // Parar áudio atual se estiver tocando
       this.stopCurrentAudio();
 
@@ -239,44 +261,30 @@ export class AudioService {
 
       let audioElement: HTMLAudioElement | null = null;
 
-      // Para Fish Audio, buscar dados via API se não tiver preview_url
-      if (voice.plataforma === 'Fish-Audio' && !voice.preview_url) {
-        console.log('🐟 AudioService: Fish Audio sem preview_url, buscando via API...', {
-          voice_id: voice.voice_id,
-          nome_voz: voice.nome_voz
-        });
-        
+      // Para Fish Audio, sempre buscar URL fresca da API a cada clique (URLs são temporárias)
+      if (voice.plataforma === 'Fish-Audio') {
+        console.log('🐟 AudioService: Buscando URL fresca do Fish Audio para', voice.nome_voz);
+
         try {
           const fishAudioData = await this.fetchVoiceDetails('Fish-Audio', voice.voice_id);
-          
+
           if (fishAudioData && fishAudioData.preview_url) {
-            console.log('🐟 AudioService: Fish Audio preview URL obtida via API:', {
-              voice_id: voice.voice_id,
-              preview_url: fishAudioData.preview_url,
-              dadosCompletos: fishAudioData
-            });
+            // Usar URL fresca diretamente (não salvar no banco pois é temporária)
             voice = { ...voice, preview_url: fishAudioData.preview_url };
+            console.log('✅ AudioService: URL fresca obtida com sucesso');
           } else {
-            console.warn(`🐟 AudioService: Não foi possível obter preview para ${voice.nome_voz}`, {
-              fishAudioData,
-              temPreviewUrl: !!fishAudioData?.preview_url
-            });
+            console.warn('⚠️ AudioService: Não foi possível obter preview para', voice.nome_voz);
             return null;
           }
         } catch (error) {
-          console.error('🐟 AudioService: Erro ao buscar dados via API:', {
-            voice_id: voice.voice_id,
-            error: error.message,
-            stack: error.stack
-          });
+          console.error('❌ AudioService: Erro ao buscar dados Fish Audio:', error.message);
           return null;
         }
       }
 
       // Usar o serviço específico da plataforma para reproduzir
       const service = this.getPlatformService(voice.plataforma);
-      console.log(`🎵 AudioService: Usando serviço ${voice.plataforma} para reproduzir preview`);
-      
+
       audioElement = await service.playPreview(voice);
 
       if (audioElement) {
@@ -298,11 +306,7 @@ export class AudioService {
           this.clearPlaybackState();
         });
 
-        console.log(`✅ AudioService: Preview iniciado com sucesso para ${voice.nome_voz}`, {
-          audioElement: !!audioElement,
-          src: audioElement.src,
-          readyState: audioElement.readyState
-        });
+        console.log(`✅ AudioService: Preview iniciado com sucesso para ${voice.nome_voz}`);
       }
 
       return audioElement;
@@ -361,6 +365,7 @@ export class AudioService {
     // Fallback para Fish-Audio se não conseguir determinar
     return 'Fish-Audio';
   }
+
 
   /**
    * Busca vozes de todas as plataformas (híbrido: banco + API)
