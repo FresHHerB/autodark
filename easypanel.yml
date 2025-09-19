@@ -5,11 +5,12 @@ services:
       name: autodark
       source:
         type: github
-        repo: seu-usuario/autodark
+        repo: FresHHerB/autodark
         branch: main
       build:
         type: dockerfile
-        dockerfile: Dockerfile
+        dockerfile: ./Dockerfile
+        context: .
       domains:
         - host: autodark.yourdomain.com
       env:

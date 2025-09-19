@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -26,6 +26,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port
 EXPOSE 80
+
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
