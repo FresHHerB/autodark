@@ -14,34 +14,21 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🐟 Edge Function: Iniciando fetch-fish-audio-voice')
+    console.log('🐟 Edge Function: Iniciando list-fish-audio-voices')
     
-    const { voice_id, api_key } = await req.json()
-    console.log('📥 Parâmetros recebidos:', { voice_id, tem_api_key: !!api_key })
-
-    if (!voice_id) {
-      console.error('❌ voice_id não fornecido')
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'voice_id is required' 
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
+    const { api_key, page = 1, page_size = 20, search, language } = await req.json()
+    console.log('📥 Parâmetros recebidos:', { 
+      tem_api_key: !!api_key, 
+      page, 
+      page_size, 
+      search, 
+      language 
+    })
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
-    console.log('🔧 Configuração Supabase:', {
-      supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NÃO CONFIGURADO',
-      supabaseServiceKey: supabaseServiceKey ? `${supabaseServiceKey.substring(0, 20)}...` : 'NÃO CONFIGURADO'
-    })
-
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ Configuração Supabase não encontrada')
       return new Response(
@@ -70,13 +57,6 @@ serve(async (req) => {
         .eq('plataforma', 'Fish-Audio')
         .single()
 
-      console.log('📊 Resultado da consulta:', {
-        hasData: !!apiData,
-        hasApiKey: !!(apiData?.api_key),
-        hasError: !!apiError,
-        error: apiError?.message
-      })
-
       if (apiError || !apiData?.api_key) {
         console.error('❌ Fish Audio API key não encontrada:', apiError)
         return new Response(
@@ -92,19 +72,20 @@ serve(async (req) => {
       }
 
       fishAudioApiKey = apiData.api_key
-      console.log('✅ API key encontrada no banco')
     }
 
-    // Fetch voice details from Fish Audio API
-    const fishAudioUrl = `https://api.fish.audio/model/${voice_id}`
-    console.log('📤 Fazendo requisição para Fish Audio:', {
-      url: fishAudioUrl,
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${fishAudioApiKey.substring(0, 10)}...`,
-        'Content-Type': 'application/json'
-      }
+    // Build query parameters
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: page_size.toString()
     })
+    
+    if (search) params.append('search', search)
+    if (language) params.append('language', language)
+
+    // Fetch voices from Fish Audio API
+    const fishAudioUrl = `https://api.fish.audio/model?${params.toString()}`
+    console.log('📤 Fazendo requisição para Fish Audio:', fishAudioUrl)
 
     const fishAudioResponse = await fetch(fishAudioUrl, {
       method: 'GET',
@@ -117,17 +98,12 @@ serve(async (req) => {
     console.log('📥 Resposta da Fish Audio API:', {
       status: fishAudioResponse.status,
       statusText: fishAudioResponse.statusText,
-      ok: fishAudioResponse.ok,
-      headers: Object.fromEntries(fishAudioResponse.headers.entries())
+      ok: fishAudioResponse.ok
     })
 
     if (!fishAudioResponse.ok) {
       const errorText = await fishAudioResponse.text()
-      console.error('❌ Erro na Fish Audio API:', {
-        status: fishAudioResponse.status,
-        statusText: fishAudioResponse.statusText,
-        errorText
-      })
+      console.error('❌ Erro na Fish Audio API:', errorText)
       
       return new Response(
         JSON.stringify({ 
@@ -142,42 +118,47 @@ serve(async (req) => {
       )
     }
 
-    const voiceData = await fishAudioResponse.json()
-    console.log('📦 Dados recebidos da Fish Audio:', {
-      _id: voiceData._id,
-      title: voiceData.title,
-      author: voiceData.author?.nickname,
-      languages: voiceData.languages,
-      samples_count: voiceData.samples?.length || 0,
-      first_sample_audio: voiceData.samples?.[0]?.audio ? 'PRESENTE' : 'AUSENTE'
+    const data = await fishAudioResponse.json()
+    console.log('📦 Dados recebidos:', {
+      items_count: data.items?.length || 0,
+      total: data.total,
+      page: data.page
     })
 
-    // Process and return the voice data
-    const processedData = {
-      voice_id: voiceData._id,
-      nome_voz: voiceData.title,
+    // Process voices data
+    const voices = (data.items || []).map((voice: any) => ({
+      voice_id: voice._id,
+      nome_voz: voice.title,
       plataforma: 'Fish-Audio',
-      idioma: voiceData.languages?.join(', ') || 'Não especificado',
+      idioma: voice.languages?.join(', ') || 'Não especificado',
       genero: 'Não especificado',
-      preview_url: voiceData.samples?.[0]?.audio || '',
-      description: voiceData.description || '',
-      author: voiceData.author?.nickname || 'Desconhecido',
-      popularity: voiceData.like_count || 0,
-      samples: voiceData.samples || [],
-      raw_data: voiceData
+      preview_url: voice.samples?.[0]?.audio || '',
+      description: voice.description || '',
+      author: voice.author?.nickname || 'Desconhecido',
+      popularity: voice.like_count || 0,
+      samples: voice.samples || [],
+      raw_data: voice
+    }))
+
+    const result = {
+      voices,
+      pagination: {
+        page: data.page || page,
+        page_size: data.page_size || page_size,
+        total_pages: Math.ceil((data.total || 0) / page_size)
+      },
+      total: data.total || 0
     }
 
-    console.log('✅ Dados processados:', {
-      voice_id: processedData.voice_id,
-      nome_voz: processedData.nome_voz,
-      preview_url_presente: !!processedData.preview_url,
-      preview_url_length: processedData.preview_url.length
+    console.log('✅ Processamento concluído:', {
+      voices_processed: voices.length,
+      total: result.total
     })
 
     return new Response(
       JSON.stringify({
         success: true,
-        data: processedData
+        ...result
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

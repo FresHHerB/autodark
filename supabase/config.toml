@@ -22,5 +22,8 @@ net = ["api.fish.audio"]
 [functions.fetch-fish-audio-voice]
 net = ["api.fish.audio"]
 
+[functions.list-fish-audio-voices]
+net = ["api.fish.audio"]
+
 [auth]
 enabled = true
