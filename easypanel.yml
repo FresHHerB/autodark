@@ -1,0 +1,38 @@
+name: autodark-app
+services:
+  - type: app
+    data:
+      name: autodark
+      source:
+        type: github
+        repo: seu-usuario/autodark
+        branch: main
+      build:
+        type: dockerfile
+        dockerfile: Dockerfile
+      domains:
+        - host: autodark.yourdomain.com
+      env:
+        - name: NODE_ENV
+          value: production
+        - name: VITE_SUPABASE_URL
+          value: ${SUPABASE_URL}
+        - name: VITE_SUPABASE_ANON_KEY
+          value: ${SUPABASE_ANON_KEY}
+      mounts:
+        - type: volume
+          name: nginx-logs
+          mountPath: /var/log/nginx
+      deploy:
+        replicas: 1
+        resources:
+          reservations:
+            memory: 128M
+          limits:
+            memory: 256M
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        startPeriod: 40s
