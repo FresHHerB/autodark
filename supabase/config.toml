@@ -1,0 +1,26 @@
+[project]
+ref = "your-project-ref"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[functions]
+net = ["api.fish.audio"]
+
+[functions.fetch-fish-audio-voice]
+net = ["api.fish.audio"]
+
+[auth]
+enabled = true
