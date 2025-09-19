@@ -9,31 +9,15 @@ services:
         branch: main
       build:
         type: dockerfile
-        dockerfile: ./Dockerfile
-        context: .
-      domains:
-        - host: autodark.yourdomain.com
+        dockerfile: Dockerfile
       env:
         - name: NODE_ENV
           value: production
         - name: VITE_SUPABASE_URL
-          value: ${SUPABASE_URL}
+          value: https://vstsnxvwvsaodulrvfjz.supabase.co
         - name: VITE_SUPABASE_ANON_KEY
-          value: ${SUPABASE_ANON_KEY}
-      mounts:
-        - type: volume
-          name: nginx-logs
-          mountPath: /var/log/nginx
-      deploy:
-        replicas: 1
-        resources:
-          reservations:
-            memory: 128M
-          limits:
-            memory: 256M
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 3
-        startPeriod: 40s
+          value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzdHNueHZ3dnNhb2R1bHJ2Zmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjM3OTMsImV4cCI6MjA3MzYzOTc5M30.QNtDCN4CwQ8ZLB2vENZh_K0Kwdd6nwFog0L8xlgAugs
+        - name: VITE_API_BASE_URL
+          value: https://n8n-n8n.gpqg9h.easypanel.host
+        - name: VITE_WEBHOOK_CLONE_CHANNEL
+          value: /webhook/treinarCanal
