@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Read(//d/code/freela/geradorRoteiroAudio/github/dash-yt/**)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
