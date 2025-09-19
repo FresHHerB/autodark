@@ -77,22 +77,6 @@ export class AudioService {
         fishAudioSemPreview: voices.filter(v => v.plataforma === 'Fish-Audio' && !v.preview_url).length
       });
 
-      // TESTE TEMPORÁRIO: Adicionar voz Fish Audio para debug
-      const testFishVoice: VoiceData = {
-        voice_id: 'beb44e5fac1e4b33a15dfcdcc2a9421d', // Voice ID que funciona
-        nome_voz: '[TESTE] Sleepless historian (Fish Audio)',
-        plataforma: 'Fish-Audio',
-        idioma: 'en',
-        genero: 'Não especificado',
-        preview_url: '', // Será buscado via API
-        description: 'Voz de teste do Fish Audio',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        id: 99999 // ID fictício para o VoiceSelector
-      };
-
-      voices.push(testFishVoice);
-      console.log('🐟 TESTE: Voz Fish Audio adicionada:', testFishVoice);
 
       return voices;
     } catch (error) {
