@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowLeft, Play, Clock, Eye, Check, AlertCircle, Users, Video as VideoIcon } from 'lucide-react';
+import { Search, ArrowLeft, Play, Clock, Eye, Check, AlertCircle, Users, Video as VideoIcon, Plus, ChevronDown, Minus } from 'lucide-react';
 import DashboardHeader from '../components/DashboardHeader';
 import VideoCard from '../components/VideoCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { apiService } from '../services/api';
 import { useChannelSearch, useChannelVideos } from '../hooks/useYouTube';
 import { YouTubeVideo, YouTubeChannel } from '../services/youtube';
+import { supabase, Canal } from '../lib/supabase';
 
 export default function CloneChannelPage() {
   const navigate = useNavigate();
@@ -16,7 +17,14 @@ export default function CloneChannelPage() {
   const [maxVideos, setMaxVideos] = useState(30);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
-  const [lastAction, setLastAction] = useState<'clone' | 'collect' | null>(null);
+  const [lastAction, setLastAction] = useState<'collect' | 'transcribe' | null>(null);
+
+  // Canal management states
+  const [canais, setCanais] = useState<Canal[]>([]);
+  const [selectedCanalId, setSelectedCanalId] = useState<string>('');
+  const [newCanalName, setNewCanalName] = useState('');
+  const [isCreatingCanal, setIsCreatingCanal] = useState(false);
+  const [loadingCanais, setLoadingCanais] = useState(true);
 
   // YouTube API hooks
   const { 
@@ -35,6 +43,45 @@ export default function CloneChannelPage() {
     loadMore,
     reset: resetVideos 
   } = useChannelVideos();
+
+  // Load canais on component mount
+  useEffect(() => {
+    loadCanais();
+  }, []);
+
+  // Auto-select or suggest canal when channel data is loaded
+  useEffect(() => {
+    if (channelData && canais.length > 0) {
+      const existingCanal = canais.find(canal => 
+        canal.nome_canal.toLowerCase() === channelData.name.toLowerCase()
+      );
+      
+      if (existingCanal) {
+        setSelectedCanalId(existingCanal.id.toString());
+        setNewCanalName('');
+      } else {
+        setSelectedCanalId('');
+        setNewCanalName(channelData.name);
+      }
+    }
+  }, [channelData, canais]);
+
+  const loadCanais = async () => {
+    try {
+      setLoadingCanais(true);
+      const { data, error } = await supabase
+        .from('canais')
+        .select('*')
+        .order('nome_canal', { ascending: true });
+
+      if (error) throw error;
+      setCanais(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar canais:', error);
+    } finally {
+      setLoadingCanais(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!channelUrl.trim()) return;
@@ -66,6 +113,12 @@ export default function CloneChannelPage() {
     setSelectedVideos(newSelected);
   };
 
+  const handleRemoveSelectedVideo = (videoId: string) => {
+    const newSelected = new Set(selectedVideos);
+    newSelected.delete(videoId);
+    setSelectedVideos(newSelected);
+  };
+
   const handleLoadMore = () => {
     if (channelData && hasMore) {
       loadMore(channelData.uploadsPlaylistId, 50);
@@ -80,72 +133,73 @@ export default function CloneChannelPage() {
     }
   };
 
-  const handleCloneChannel = async () => {
-    if (!channelData || selectedVideos.size === 0) return;
+  const handleCreateCanal = async () => {
+    if (!newCanalName.trim()) return;
     
-    setIsProcessing(true);
-    setProcessingComplete(false);
-    setLastAction('clone');
-    
+    setIsCreatingCanal(true);
     try {
-      // Convert selected video IDs to array with titles
-      const selectedVideoData = Array.from(selectedVideos).map(videoId => {
-        const video = videos.find(v => v.id === videoId);
-        return {
-          id: videoId,
-          title: video?.title || 'Título não encontrado'
-        };
-      });
-      
-      console.log('Cloning channel with data:', {
-        channelUrl,
-        selectedVideos: selectedVideoData,
-        channelName: channelData.name,
-        action: 'transcrever'
-      });
-      
-      // Call the webhook API
-      const response = await apiService.cloneChannel(channelUrl, selectedVideoData, channelData.name, 'transcrever');
-      
-      console.log('Webhook response:', response);
-      
-      setIsProcessing(false);
-      setProcessingComplete(true);
+      const { data, error } = await supabase
+        .from('canais')
+        .insert([{ nome_canal: newCanalName.trim() }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update canais list and select the new canal
+      await loadCanais();
+      setSelectedCanalId(data.id.toString());
+      setNewCanalName('');
     } catch (error) {
-      console.error('Error cloning channel:', error);
-      setIsProcessing(false);
-      alert(`Erro ao clonar canal: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      console.error('Erro ao criar canal:', error);
+      alert('Erro ao criar canal. Tente novamente.');
+    } finally {
+      setIsCreatingCanal(false);
     }
   };
 
   const handleCollectTitles = async () => {
-    if (!channelData || selectedVideos.size === 0) return;
+    if (!selectedCanalId || selectedVideos.size === 0) return;
     
     setIsProcessing(true);
     setProcessingComplete(false);
     setLastAction('collect');
     
     try {
-      // Convert selected video IDs to array with titles
-      const selectedVideoData = Array.from(selectedVideos).map(videoId => {
+      const selectedCanal = canais.find(c => c.id.toString() === selectedCanalId);
+      if (!selectedCanal) throw new Error('Canal não encontrado');
+
+      // Get selected video titles
+      const selectedVideoTitles = Array.from(selectedVideos).map(videoId => {
         const video = videos.find(v => v.id === videoId);
-        return {
-          id: videoId,
-          title: video?.title || 'Título não encontrado'
-        };
+        return video?.title || 'Título não encontrado';
       });
       
-      console.log('Collecting titles with data:', {
-        channelUrl,
-        selectedVideos: selectedVideoData,
-        channelName: channelData.name,
-        action: 'coleta_titulo'
+      console.log('Coletando títulos:', {
+        nome_canal: selectedCanal.nome_canal,
+        titulos: selectedVideoTitles,
+        tipo_treino: 'treinar_titulo'
       });
       
       // Call the webhook API
-      const response = await apiService.cloneChannel(channelUrl, selectedVideoData, channelData.name, 'coleta_titulo');
+      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome_canal: selectedCanal.nome_canal,
+          titulos: selectedVideoTitles,
+          tipo_treino: 'treinar_titulo'
+        })
+      });
       
-      console.log('Webhook response:', response);
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Webhook response:', result);
       
       setIsProcessing(false);
       setProcessingComplete(true);
@@ -156,6 +210,57 @@ export default function CloneChannelPage() {
     }
   };
 
+  const handleTranscribeVideos = async () => {
+    if (!selectedCanalId || selectedVideos.size === 0) return;
+    
+    setIsProcessing(true);
+    setProcessingComplete(false);
+    setLastAction('transcribe');
+    
+    try {
+      const selectedCanal = canais.find(c => c.id.toString() === selectedCanalId);
+      if (!selectedCanal) throw new Error('Canal não encontrado');
+
+      // Get selected video links
+      const selectedVideoLinks = Array.from(selectedVideos).map(videoId => {
+        return `https://www.youtube.com/watch?v=${videoId}`;
+      });
+      
+      console.log('Transcrevendo vídeos:', {
+        nome_canal: selectedCanal.nome_canal,
+        videos: selectedVideoLinks,
+        tipo_treino: 'treinar_roteiro'
+      });
+      
+      // Call the webhook API
+      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome_canal: selectedCanal.nome_canal,
+          videos: selectedVideoLinks,
+          tipo_treino: 'treinar_roteiro'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Webhook response:', result);
+      
+      setIsProcessing(false);
+      setProcessingComplete(true);
+    } catch (error) {
+      console.error('Error transcribing videos:', error);
+      setIsProcessing(false);
+      alert(`Erro ao transcrever vídeos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    }
+  };
+
   const sortedVideos = [...videos].sort((a, b) => {
     if (sortBy === 'recent') {
       return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
@@ -163,6 +268,10 @@ export default function CloneChannelPage() {
       return parseInt(b.views.replace(/[^\d]/g, '')) - parseInt(a.views.replace(/[^\d]/g, ''));
     }
   });
+
+  const selectedVideosList = Array.from(selectedVideos).map(videoId => {
+    return videos.find(v => v.id === videoId);
+  }).filter(Boolean);
 
   const isSearching = channelLoading || videosLoading;
   const hasSearched = !!channelData;
@@ -361,27 +470,71 @@ export default function CloneChannelPage() {
 
             {/* Actions Panel */}
             <div className="w-80 space-y-6">
+              {/* Canal Selection */}
               <div className="bg-gray-900 border border-gray-800 p-6">
                 <h3 className="text-lg font-light text-white mb-4">
-                  2. Ações com Vídeos Selecionados
+                  2. Selecionar Canal
                 </h3>
                 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-gray-400 text-sm mb-2">
-                      Nome do Canal (para pastas):
+                      Canal Existente:
                     </label>
-                    <input
-                      type="text"
-                      value={channelData?.name || ''}
-                      onChange={() => {}} // Read-only, populated from API
-                      className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600"
-                      placeholder="Nome será preenchido automaticamente"
-                      readOnly
-                    />
+                    <div className="relative">
+                      <select
+                        value={selectedCanalId}
+                        onChange={(e) => setSelectedCanalId(e.target.value)}
+                        disabled={loadingCanais}
+                        className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none"
+                      >
+                        <option value="">Selecione um canal...</option>
+                        {canais.map((canal) => (
+                          <option key={canal.id} value={canal.id.toString()}>
+                            {canal.nome_canal}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-800">
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Criar Novo Canal:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCanalName}
+                        onChange={(e) => setNewCanalName(e.target.value)}
+                        placeholder="Nome do novo canal"
+                        className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600"
+                      />
+                      <button
+                        onClick={handleCreateCanal}
+                        disabled={!newCanalName.trim() || isCreatingCanal}
+                        className="bg-blue-600 text-white px-4 py-3 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isCreatingCanal ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Training Actions */}
+              <div className="bg-gray-900 border border-gray-800 p-6">
+                <h3 className="text-lg font-light text-white mb-4">
+                  3. Ações de Treinamento
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
                     <p className="text-gray-400 text-sm mb-4">
                       {selectedVideos.size} vídeo{selectedVideos.size !== 1 ? 's' : ''} selecionado{selectedVideos.size !== 1 ? 's' : ''}
                     </p>
@@ -389,23 +542,50 @@ export default function CloneChannelPage() {
                     <div className="space-y-3">
                       <button
                         onClick={handleCollectTitles}
-                        disabled={selectedVideos.size === 0 || isProcessing}
+                        disabled={selectedVideos.size === 0 || !selectedCanalId || isProcessing}
                         className="w-full bg-yellow-600 text-white py-3 px-4 hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        📝 Coletar Títulos dos Selecionados
+                        📝 Coletar Títulos
                       </button>
 
                       <button
-                        onClick={handleCloneChannel}
-                        disabled={selectedVideos.size === 0 || isProcessing}
+                        onClick={handleTranscribeVideos}
+                        disabled={selectedVideos.size === 0 || !selectedCanalId || isProcessing}
                         className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        👤 Transcrever Vídeos Selecionados
+                        🎬 Transcrever - Treinar Roteiro
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Selected Videos List */}
+              {selectedVideosList.length > 0 && (
+                <div className="bg-gray-900 border border-gray-800 p-6">
+                  <h4 className="text-white font-medium mb-4">
+                    Vídeos Selecionados ({selectedVideosList.length})
+                  </h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {selectedVideosList.map((video) => (
+                      <div key={video.id} className="bg-gray-800 border border-gray-700 p-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-medium line-clamp-2">
+                            {video.title}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveSelectedVideo(video.id)}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                          title="Remover vídeo"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Processing Status */}
               {isProcessing && (
@@ -415,9 +595,9 @@ export default function CloneChannelPage() {
                     <h4 className="text-white font-medium">Processando...</h4>
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {lastAction === 'clone' 
-                      ? 'Enviando dados para clonagem do canal. Aguardando resposta do servidor...' 
-                      : 'Enviando dados para coleta de títulos. Aguardando resposta do servidor...'
+                    {lastAction === 'collect' 
+                      ? 'Enviando títulos para treinamento. Aguardando resposta do servidor...' 
+                      : 'Enviando vídeos para transcrição e treinamento. Aguardando resposta do servidor...'
                     } 
                     Por favor, aguarde.
                   </p>
@@ -436,9 +616,9 @@ export default function CloneChannelPage() {
                     <h4 className="text-white font-medium">Concluído com Sucesso!</h4>
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {lastAction === 'clone' 
-                      ? `Canal clonado com sucesso! ${selectedVideos.size} vídeo${selectedVideos.size !== 1 ? 's' : ''} processado${selectedVideos.size !== 1 ? 's' : ''}.`
-                      : `Títulos coletados com sucesso! ${selectedVideos.size} título${selectedVideos.size !== 1 ? 's' : ''} extraído${selectedVideos.size !== 1 ? 's' : ''}.`
+                    {lastAction === 'collect' 
+                      ? `Títulos coletados com sucesso! ${selectedVideos.size} título${selectedVideos.size !== 1 ? 's' : ''} enviado${selectedVideos.size !== 1 ? 's' : ''} para treinamento.`
+                      : `Vídeos enviados para transcrição com sucesso! ${selectedVideos.size} vídeo${selectedVideos.size !== 1 ? 's' : ''} processado${selectedVideos.size !== 1 ? 's' : ''}.`
                     }
                   </p>
                   <button
