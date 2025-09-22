@@ -18,6 +18,7 @@ export default function CloneChannelPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
   const [lastAction, setLastAction] = useState<'collect' | 'transcribe' | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Canal management states
   const [canais, setCanais] = useState<Canal[]>([]);
@@ -177,6 +178,12 @@ export default function CloneChannelPage() {
       }
       
       setNewCanalName('');
+      
+      // Show success message for 5 seconds
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
     } catch (error) {
       console.error('Erro ao criar canal:', error);
       alert(`Erro ao criar canal: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -209,7 +216,7 @@ export default function CloneChannelPage() {
       });
       
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_CLONE_CHANNEL;
       const webhookUrl = `${apiBaseUrl}${webhookPath}`;
       
       // Call the webhook API
@@ -264,7 +271,7 @@ export default function CloneChannelPage() {
       });
       
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_CLONE_CHANNEL;
       const webhookUrl = `${apiBaseUrl}${webhookPath}`;
       
       // Call the webhook API
@@ -559,6 +566,13 @@ export default function CloneChannelPage() {
                       </button>
                     </div>
                   </div>
+                  
+                  {/* Success Message */}
+                  {showSuccessMessage && (
+                    <div className="bg-green-900/20 border border-green-500/30 p-3 text-green-300 text-sm text-center">
+                      Canal criado com sucesso!
+                    </div>
+                  )}
                 </div>
               </div>
 
