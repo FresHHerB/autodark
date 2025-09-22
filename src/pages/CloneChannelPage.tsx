@@ -139,7 +139,7 @@ export default function CloneChannelPage() {
     setIsCreatingCanal(true);
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_CLONE_CHANNEL;
       const webhookUrl = `${apiBaseUrl}${webhookPath}`;
       
       // Call webhook to create canal
