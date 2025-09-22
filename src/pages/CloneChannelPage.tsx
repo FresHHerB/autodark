@@ -151,7 +151,8 @@ export default function CloneChannelPage() {
         },
         body: JSON.stringify({
           nome_canal: newCanalName.trim(),
-          tipo_treino: 'criar_canal'
+          tipo_treino: 'criar_canal',
+          link_canal: channelUrl
         })
       });
       
