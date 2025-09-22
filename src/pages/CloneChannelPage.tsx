@@ -138,8 +138,12 @@ export default function CloneChannelPage() {
     
     setIsCreatingCanal(true);
     try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookUrl = `${apiBaseUrl}${webhookPath}`;
+      
       // Call webhook to create canal
-      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,8 +208,12 @@ export default function CloneChannelPage() {
         tipo_treino: 'treinar_titulo'
       });
       
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookUrl = `${apiBaseUrl}${webhookPath}`;
+      
       // Call the webhook API
-      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,8 +263,12 @@ export default function CloneChannelPage() {
         tipo_treino: 'treinar_roteiro'
       });
       
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_TREINAR_CANAL;
+      const webhookUrl = `${apiBaseUrl}${webhookPath}`;
+      
       // Call the webhook API
-      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
