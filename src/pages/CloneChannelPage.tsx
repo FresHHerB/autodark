@@ -138,21 +138,44 @@ export default function CloneChannelPage() {
     
     setIsCreatingCanal(true);
     try {
-      const { data, error } = await supabase
-        .from('canais')
-        .insert([{ nome_canal: newCanalName.trim() }])
-        .select()
-        .single();
+      // Call webhook to create canal
+      const response = await fetch('https://n8n-n8n.gpqg9h.easypanel.host/webhook/treinarCanal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome_canal: newCanalName.trim(),
+          tipo_treino: 'criar_canal'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
 
-      if (error) throw error;
+      const result = await response.json();
+      console.log('Canal criado via webhook:', result);
 
       // Update canais list and select the new canal
       await loadCanais();
-      setSelectedCanalId(data.id.toString());
+      
+      // Find the newly created canal and select it
+      const updatedCanais = await supabase
+        .from('canais')
+        .select('*')
+        .eq('nome_canal', newCanalName.trim())
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (updatedCanais.data && updatedCanais.data.length > 0) {
+        setSelectedCanalId(updatedCanais.data[0].id.toString());
+      }
+      
       setNewCanalName('');
     } catch (error) {
       console.error('Erro ao criar canal:', error);
-      alert('Erro ao criar canal. Tente novamente.');
+      alert(`Erro ao criar canal: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setIsCreatingCanal(false);
     }
