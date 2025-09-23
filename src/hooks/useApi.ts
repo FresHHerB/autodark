@@ -55,7 +55,7 @@ export function useChannelSearch() {
 
 export function useAIGeneration() {
   const { execute, ...state } = useApi();
-  
+
   const generateTitle = useCallback((idea: string, prompt: string, model?: string) => {
     return execute(() => apiService.generateTitle(idea, prompt, model));
   }, [execute]);
@@ -64,10 +64,20 @@ export function useAIGeneration() {
     return execute(() => apiService.generateScript(idea, title, prompt, model));
   }, [execute]);
 
+  const generateContent = useCallback((payload: {
+    id_canal: string;
+    nova_ideia: string;
+    idioma: string;
+    tipo_geracao: string;
+  }) => {
+    return execute(() => apiService.generateContent(payload));
+  }, [execute]);
+
   return {
     ...state,
     generateTitle,
     generateScript,
+    generateContent,
   };
 }
 
