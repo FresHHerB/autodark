@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CloneChannelPage from './pages/CloneChannelPage';
 import ManageChannelPage from './pages/ManageChannelPage';
+import GenerateContentPage from './pages/GenerateContentPage';
 import SettingsPage from './pages/SettingsPage';
 import GenerateVideoPage from './pages/GenerateVideoPage';
 import ReviewEditPage from './pages/ReviewEditPage';
@@ -69,21 +70,29 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/manage-channel" 
+            <Route
+              path="/manage-channel"
               element={
                 <ProtectedRoute>
                   <ManageChannelPage />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/settings" 
+            <Route
+              path="/generate-content"
+              element={
+                <ProtectedRoute>
+                  <GenerateContentPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
               element={
                 <ProtectedRoute>
                   <SettingsPage />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route 
               path="/generate-video" 

@@ -86,6 +86,5 @@ export interface Voice {
   plataforma: string;
   idioma: string;
   genero?: string;
-  preview_url?: string;
   created_at: string;
 }

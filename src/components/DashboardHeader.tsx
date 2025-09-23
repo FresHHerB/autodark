@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Settings, Bell, Copy, Video, Edit, Calendar, Eye } from 'lucide-react';
+import { LogOut, Settings, Bell, Copy, Video, Edit, Calendar, Eye, FileText } from 'lucide-react';
 
 const navigationCards = [
   {
@@ -15,6 +15,12 @@ const navigationCards = [
     title: 'Editar/Gerenciar Canal',
     icon: Edit,
     path: '/manage-channel'
+  },
+  {
+    id: 'generate-content',
+    title: 'Gerar Conteúdo',
+    icon: FileText,
+    path: '/generate-content'
   },
   {
     id: 'generate',
@@ -33,12 +39,6 @@ const navigationCards = [
     title: 'Publicar/Agendar',
     icon: Calendar,
     path: '/publish-schedule'
-  },
-  {
-    id: 'settings',
-    title: 'Configurações Gerais',
-    icon: Settings,
-    path: '/settings'
   }
 ];
 

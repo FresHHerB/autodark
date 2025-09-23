@@ -4,7 +4,8 @@
       "Read(//d/code/freela/geradorRoteiroAudio/github/dash-yt/**)",
       "Bash(node:*)",
       "Bash(git commit:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

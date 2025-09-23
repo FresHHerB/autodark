@@ -23,12 +23,13 @@ class ApiService {
   getWebhook(key: string): string {
     const webhooks = {
       cloneChannel: import.meta.env.VITE_WEBHOOK_CLONE_CHANNEL || '/webhook/treinarCanal',
+      generateContent: import.meta.env.VITE_WEBHOOK_GERAR_CONTEUDO || '/webhook/gerarConteudo',
       generateTitle: import.meta.env.VITE_WEBHOOK_GENERATE_TITLE,
       generateScript: import.meta.env.VITE_WEBHOOK_GENERATE_SCRIPT,
       processVideo: import.meta.env.VITE_WEBHOOK_PROCESS_VIDEO,
       publishVideo: import.meta.env.VITE_WEBHOOK_PUBLISH_VIDEO,
     };
-    
+
     return `${this.baseUrl}${webhooks[key as keyof typeof webhooks] || ''}`;
   }
 
@@ -98,6 +99,18 @@ class ApiService {
     return this.call(this.getWebhook('generateScript'), {
       method: 'POST',
       body: JSON.stringify({ idea, title, prompt, model }),
+    });
+  }
+
+  async generateContent(payload: {
+    id_canal: string;
+    nova_ideia: string;
+    idioma: string;
+    tipo_geracao: string;
+  }) {
+    return this.call(this.getWebhook('generateContent'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   }
 
