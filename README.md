@@ -250,42 +250,117 @@ Centraliza todas as chamadas para APIs externas:
 
 ## 📁 Estrutura do Projeto
 
+### Nova Arquitetura (Feature-Based)
 ```
 autodark/
+├── config/                  # Arquivos de configuração
+│   ├── docker/             # Configurações Docker
+│   │   ├── Dockerfile
+│   │   ├── docker-compose.yml
+│   │   └── .dockerignore
+│   ├── deployment/         # Configurações de deploy
+│   │   ├── easypanel.json
+│   │   ├── easypanel.yml
+│   │   └── README-DEPLOY.md
+│   ├── build/              # Configurações de build
+│   │   ├── eslint.config.js
+│   │   ├── postcss.config.js
+│   │   ├── tailwind.config.js
+│   │   ├── tsconfig.app.json
+│   │   └── tsconfig.node.json
+│   └── env/
+│       ├── .env.example
+│       └── .gitignore
+│
+├── database/               # Database related files
+│   ├── supabase/          # Supabase configuration
+│   │   ├── config.toml
+│   │   ├── functions/     # Edge Functions
+│   │   │   ├── fetch-elevenlabs-voice/
+│   │   │   ├── fetch-fish-audio-voice/
+│   │   │   ├── fetch-runware-model/
+│   │   │   └── list-elevenlabs-voices/
+│   │   └── migrations/    # Migrações de banco
+│   ├── scripts/           # Database scripts
+│   │   └── supabase_rls_fix.sql
+│   └── local/             # Local databases
+│       └── vozes.db
+│
 ├── src/
-│   ├── components/          # Componentes reutilizáveis
-│   │   ├── ActionCard.tsx   # Cards de ação do dashboard
-│   │   ├── VideoCard.tsx    # Cards de vídeos
-│   │   ├── VoiceSelector.tsx # Seletor de vozes
-│   │   ├── ImageModelCard.tsx # Cards de modelos de imagem
-│   │   └── DashboardHeader.tsx # Cabeçalho padrão
-│   ├── contexts/            # Contexts do React
-│   │   └── AuthContext.tsx  # Autenticação global
-│   ├── hooks/               # Hooks personalizados
-│   │   ├── useApi.ts        # Hook para chamadas de API
-│   │   ├── useDatabase.ts   # Hook para operações de banco
-│   │   └── useAudio.ts      # Hook para controles de áudio
-│   ├── pages/               # Páginas da aplicação
-│   │   ├── DashboardPage.tsx
-│   │   ├── CloneChannelPage.tsx
-│   │   ├── GenerateContentPage.tsx # UI redesenhada
-│   │   ├── SettingsPage.tsx # Sistema de configurações
-│   │   └── ReviewEditPage.tsx
-│   ├── services/            # Serviços e integrações
-│   │   ├── api.ts           # Configuração de APIs
-│   │   ├── audio/           # Serviços de áudio
-│   │   ├── youtube.ts       # Integração YouTube
-│   │   └── database.ts      # Operações de banco
-│   └── lib/
-│       └── supabase.ts      # Configuração Supabase
-├── supabase/
-│   ├── functions/           # Edge Functions
-│   │   ├── fetch-elevenlabs-voice/
-│   │   ├── fetch-fish-audio-voice/
-│   │   ├── fetch-runware-model/
-│   │   └── list-elevenlabs-voices/
-│   └── migrations/          # Migrações de banco
-└── public/                  # Arquivos estáticos
+│   ├── app/               # App configuration
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   │
+│   ├── shared/            # Shared utilities
+│   │   ├── components/
+│   │   │   ├── ui/        # UI components
+│   │   │   │   └── LoadingSpinner.tsx
+│   │   │   └── modals/    # Modal components
+│   │   │       └── PromptModal.tsx
+│   │   ├── hooks/         # Shared hooks
+│   │   │   ├── useApi.ts
+│   │   │   └── useDatabase.ts
+│   │   ├── contexts/      # React contexts
+│   │   │   └── AuthContext.tsx
+│   │   ├── lib/           # Libraries & configs
+│   │   │   └── supabase.ts
+│   │   └── services/      # Shared services
+│   │       ├── api.ts
+│   │       ├── database.ts
+│   │       └── youtube.ts
+│   │
+│   ├── features/          # Feature-based organization
+│   │   ├── auth/
+│   │   │   └── pages/
+│   │   │       └── LoginPage.tsx
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── components/
+│   │   │   │   ├── DashboardHeader.tsx
+│   │   │   │   └── ActionCard.tsx
+│   │   │   └── pages/
+│   │   │       └── DashboardPage.tsx
+│   │   │
+│   │   ├── content-generation/
+│   │   │   ├── components/
+│   │   │   │   └── VoiceSelector.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── GenerateContentPage.tsx
+│   │   │   │   └── GenerateVideoPage.tsx
+│   │   │   └── services/
+│   │   │       └── audio/     # Audio generation services
+│   │   │           ├── audioService.ts
+│   │   │           └── platforms/
+│   │   │               ├── base.ts
+│   │   │               ├── elevenLabs.ts
+│   │   │               ├── fishAudio.ts
+│   │   │               └── minimax.ts
+│   │   │
+│   │   ├── channel-management/
+│   │   │   ├── components/
+│   │   │   │   ├── VideoCard.tsx
+│   │   │   │   ├── VideoReviewModal.tsx
+│   │   │   │   └── ImageModelCard.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── CloneChannelPage.tsx
+│   │   │   │   ├── ManageChannelPage.tsx
+│   │   │   │   ├── PublishSchedulePage.tsx
+│   │   │   │   └── ReviewEditPage.tsx
+│   │   │   └── hooks/
+│   │   │       └── useYouTube.ts
+│   │   │
+│   │   └── settings/
+│   │       └── pages/
+│   │           └── SettingsPage.tsx
+│   │
+│   └── types/             # Type definitions
+│       └── index.ts
+│
+├── public/                # Static files
+│   └── index.html
+│
+└── dist/                  # Build output
 ```
 
 ## 🗄 Banco de Dados
