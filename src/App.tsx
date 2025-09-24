@@ -110,21 +110,13 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/publish-schedule" 
+            <Route
+              path="/publish-schedule"
               element={
                 <ProtectedRoute>
                   <PublishSchedulePage />
                 </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/publish-schedule" 
-              element={
-                <ProtectedRoute>
-                  <PublishSchedulePage />
-                </ProtectedRoute>
-              } 
+              }
             />
           </Routes>
         </div>

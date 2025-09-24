@@ -289,10 +289,7 @@ export default function SettingsPage() {
 
   // Collect voice data automatically using edge functions
   const collectVoiceData = async (voiceId: string, platform: string) => {
-    console.log('🎯 [collectVoiceData] Iniciando coleta:', { voiceId, platform });
-
     if (!voiceId.trim() || !platform.trim()) {
-      console.log('❌ [collectVoiceData] Campos vazios, limpando dados');
       setCollectedVoiceData(null);
       setCanPlayPreview(false);
       setShowManualEdit(false);
@@ -300,7 +297,6 @@ export default function SettingsPage() {
       return;
     }
 
-    console.log('🔄 [collectVoiceData] Iniciando coleta de dados...');
     setIsCollectingVoiceData(true);
     setCollectedVoiceData(null);
     setCanPlayPreview(false);
@@ -314,12 +310,9 @@ export default function SettingsPage() {
       }
 
       if (platform === 'ElevenLabs') {
-        console.log('🎵 [collectVoiceData] Processando ElevenLabs...');
-
         let voiceData;
         try {
           // Primeira tentativa: Edge Function
-          console.log('📡 Tentando Edge Function para ElevenLabs...');
           const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-elevenlabs-voice`, {
             method: 'POST',
             headers: {
@@ -338,10 +331,7 @@ export default function SettingsPage() {
 
           const result = await response.json();
           voiceData = result.data;
-          console.log('✅ Edge Function ElevenLabs bem-sucedida');
         } catch (edgeFunctionError) {
-          console.log('⚠️ Edge Function falhou, tentando API direta:', edgeFunctionError.message);
-
           // Fallback: Chamada direta à API ElevenLabs
           const directResponse = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
             method: 'GET',
@@ -357,7 +347,6 @@ export default function SettingsPage() {
           }
 
           const rawData = await directResponse.json();
-          console.log('✅ Chamada direta ElevenLabs bem-sucedida');
 
           // Processar dados igual à Edge Function
           voiceData = {
@@ -393,12 +382,9 @@ export default function SettingsPage() {
         setCanPlayPreview(true);
 
       } else if (platform === 'Fish-Audio') {
-        console.log('🐟 [collectVoiceData] Processando Fish-Audio...');
-
         let voiceData;
         try {
           // Primeira tentativa: Edge Function
-          console.log('📡 Tentando Edge Function para Fish-Audio...');
           const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-fish-audio-voice`, {
             method: 'POST',
             headers: {
@@ -417,10 +403,7 @@ export default function SettingsPage() {
 
           const result = await response.json();
           voiceData = result.data;
-          console.log('✅ Edge Function Fish-Audio bem-sucedida');
         } catch (edgeFunctionError) {
-          console.log('⚠️ Edge Function falhou, tentando API direta:', edgeFunctionError.message);
-
           // Fallback: Chamada direta à API Fish-Audio
           const directResponse = await fetch(`https://api.fish.audio/model/${voiceId}`, {
             method: 'GET',
@@ -436,7 +419,6 @@ export default function SettingsPage() {
           }
 
           const rawData = await directResponse.json();
-          console.log('✅ Chamada direta Fish-Audio bem-sucedida');
 
           // Processar dados igual à Edge Function
           voiceData = {
@@ -462,7 +444,6 @@ export default function SettingsPage() {
         setCanPlayPreview(!!voiceData.preview_url);
 
       } else if (platform === 'Minimax') {
-        console.log('🔴 [collectVoiceData] Processando Minimax...');
         // Para Minimax, habilitar edição manual com campos vazios
         setCollectedVoiceData({
           nome_voz: '',
@@ -474,8 +455,6 @@ export default function SettingsPage() {
         setCanPlayPreview(false);
       }
 
-      console.log('✅ [collectVoiceData] Coleta concluída com sucesso');
-
     } catch (error) {
       console.error('❌ [collectVoiceData] Erro ao coletar dados da voz:', error);
       setCollectedVoiceData(null);
@@ -484,38 +463,27 @@ export default function SettingsPage() {
       setManualEditReason('');
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao coletar dados da voz' });
     } finally {
-      console.log('🏁 [collectVoiceData] Finalizando coleta');
       setIsCollectingVoiceData(false);
     }
   };
 
   // Auto-collect data when voice_id or platform changes
   const handleVoiceFormChange = (field: string, value: string) => {
-    console.log('📝 [handleVoiceFormChange] Campo alterado:', { field, value });
     setVoiceForm(prev => ({ ...prev, [field]: value }));
 
     // Clear existing timeout
     if (autoCollectTimeout) {
-      console.log('⏰ [handleVoiceFormChange] Limpando timeout anterior');
       clearTimeout(autoCollectTimeout);
     }
 
     // Set new timeout for auto-collection
     const newTimeout = setTimeout(() => {
       const updatedForm = { ...voiceForm, [field]: value };
-      console.log('⏰ [handleVoiceFormChange] Timeout executado, form:', updatedForm);
       if (updatedForm.voice_id.trim() && updatedForm.plataforma.trim()) {
-        console.log('✅ [handleVoiceFormChange] Condições atendidas, iniciando coleta');
         collectVoiceData(updatedForm.voice_id, updatedForm.plataforma);
-      } else {
-        console.log('❌ [handleVoiceFormChange] Condições não atendidas:', {
-          voice_id: updatedForm.voice_id.trim(),
-          plataforma: updatedForm.plataforma.trim()
-        });
       }
     }, 800); // 800ms delay after user stops typing
 
-    console.log('⏰ [handleVoiceFormChange] Novo timeout definido');
     setAutoCollectTimeout(newTimeout);
   };
 
@@ -561,50 +529,17 @@ export default function SettingsPage() {
 
   // Image Model Functions
   const collectModelData = async (air: string, platform: string) => {
-    console.log('🚀 [collectModelData] === INICIANDO COLETA DE DADOS ===');
-    console.log('🎨 [collectModelData] Parâmetros recebidos:', { air, platform });
-    console.log('🎨 [collectModelData] Tipo dos parâmetros:', {
-      airType: typeof air,
-      airLength: air?.length || 0,
-      platformType: typeof platform,
-      platformLength: platform?.length || 0
-    });
-
     if (!air.trim() || platform !== 'Runware') {
-      console.log('❌ [collectModelData] VALIDAÇÃO FALHOU - Campos vazios ou plataforma inválida');
-      console.log('❌ [collectModelData] air.trim():', air.trim());
-      console.log('❌ [collectModelData] platform:', platform);
-      console.log('❌ [collectModelData] platform === "Runware":', platform === 'Runware');
-      console.log('🧹 [collectModelData] Limpando dados coletados...');
       setCollectedModelData(null);
       return;
     }
 
-    console.log('✅ [collectModelData] VALIDAÇÃO PASSOU - Iniciando coleta...');
-    console.log('🔄 [collectModelData] Configurando estados...');
     setIsCollectingModelData(true);
     setCollectedModelData(null);
-    console.log('🔄 [collectModelData] Estados configurados');
 
     try {
-      console.log('🔍 [collectModelData] === BUSCANDO API KEY ===');
-      console.log('🔍 [collectModelData] APIs disponíveis:', apis.map(a => ({
-        plataforma: a.plataforma,
-        id: a.id,
-        hasApiKey: !!a.api_key,
-        keyLength: a.api_key?.length || 0
-      })));
-      console.log('🔍 [collectModelData] Buscando plataforma:', platform);
 
       const apiData = apis.find(api => api.plataforma.toLowerCase() === platform.toLowerCase());
-      console.log('🔍 [collectModelData] Resultado da busca:', {
-        found: !!apiData,
-        platform,
-        availableAPIs: apis.map(a => a.plataforma),
-        matchedPlatform: apiData?.plataforma,
-        hasApiKey: !!apiData?.api_key,
-        apiKeyLength: apiData?.api_key?.length || 0
-      });
 
       if (!apiData) {
         throw new Error(`API key não encontrada para ${platform}`);
@@ -614,23 +549,10 @@ export default function SettingsPage() {
         air: air,
         api_key: apiData.api_key
       };
-      console.log('📤 [collectModelData] Enviando requisição para Edge Function:', {
-        url: 'https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model',
-        payload: { ...requestPayload, api_key: '***REDACTED***' }
-      });
 
       let modelData;
       try {
         // Primeira tentativa: Edge Function
-        console.log('🚀 [collectModelData] === INICIANDO EDGE FUNCTION ===');
-        console.log('📤 [collectModelData] PAYLOAD sendo enviado:', JSON.stringify(requestPayload, null, 2));
-        console.log('📤 [collectModelData] HEADERS enviados:', {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY ? import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'UNDEFINED'}`,
-          'Content-Type': 'application/json',
-        });
-        console.log('📤 [collectModelData] URL:', 'https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model');
-
-        console.log('📡 Enviando requisição para Edge Function...');
         const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model`, {
           method: 'POST',
           headers: {
@@ -640,29 +562,11 @@ export default function SettingsPage() {
           body: JSON.stringify(requestPayload)
         });
 
-        console.log('📥 [collectModelData] === RESPOSTA DA EDGE FUNCTION ===');
-        console.log('📥 [collectModelData] Status:', response.status);
-        console.log('📥 [collectModelData] Status Text:', response.statusText);
-        console.log('📥 [collectModelData] OK:', response.ok);
-        console.log('📥 [collectModelData] Type:', response.type);
-        console.log('📥 [collectModelData] URL:', response.url);
-        console.log('📥 [collectModelData] Headers completos:', Object.fromEntries(response.headers.entries()));
-
         if (!response.ok) {
           let errorText;
           try {
             errorText = await response.text();
-            console.error('❌ [collectModelData] ERRO - Resposta da Edge Function (text):', errorText);
-
-            // Tentar parsear como JSON se possível
-            try {
-              const errorJson = JSON.parse(errorText);
-              console.error('❌ [collectModelData] ERRO - Como JSON:', JSON.stringify(errorJson, null, 2));
-            } catch (jsonError) {
-              console.log('ℹ️ [collectModelData] Resposta de erro não é JSON válido');
-            }
           } catch (textError) {
-            console.error('❌ [collectModelData] ERRO - Não foi possível ler texto da resposta:', textError);
             errorText = 'Erro ao ler resposta';
           }
           throw new Error(`Edge Function falhou: ${response.status} - ${errorText}`);
@@ -671,28 +575,18 @@ export default function SettingsPage() {
         let result;
         try {
           const responseText = await response.text();
-          console.log('📊 [collectModelData] RESPOSTA RAW (texto):', responseText);
-
           result = JSON.parse(responseText);
-          console.log('📊 [collectModelData] RESPOSTA PARSEADA (JSON):', JSON.stringify(result, null, 2));
         } catch (parseError) {
-          console.error('❌ [collectModelData] ERRO ao parsear JSON da resposta:', parseError);
           throw new Error('Resposta da Edge Function não é JSON válido');
         }
 
         if (!result.data) {
-          console.error('❌ [collectModelData] ERRO - Resposta sem propriedade "data":', result);
           throw new Error('Resposta da Edge Function sem dados válidos');
         }
 
         modelData = result.data;
-        console.log('🔍 [collectModelData] MODEL DATA extraído:', JSON.stringify(modelData, null, 2));
-        console.log('✅ [collectModelData] === EDGE FUNCTION SUCESSO ===');
 
       } catch (edgeFunctionError) {
-        console.log('🔄 [collectModelData] === INICIANDO FALLBACK - API DIRETA ===');
-        console.log('⚠️ [collectModelData] Edge Function falhou, motivo:', edgeFunctionError.message);
-        console.error('🔍 [collectModelData] Stack trace do erro:', edgeFunctionError.stack);
 
         // Fallback: Chamada direta à API Runware
         const taskUUID = crypto.randomUUID();
@@ -705,17 +599,6 @@ export default function SettingsPage() {
             limit: 1
           }
         ];
-
-        console.log('📤 [collectModelData] PAYLOAD da API direta:', JSON.stringify(directRequestBody, null, 2));
-        console.log('📤 [collectModelData] HEADERS da API direta:', {
-          'Authorization': `Bearer ${apiData.api_key ? apiData.api_key.substring(0, 15) + '...' : 'UNDEFINED'}`,
-          'Content-Type': 'application/json',
-        });
-        console.log('📤 [collectModelData] URL da API direta:', 'https://api.runware.ai/v1');
-        console.log('📤 [collectModelData] Task UUID:', taskUUID);
-        console.log('📤 [collectModelData] AIR pesquisado:', air);
-
-        console.log('📡 Enviando requisição para API Runware direta...');
         const directResponse = await fetch('https://api.runware.ai/v1', {
           method: 'POST',
           headers: {
@@ -725,29 +608,11 @@ export default function SettingsPage() {
           body: JSON.stringify(directRequestBody)
         });
 
-        console.log('📥 [collectModelData] === RESPOSTA DA API DIRETA ===');
-        console.log('📥 [collectModelData] Status:', directResponse.status);
-        console.log('📥 [collectModelData] Status Text:', directResponse.statusText);
-        console.log('📥 [collectModelData] OK:', directResponse.ok);
-        console.log('📥 [collectModelData] Type:', directResponse.type);
-        console.log('📥 [collectModelData] URL:', directResponse.url);
-        console.log('📥 [collectModelData] Headers completos:', Object.fromEntries(directResponse.headers.entries()));
-
         if (!directResponse.ok) {
           let errorText;
           try {
             errorText = await directResponse.text();
-            console.error('❌ [collectModelData] ERRO - Resposta da API direta (text):', errorText);
-
-            // Tentar parsear como JSON se possível
-            try {
-              const errorJson = JSON.parse(errorText);
-              console.error('❌ [collectModelData] ERRO - Como JSON:', JSON.stringify(errorJson, null, 2));
-            } catch (jsonError) {
-              console.log('ℹ️ [collectModelData] Resposta de erro da API direta não é JSON válido');
-            }
           } catch (textError) {
-            console.error('❌ [collectModelData] ERRO - Não foi possível ler texto da resposta da API direta:', textError);
             errorText = 'Erro ao ler resposta';
           }
           throw new Error(`Runware API error: ${directResponse.status} - ${errorText}`);
@@ -756,35 +621,19 @@ export default function SettingsPage() {
         let directResponseData;
         try {
           const responseText = await directResponse.text();
-          console.log('📊 [collectModelData] RESPOSTA RAW da API direta (texto):', responseText);
-
           directResponseData = JSON.parse(responseText);
-          console.log('📊 [collectModelData] RESPOSTA PARSEADA da API direta (JSON):', JSON.stringify(directResponseData, null, 2));
         } catch (parseError) {
-          console.error('❌ [collectModelData] ERRO ao parsear JSON da resposta da API direta:', parseError);
           throw new Error('Resposta da API Runware não é JSON válido');
         }
 
         // Verificar se temos resultados
-        console.log('🔍 [collectModelData] Verificando estrutura de dados...');
-        console.log('🔍 [collectModelData] directResponseData?.data:', !!directResponseData?.data);
-        console.log('🔍 [collectModelData] directResponseData.data.length:', directResponseData?.data?.length || 0);
-
-        if (directResponseData?.data?.[0]) {
-          console.log('🔍 [collectModelData] Primeiro item data:', JSON.stringify(directResponseData.data[0], null, 2));
-          console.log('🔍 [collectModelData] directResponseData.data[0].results:', !!directResponseData.data[0].results);
-          console.log('🔍 [collectModelData] directResponseData.data[0].results.length:', directResponseData.data[0].results?.length || 0);
-        }
 
         if (!directResponseData?.data?.[0]?.results || directResponseData.data[0].results.length === 0) {
-          console.error('❌ [collectModelData] ERRO - Nenhum resultado encontrado para:', air);
-          console.log('🔍 [collectModelData] Estrutura recebida:', JSON.stringify(directResponseData, null, 2));
           throw new Error(`Nenhum modelo encontrado para o AIR: ${air}`);
         }
 
         // Processar dados igual à Edge Function
         const rawModelData = directResponseData.data[0].results[0];
-        console.log('📦 [collectModelData] RAW MODEL DATA:', JSON.stringify(rawModelData, null, 2));
 
         modelData = {
           air: rawModelData.air,
@@ -802,14 +651,8 @@ export default function SettingsPage() {
           like_count: 0,
           raw_data: rawModelData
         };
-
-        console.log('🔧 [collectModelData] MODEL DATA processado:', JSON.stringify(modelData, null, 2));
-        console.log('✅ [collectModelData] === API DIRETA SUCESSO ===');
       }
 
-      console.log('🔍 [collectModelData] Dados processados do modelo:', modelData);
-
-      console.log('🔧 [collectModelData] === PROCESSAMENTO FINAL ===');
 
       const collectedData = {
         nome_modelo: modelData.nome_modelo || 'Nome não disponível',
@@ -818,50 +661,31 @@ export default function SettingsPage() {
         tags: modelData.tags || []
       };
 
-      console.log('💾 [collectModelData] COLLECTED DATA que será salvo no state:', JSON.stringify(collectedData, null, 2));
-      console.log('💾 [collectModelData] Campos individuais:');
-      console.log('  📝 nome_modelo:', collectedData.nome_modelo);
-      console.log('  📁 categoria:', collectedData.categoria);
-      console.log('  📄 descricao:', collectedData.descricao);
-      console.log('  🏷️ tags:', collectedData.tags);
-      console.log('  🏷️ tags.length:', collectedData.tags?.length || 0);
-
-      console.log('🔄 [collectModelData] Chamando setCollectedModelData...');
       setCollectedModelData(collectedData);
-      console.log('✅ [collectModelData] setCollectedModelData executado');
-
-      console.log('✅ [collectModelData] === COLETA CONCLUÍDA COM SUCESSO ===');
 
     } catch (error) {
-      console.error('❌ [collectModelData] Erro ao coletar dados do modelo:', error);
-      console.error('🔍 [collectModelData] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      console.error('Erro ao coletar dados do modelo:', error);
       setCollectedModelData(null);
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao coletar dados do modelo' });
     } finally {
-      console.log('🏁 [collectModelData] Finalizando coleta');
       setIsCollectingModelData(false);
     }
   };
 
   const handleImageModelFormChange = (field: string, value: string) => {
-    console.log('📝 [handleImageModelFormChange] Campo alterado:', { field, value });
     setImageModelForm(prev => ({ ...prev, [field]: value }));
 
     if (autoCollectModelTimeout) {
-      console.log('⏰ [handleImageModelFormChange] Limpando timeout anterior');
       clearTimeout(autoCollectModelTimeout);
     }
 
     const newTimeout = setTimeout(() => {
       const updatedForm = { ...imageModelForm, [field]: value };
-      console.log('⏰ [handleImageModelFormChange] Timeout executado, form:', updatedForm);
       if (updatedForm.air.trim() && updatedForm.plataforma.trim()) {
-        console.log('✅ [handleImageModelFormChange] Condições atendidas, iniciando coleta');
         collectModelData(updatedForm.air, updatedForm.plataforma);
       }
     }, 800);
 
-    console.log('⏰ [handleImageModelFormChange] Novo timeout definido');
     setAutoCollectModelTimeout(newTimeout);
   };
 
@@ -1181,7 +1005,6 @@ export default function SettingsPage() {
         let voiceData;
         try {
           // Primeira tentativa: Edge Function
-          console.log('📡 generateVoiceTest: Tentando Edge Function para ElevenLabs...');
           const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-elevenlabs-voice`, {
             method: 'POST',
             headers: {
@@ -1200,9 +1023,7 @@ export default function SettingsPage() {
 
           const result = await response.json();
           voiceData = result.data;
-          console.log('✅ generateVoiceTest: Edge Function ElevenLabs bem-sucedida');
         } catch (edgeFunctionError) {
-          console.log('⚠️ generateVoiceTest: Edge Function falhou, tentando API direta:', edgeFunctionError.message);
 
           // Fallback: Chamada direta à API ElevenLabs
           const directResponse = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
@@ -1219,7 +1040,6 @@ export default function SettingsPage() {
           }
 
           const rawData = await directResponse.json();
-          console.log('✅ generateVoiceTest: Chamada direta ElevenLabs bem-sucedida');
 
           // Processar dados igual à Edge Function
           voiceData = {
@@ -1245,7 +1065,6 @@ export default function SettingsPage() {
         let voiceData;
         try {
           // Primeira tentativa: Edge Function
-          console.log('📡 generateVoiceTest: Tentando Edge Function para Fish-Audio...');
           const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-fish-audio-voice`, {
             method: 'POST',
             headers: {
@@ -1264,9 +1083,7 @@ export default function SettingsPage() {
 
           const result = await response.json();
           voiceData = result.data;
-          console.log('✅ generateVoiceTest: Edge Function Fish-Audio bem-sucedida');
         } catch (edgeFunctionError) {
-          console.log('⚠️ generateVoiceTest: Edge Function falhou, tentando API direta:', edgeFunctionError.message);
 
           // Fallback: Chamada direta à API Fish-Audio
           const directResponse = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
@@ -1283,7 +1100,6 @@ export default function SettingsPage() {
           }
 
           const rawData = await directResponse.json();
-          console.log('✅ generateVoiceTest: Chamada direta Fish-Audio bem-sucedida');
 
           // Processar dados igual à Edge Function
           voiceData = {

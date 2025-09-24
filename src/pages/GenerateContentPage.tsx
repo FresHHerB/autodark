@@ -216,15 +216,12 @@ export default function GenerateContentPage() {
 
     try {
       setLoadingExistingScripts(true);
-      console.log('🔍 Carregando roteiros para canal:', selectedChannelId);
 
       // Primeiro tentar com RPC (contorna RLS)
-      console.log('🔍 Tentando com função RPC...');
       const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_roteiros_sem_audio', { canal_param: parseInt(selectedChannelId) });
 
       if (!rpcError && rpcData) {
-        console.log('✅ RPC funcionou! Dados encontrados:', rpcData.length);
         const scripts: GeneratedScript[] = rpcData.map((script: any) => ({
           id_roteiro: script.id.toString(),
           titulo: script.titulo || 'Sem título',
@@ -232,12 +229,9 @@ export default function GenerateContentPage() {
           audio_path: undefined
         }));
         setExistingScripts(scripts);
-        console.log('📋 Scripts carregados via RPC:', scripts.length);
         return;
       }
 
-      console.log('⚠️ RPC falhou ou não existe:', rpcError?.message);
-      console.log('🔍 Tentando query direta...');
 
       // Fallback: Query direta (pode não funcionar se RLS estiver ativo)
       const { data, error } = await supabase
@@ -246,7 +240,6 @@ export default function GenerateContentPage() {
         .eq('canal_id', parseInt(selectedChannelId))
         .is('audio_path', null);
 
-      console.log('📊 Query direta:', { data, error, dataLength: data?.length });
 
       if (error) {
         console.error('❌ Erro na query direta:', error);
@@ -255,7 +248,6 @@ export default function GenerateContentPage() {
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ Nenhum roteiro encontrado para o canal', selectedChannelId);
         setExistingScripts([]);
         return;
       }
@@ -268,7 +260,6 @@ export default function GenerateContentPage() {
       }));
 
       setExistingScripts(scripts);
-      console.log('📋 Scripts carregados via query direta:', scripts.length);
 
     } catch (error) {
       console.error('❌ Erro geral:', error);
@@ -286,7 +277,6 @@ export default function GenerateContentPage() {
 
     try {
       setLoadingScriptsForImages(true);
-      console.log('🔍 Carregando roteiros sem imagem para canal:', selectedChannelId);
 
       const { data, error } = await supabase
         .from('roteiros')
@@ -294,7 +284,6 @@ export default function GenerateContentPage() {
         .eq('canal_id', parseInt(selectedChannelId))
         .is('images_path', null);
 
-      console.log('📊 Query roteiros sem imagem:', { data, error, dataLength: data?.length });
 
       if (error) {
         console.error('❌ Erro na query:', error);
@@ -303,7 +292,6 @@ export default function GenerateContentPage() {
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ Nenhum roteiro sem imagem encontrado para o canal', selectedChannelId);
         setExistingScriptsForImages([]);
         return;
       }
@@ -315,7 +303,6 @@ export default function GenerateContentPage() {
       }));
 
       setExistingScriptsForImages(scripts);
-      console.log('📋 Scripts sem imagem carregados:', scripts.length);
 
     } catch (error) {
       console.error('❌ Erro geral:', error);
@@ -343,7 +330,6 @@ export default function GenerateContentPage() {
         apiService.generateContent(payload)
       );
 
-      console.log('Generate titles response:', response);
 
       // Handle the specific response format: [{ "output": { "titulos": { "titulo_1": "...", ... } } }]
       if (response && Array.isArray(response) && response.length > 0) {
@@ -510,14 +496,12 @@ export default function GenerateContentPage() {
         tipo_geracao: 'gerar_imagens'
       };
 
-      console.log('Generate images payload:', payload);
 
       // Call the same endpoint as content generation with tipo_geracao: 'gerar_imagens'
       const response = await execute(() =>
         apiService.generateContent(payload)
       );
 
-      console.log('Generate images response:', response);
 
       if (response && Array.isArray(response)) {
         // Store the generated images
@@ -597,13 +581,11 @@ export default function GenerateContentPage() {
         }
       }
 
-      console.log('Generate content payload:', payload);
 
       const response = await execute(() =>
         apiService.generateContent(payload)
       );
 
-      console.log('Generate content response:', response);
 
       // Handle the response format: [{ "id_roteiro": "18", "titulo": "...", "roteiro": "...", "audio_path": "..." }, ...]
       if (response && Array.isArray(response)) {
@@ -761,7 +743,6 @@ export default function GenerateContentPage() {
         throw new Error('Voz não encontrada');
       }
 
-      console.log('🔄 Buscando preview fresh para voz:', voice.nome_voz, 'Plataforma:', voice.plataforma);
 
       // Get API key from apis table
       const { data: apiData, error: apiError } = await supabase
@@ -774,10 +755,8 @@ export default function GenerateContentPage() {
         throw new Error(`API key não encontrada para ${voice.plataforma}`);
       }
 
-      console.log('✅ API key encontrada para:', voice.plataforma);
 
       if (voice.plataforma === 'ElevenLabs') {
-        console.log('📡 Fazendo requisição para ElevenLabs API...');
 
         const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
           method: 'GET',
@@ -793,11 +772,6 @@ export default function GenerateContentPage() {
         }
 
         const voiceData = await response.json();
-        console.log('📦 Resposta ElevenLabs:', {
-          voice_id: voiceData.voice_id,
-          name: voiceData.name,
-          has_preview: !!voiceData.preview_url
-        });
 
         if (!voiceData.preview_url) {
           throw new Error('Nenhum preview de áudio disponível para esta voz ElevenLabs');
@@ -806,7 +780,6 @@ export default function GenerateContentPage() {
         return voiceData.preview_url;
 
       } else if (voice.plataforma === 'Fish-Audio') {
-        console.log('📡 Fazendo requisição para Fish-Audio API...');
 
         const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
           method: 'GET',
@@ -822,12 +795,6 @@ export default function GenerateContentPage() {
         }
 
         const voiceData = await response.json();
-        console.log('📦 Resposta Fish-Audio:', {
-          _id: voiceData._id,
-          title: voiceData.title,
-          samples_count: voiceData.samples?.length || 0,
-          has_first_sample: !!voiceData.samples?.[0]?.audio
-        });
 
         // Fish-Audio retorna samples, pegamos o primeiro sample de áudio
         if (!voiceData.samples || voiceData.samples.length === 0 || !voiceData.samples[0].audio) {

@@ -46,15 +46,13 @@ export class AudioService {
    */
   async getAllVoicesFromDatabase(): Promise<VoiceData[]> {
     try {
-      console.log('🔍 AudioService: Buscando todas as vozes do banco de dados...');
-      
       const { data, error } = await supabase
         .from('vozes')
         .select('*')
         .order('nome_voz', { ascending: true });
-      
+
       if (error) throw error;
-      
+
       const voices = (data || []).map(voice => ({
         voice_id: voice.voice_id,
         nome_voz: voice.nome_voz,
@@ -66,17 +64,6 @@ export class AudioService {
         created_at: voice.created_at,
         id: voice.id
       }));
-      
-      console.log('📊 AudioService: Vozes carregadas do banco:', {
-        total: voices.length,
-        porPlataforma: voices.reduce((acc, voice) => {
-          acc[voice.plataforma] = (acc[voice.plataforma] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        fishAudioComPreview: voices.filter(v => v.plataforma === 'Fish-Audio' && v.preview_url).length,
-        fishAudioSemPreview: voices.filter(v => v.plataforma === 'Fish-Audio' && !v.preview_url).length
-      });
-
 
       return voices;
     } catch (error) {
@@ -145,12 +132,11 @@ export class AudioService {
         .single();
 
       if (error) {
-        console.warn(`❌ AudioService: Erro ao buscar API key ${platform}:`, error.message);
         return null;
       }
       return data?.api_key || null;
     } catch (error) {
-      console.error(`❌ AudioService: Erro ao buscar API key ${platform}:`, error.message);
+      console.error(`Erro ao buscar API key ${platform}:`, error);
       return null;
     }
   }
@@ -165,7 +151,7 @@ export class AudioService {
 
       return await service.fetchVoiceDetails(voiceId, apiKey || undefined);
     } catch (error) {
-      console.error(`❌ AudioService: Erro ao buscar detalhes da voz ${platform}:`, error.message);
+      console.error(`Erro ao buscar detalhes da voz ${platform}:`, error);
       throw error;
     }
   }
@@ -204,7 +190,6 @@ export class AudioService {
         });
 
       if (error) throw error;
-      console.log(`✅ Voz ${voiceData.nome_voz} salva no banco`);
     } catch (error) {
       console.error('Erro ao salvar voz no banco:', error);
       throw error;
@@ -230,38 +215,24 @@ export class AudioService {
    */
   async playVoicePreview(voice: VoiceData): Promise<HTMLAudioElement | null> {
     try {
-      console.log('🎵 AudioService: Reproduzindo preview', voice.nome_voz, `(${voice.plataforma})`);
-
       // Parar áudio atual se estiver tocando
       this.stopCurrentAudio();
-
-      console.log(`🎵 AudioService: Tentando reproduzir preview para:`, {
-        nome: voice.nome_voz,
-        plataforma: voice.plataforma,
-        preview_url: voice.preview_url,
-        voice_id: voice.voice_id,
-        temPreviewUrl: !!voice.preview_url
-      });
 
       let audioElement: HTMLAudioElement | null = null;
 
       // Para Fish Audio, sempre buscar URL fresca da API a cada clique (URLs são temporárias)
       if (voice.plataforma === 'Fish-Audio') {
-        console.log('🐟 AudioService: Buscando URL fresca do Fish Audio para', voice.nome_voz);
-
         try {
           const fishAudioData = await this.fetchVoiceDetails('Fish-Audio', voice.voice_id);
 
           if (fishAudioData && fishAudioData.preview_url) {
             // Usar URL fresca diretamente (não salvar no banco pois é temporária)
             voice = { ...voice, preview_url: fishAudioData.preview_url };
-            console.log('✅ AudioService: URL fresca obtida com sucesso');
           } else {
-            console.warn('⚠️ AudioService: Não foi possível obter preview para', voice.nome_voz);
             return null;
           }
         } catch (error) {
-          console.error('❌ AudioService: Erro ao buscar dados Fish Audio:', error.message);
+          console.error('Erro ao buscar dados Fish Audio:', error);
           return null;
         }
       }
@@ -281,26 +252,17 @@ export class AudioService {
 
         // Configurar eventos para limpar estado quando terminar
         audioElement.addEventListener('ended', () => {
-          console.log(`🎵 AudioService: Áudio finalizado para ${voice.nome_voz}`);
-          this.clearPlaybackState();
-        });
-        
-        audioElement.addEventListener('error', () => {
-          console.error(`🎵 AudioService: Erro no áudio para ${voice.nome_voz}`);
           this.clearPlaybackState();
         });
 
-        console.log(`✅ AudioService: Preview iniciado com sucesso para ${voice.nome_voz}`);
+        audioElement.addEventListener('error', () => {
+          this.clearPlaybackState();
+        });
       }
 
       return audioElement;
     } catch (error) {
-      console.error('🚨 AudioService: Erro ao reproduzir preview:', {
-        voice: voice.nome_voz,
-        plataforma: voice.plataforma,
-        error: error.message,
-        stack: error.stack
-      });
+      console.error('Erro ao reproduzir preview:', error);
       this.clearPlaybackState();
       return null;
     }
@@ -382,8 +344,6 @@ export class AudioService {
    */
   async syncPlatformVoices(platform: PlatformType, options: VoiceServiceOptions = {}): Promise<number> {
     try {
-      console.log(`🔄 Sincronizando vozes ${platform}...`);
-      
       const result = await this.listVoicesFromApi(platform, options);
       let savedCount = 0;
 
@@ -396,7 +356,6 @@ export class AudioService {
         }
       }
 
-      console.log(`✅ ${savedCount} vozes ${platform} sincronizadas`);
       return savedCount;
     } catch (error) {
       console.error(`Erro ao sincronizar vozes ${platform}:`, error);
