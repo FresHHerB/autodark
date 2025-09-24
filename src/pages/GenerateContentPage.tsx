@@ -40,6 +40,8 @@ export default function GenerateContentPage() {
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(true);
+  const [imageModels, setImageModels] = useState<{id: number, name: string, air: string}[]>([]);
+  const [imageModelsLoading, setImageModelsLoading] = useState(true);
   const [selectedVoiceId, setSelectedVoiceId] = useState<number | null>(null);
   const [audioSpeed, setAudioSpeed] = useState(1.0);
   const [voiceSearchTerm, setVoiceSearchTerm] = useState<string>('');
@@ -71,10 +73,25 @@ export default function GenerateContentPage() {
   const [selectedScriptsForAudio, setSelectedScriptsForAudio] = useState<Set<string>>(new Set());
   const [loadingExistingScripts, setLoadingExistingScripts] = useState(false);
 
+  // For image generation mode
+  const [existingScriptsForImages, setExistingScriptsForImages] = useState<GeneratedScript[]>([]);
+  const [selectedScriptsForImages, setSelectedScriptsForImages] = useState<Set<string>>(new Set());
+  const [loadingScriptsForImages, setLoadingScriptsForImages] = useState(false);
+  const [loadingImageGeneration, setLoadingImageGeneration] = useState(false);
+  const [imageModel, setImageModel] = useState<string>('');
+  const [globalImageStyle, setGlobalImageStyle] = useState<string>('');
+  const [globalImageStyleDetail, setGlobalImageStyleDetail] = useState<string>('');
+  const [globalImageWidth, setGlobalImageWidth] = useState<number>(1024);
+  const [globalImageHeight, setGlobalImageHeight] = useState<number>(1024);
+  const [scriptImageSettings, setScriptImageSettings] = useState<{[key: string]: {n_imgs: number}}>({});
+  const [generatedImages, setGeneratedImages] = useState<{id_roteiro: number, titulo: string, images_path: string[]}[]>([]);
+  const [selectedImageModal, setSelectedImageModal] = useState<{id_roteiro: number, titulo: string, images_path: string[]} | null>(null);
+
   // Load channels and voices on component mount
   useEffect(() => {
     loadChannels();
     loadVoices();
+    loadImageModels();
   }, []);
 
   // Close voice dropdown when clicking outside
@@ -174,6 +191,23 @@ export default function GenerateContentPage() {
     }
   };
 
+  const loadImageModels = async () => {
+    try {
+      setImageModelsLoading(true);
+      const { data, error } = await supabase
+        .from('modelos_imagem')
+        .select('id, name, air')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setImageModels(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar modelos de imagem:', error);
+    } finally {
+      setImageModelsLoading(false);
+    }
+  };
+
   const loadExistingScripts = async () => {
     if (!selectedChannelId) {
       alert('Por favor, selecione um canal primeiro.');
@@ -241,6 +275,53 @@ export default function GenerateContentPage() {
       alert('Erro ao carregar roteiros. Verifique o console para detalhes.');
     } finally {
       setLoadingExistingScripts(false);
+    }
+  };
+
+  const loadScriptsForImages = async () => {
+    if (!selectedChannelId) {
+      alert('Por favor, selecione um canal primeiro.');
+      return;
+    }
+
+    try {
+      setLoadingScriptsForImages(true);
+      console.log('🔍 Carregando roteiros sem imagem para canal:', selectedChannelId);
+
+      const { data, error } = await supabase
+        .from('roteiros')
+        .select('id, titulo, roteiro, canal_id')
+        .eq('canal_id', parseInt(selectedChannelId))
+        .is('images_path', null);
+
+      console.log('📊 Query roteiros sem imagem:', { data, error, dataLength: data?.length });
+
+      if (error) {
+        console.error('❌ Erro na query:', error);
+        alert(`Problema de acesso ao banco: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('⚠️ Nenhum roteiro sem imagem encontrado para o canal', selectedChannelId);
+        setExistingScriptsForImages([]);
+        return;
+      }
+
+      const scripts: GeneratedScript[] = data.map((script: any) => ({
+        id_roteiro: script.id.toString(),
+        titulo: script.titulo || 'Sem título',
+        roteiro: script.roteiro || 'Sem roteiro'
+      }));
+
+      setExistingScriptsForImages(scripts);
+      console.log('📋 Scripts sem imagem carregados:', scripts.length);
+
+    } catch (error) {
+      console.error('❌ Erro geral:', error);
+      alert('Erro ao carregar roteiros. Verifique o console para detalhes.');
+    } finally {
+      setLoadingScriptsForImages(false);
     }
   };
 
@@ -342,6 +423,121 @@ export default function GenerateContentPage() {
 
   const clearScriptSelection = () => {
     setSelectedScriptsForAudio(new Set());
+  };
+
+  const handleImageScriptSelection = (scriptId: string) => {
+    setSelectedScriptsForImages(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(scriptId)) {
+        newSelection.delete(scriptId);
+        // Remove settings for unselected script
+        setScriptImageSettings(prevSettings => {
+          const newSettings = { ...prevSettings };
+          delete newSettings[scriptId];
+          return newSettings;
+        });
+      } else {
+        newSelection.add(scriptId);
+        // Add default settings for new script
+        setScriptImageSettings(prevSettings => ({
+          ...prevSettings,
+          [scriptId]: { n_imgs: 1 }
+        }));
+      }
+      return newSelection;
+    });
+  };
+
+  const clearImageScriptSelection = () => {
+    setSelectedScriptsForImages(new Set());
+    setScriptImageSettings({});
+  };
+
+  const updateScriptImageSetting = (scriptId: string, field: 'n_imgs', value: string | number) => {
+    setScriptImageSettings(prev => ({
+      ...prev,
+      [scriptId]: {
+        ...prev[scriptId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleGenerateImages = async () => {
+    if (selectedScriptsForImages.size === 0 || !imageModel) {
+      alert('Selecione pelo menos um roteiro e um modelo de imagem.');
+      return;
+    }
+
+    if (!globalImageStyle.trim() || !globalImageStyleDetail.trim()) {
+      alert('Preencha o estilo visual e detalhamento globais.');
+      return;
+    }
+
+    if (globalImageWidth < 128 || globalImageHeight < 128 || globalImageWidth % 64 !== 0 || globalImageHeight % 64 !== 0) {
+      alert('As dimensões devem ser múltiplas de 64 com mínimo de 128px.');
+      return;
+    }
+
+    // Validate that all selected scripts have required settings
+    const missingSettings = Array.from(selectedScriptsForImages).filter(scriptId => {
+      const settings = scriptImageSettings[scriptId];
+      return !settings || settings.n_imgs < 1;
+    });
+
+    if (missingSettings.length > 0) {
+      alert('Defina a quantidade de imagens para todos os roteiros selecionados.');
+      return;
+    }
+
+    try {
+      setLoadingImageGeneration(true);
+      const selectedModel = imageModels.find(model => model.air === imageModel);
+
+      // Prepare payload
+      const roteiros = Array.from(selectedScriptsForImages).map(scriptId => ({
+        id_roteiro: parseInt(scriptId),
+        n_imgs: scriptImageSettings[scriptId].n_imgs
+      }));
+
+      const payload = {
+        roteiros,
+        img_model: imageModel,
+        estilo: globalImageStyle,
+        detalhe_estilo: globalImageStyleDetail,
+        altura: globalImageHeight,
+        largura: globalImageWidth,
+        tipo_geracao: 'gerar_imagens'
+      };
+
+      console.log('Generate images payload:', payload);
+
+      // Call the same endpoint as content generation with tipo_geracao: 'gerar_imagens'
+      const response = await execute(() =>
+        apiService.generateContent(payload)
+      );
+
+      console.log('Generate images response:', response);
+
+      if (response && Array.isArray(response)) {
+        // Store the generated images
+        setGeneratedImages(response);
+
+        alert(`Imagens geradas com sucesso para ${response.length} roteiro(s)!`);
+        // Clear selections after successful generation
+        clearImageScriptSelection();
+        // Reload scripts to update the list (scripts with images should be removed)
+        loadScriptsForImages();
+      } else {
+        console.error('Invalid response format:', response);
+        alert('Formato de resposta inesperado do servidor.');
+      }
+    } catch (error) {
+      console.error('Error generating images:', error);
+      alert('Erro ao gerar imagens. Tente novamente.');
+    } finally {
+      setLoadingImageGeneration(false);
+    }
   };
 
   const handleGenerateContent = async () => {
@@ -1523,6 +1719,519 @@ export default function GenerateContentPage() {
             </div>
           </div>
         )}
+
+        {/* Generate Images Section - Redesigned with better UX/UI */}
+        <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 rounded-xl border border-purple-500/30 p-8 mt-8">
+          {/* Header with Icon */}
+          <div className="mb-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full mb-4">
+              <Video className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Gerar Imagens</h2>
+            <p className="text-purple-200 text-sm max-w-md mx-auto">
+              Transforme seus roteiros em conteúdo visual personalizado com IA
+            </p>
+          </div>
+
+          {/* Configuration Panel - Basic Settings */}
+          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-purple-400/20 p-6 mb-8">
+            <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
+              <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+              Configuração Inicial
+            </h3>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Model Selection */}
+              <div>
+                <label className="block text-sm font-medium text-purple-200 mb-3">
+                  Modelo de IA para Imagens
+                </label>
+                {imageModelsLoading ? (
+                  <div className="flex items-center space-x-3 p-4 bg-purple-900/30 border border-purple-500/30 rounded-lg">
+                    <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                    <span className="text-purple-200">Carregando modelos...</span>
+                  </div>
+                ) : (
+                  <select
+                    value={imageModel}
+                    onChange={(e) => setImageModel(e.target.value)}
+                    className="w-full bg-gray-800/80 border border-purple-500/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                  >
+                    <option value="">Selecione um modelo de IA...</option>
+                    {imageModels.map((model) => (
+                      <option key={model.id} value={model.air}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Load Scripts Button */}
+              <div className="flex flex-col justify-end">
+                <button
+                  onClick={loadScriptsForImages}
+                  disabled={loadingScriptsForImages || !selectedChannelId}
+                  className="flex items-center justify-center space-x-3 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-none"
+                >
+                  {loadingScriptsForImages ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Carregando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5" />
+                      <span>{selectedChannelId ? 'Buscar Roteiros sem Imagem' : 'Selecione um Canal Primeiro'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Scripts Selection Panel */}
+          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-purple-400/20 p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white flex items-center">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                Roteiros Disponíveis
+                <span className="ml-2 px-3 py-1 bg-purple-500/30 text-purple-200 text-sm rounded-full">
+                  {existingScriptsForImages.length}
+                </span>
+              </h3>
+              {selectedScriptsForImages.size > 0 && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-purple-200 text-sm">
+                    {selectedScriptsForImages.size} selecionados
+                  </span>
+                  <button
+                    onClick={clearImageScriptSelection}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-200 rounded-lg transition-colors text-sm"
+                  >
+                    Limpar Tudo
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {existingScriptsForImages.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-10 h-10 text-gray-400" />
+                </div>
+                <p className="text-gray-400 mb-2">Nenhum roteiro encontrado</p>
+                <p className="text-gray-500 text-sm">
+                  {selectedChannelId ? 'Clique em "Buscar Roteiros" para carregar roteiros sem imagem' : 'Selecione um canal primeiro'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                {existingScriptsForImages.map((script) => {
+                  const isSelected = selectedScriptsForImages.has(script.id_roteiro);
+                  const settings = scriptImageSettings[script.id_roteiro];
+
+                  return (
+                    <div
+                      key={script.id_roteiro}
+                      className={`relative border-2 rounded-xl transition-all duration-300 ${
+                        isSelected
+                          ? 'border-purple-400/80 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 shadow-lg shadow-purple-500/20'
+                          : 'border-gray-600/50 bg-gray-800/30 hover:border-purple-400/40 hover:bg-gray-800/50'
+                      }`}
+                    >
+                      {/* Selection Header */}
+                      <div
+                        onClick={() => handleImageScriptSelection(script.id_roteiro)}
+                        className="p-5 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 pr-4">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <span className="px-2 py-1 bg-purple-500/20 text-purple-200 text-xs rounded-full">
+                                Roteiro #{script.id_roteiro}
+                              </span>
+                              {isSelected && (
+                                <span className="px-2 py-1 bg-green-500/20 text-green-200 text-xs rounded-full">
+                                  ✓ Selecionado
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-white font-semibold mb-2 line-clamp-2">
+                              {script.titulo}
+                            </h4>
+                            <p className="text-gray-300 text-sm line-clamp-3">
+                              {script.roteiro.substring(0, 150)}
+                              {script.roteiro.length > 150 && '...'}
+                            </p>
+                          </div>
+                          <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'border-purple-400 bg-purple-500'
+                              : 'border-gray-500 hover:border-purple-400'
+                          }`}>
+                            {isSelected && <span className="text-white text-sm">✓</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Configuration Panel - Only when selected */}
+                      {isSelected && (
+                        <div className="border-t border-purple-400/20 p-5 bg-black/20">
+                          <div className="flex items-center justify-between mb-4">
+                            <h5 className="text-white font-medium flex items-center">
+                              <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-2"></div>
+                              Configuração Individual
+                            </h5>
+                            <div className="text-xs text-purple-300/70">
+                              Estilo e dimensões: <span className="text-purple-200 font-medium">Global ↑</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-purple-200 mb-2">
+                                Quantidade de Imagens *
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={settings?.n_imgs || 1}
+                                  onChange={(e) => updateScriptImageSetting(script.id_roteiro, 'n_imgs', parseInt(e.target.value) || 1)}
+                                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                                />
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-300/60 text-xs pointer-events-none">
+                                  imagens
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="text-xs text-purple-200 mb-2">Preview</div>
+                              <div className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-3">
+                                <div className="text-xs space-y-1">
+                                  <div className="text-purple-200">
+                                    <span className="text-purple-300/70">Dimensões:</span> {globalImageWidth}×{globalImageHeight}
+                                  </div>
+                                  <div className="text-purple-200">
+                                    <span className="text-purple-300/70">Total:</span> {(settings?.n_imgs || 1)} × {script.titulo.length > 20 ? script.titulo.substring(0, 20) + '...' : script.titulo}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-purple-300/60 text-xs mt-3">
+                            💡 <span className="font-medium">Apenas a quantidade é configurável por roteiro.</span>
+                            Estilo e dimensões são aplicados universalmente na seção acima.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Universal Configurations Panel */}
+          {existingScriptsForImages.length > 0 && (
+            <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-purple-400/20 p-6 mb-8">
+              <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                Configurações Universais
+              </h3>
+
+              <div className="space-y-6">
+                {/* Style Settings */}
+                <div>
+                  <h5 className="text-purple-200 text-sm font-medium mb-3">Estilo Visual</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-purple-300/80 mb-2">
+                        Estilo Principal *
+                      </label>
+                      <input
+                        type="text"
+                        value={globalImageStyle}
+                        onChange={(e) => setGlobalImageStyle(e.target.value)}
+                        placeholder="fotorrealista, cartoon, pintura digital, aquarela..."
+                        className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-purple-300/80 mb-2">
+                        Detalhamento *
+                      </label>
+                      <input
+                        type="text"
+                        value={globalImageStyleDetail}
+                        onChange={(e) => setGlobalImageStyleDetail(e.target.value)}
+                        placeholder="4K, alta resolução, cores vibrantes, iluminação suave..."
+                        className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dimensions Settings */}
+                <div>
+                  <h5 className="text-purple-200 text-sm font-medium mb-3">Dimensões das Imagens</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-purple-300/80 mb-2">
+                        Largura (px) *
+                      </label>
+                      <input
+                        type="number"
+                        min="128"
+                        max="2048"
+                        step="64"
+                        value={globalImageWidth}
+                        onChange={(e) => setGlobalImageWidth(parseInt(e.target.value) || 1024)}
+                        className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-purple-300/80 mb-2">
+                        Altura (px) *
+                      </label>
+                      <input
+                        type="number"
+                        min="128"
+                        max="2048"
+                        step="64"
+                        value={globalImageHeight}
+                        onChange={(e) => setGlobalImageHeight(parseInt(e.target.value) || 1024)}
+                        className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Global Size Presets */}
+                  <div className="mt-4">
+                    <p className="text-xs text-purple-200/80 mb-3">
+                      <span className="font-medium">Presets universais:</span> Aplicado a todas as imagens
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(1024);
+                          setGlobalImageHeight(1024);
+                        }}
+                        className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-xs rounded-lg transition-colors border border-purple-500/30"
+                      >
+                        <div className="font-medium">1:1 Quadrado</div>
+                        <div className="text-purple-300/80">1024×1024</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(1152);
+                          setGlobalImageHeight(896);
+                        }}
+                        className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-xs rounded-lg transition-colors border border-purple-500/30"
+                      >
+                        <div className="font-medium">9:7 Paisagem</div>
+                        <div className="text-purple-300/80">1152×896</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(896);
+                          setGlobalImageHeight(1152);
+                        }}
+                        className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-xs rounded-lg transition-colors border border-purple-500/30"
+                      >
+                        <div className="font-medium">7:9 Retrato</div>
+                        <div className="text-purple-300/80">896×1152</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(1280);
+                          setGlobalImageHeight(768);
+                        }}
+                        className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-xs rounded-lg transition-colors border border-purple-500/30"
+                      >
+                        <div className="font-medium">5:3 Widescreen</div>
+                        <div className="text-purple-300/80">1280×768</div>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(1344);
+                          setGlobalImageHeight(768);
+                        }}
+                        className="px-4 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 text-xs rounded-lg transition-colors border border-indigo-500/30"
+                      >
+                        <div className="font-medium">16:9 Landscape</div>
+                        <div className="text-indigo-300/80">1344×768</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGlobalImageWidth(768);
+                          setGlobalImageHeight(1344);
+                        }}
+                        className="px-4 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 text-xs rounded-lg transition-colors border border-indigo-500/30"
+                      >
+                        <div className="font-medium">9:16 Portrait</div>
+                        <div className="text-indigo-300/80">768×1344</div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-purple-300/60 text-xs">
+                  💡 <span className="font-medium">Todas as configurações acima se aplicam a todos os roteiros selecionados.</span>
+                  Configure o estilo visual e dimensões uma única vez para manter consistência.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Generate Button */}
+          {selectedScriptsForImages.size > 0 && (
+            <div className="text-center">
+              <button
+                onClick={handleGenerateImages}
+                disabled={
+                  loadingImageGeneration ||
+                  selectedScriptsForImages.size === 0 ||
+                  !imageModel ||
+                  !globalImageStyle.trim() ||
+                  !globalImageStyleDetail.trim() ||
+                  globalImageWidth < 128 ||
+                  globalImageHeight < 128 ||
+                  globalImageWidth % 64 !== 0 ||
+                  globalImageHeight % 64 !== 0 ||
+                  Array.from(selectedScriptsForImages).some(scriptId => {
+                    const settings = scriptImageSettings[scriptId];
+                    return !settings || settings.n_imgs < 1;
+                  })
+                }
+                className={`
+                  inline-flex items-center space-x-4 px-12 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform shadow-2xl
+                  ${(loadingImageGeneration ||
+                     selectedScriptsForImages.size === 0 ||
+                     !imageModel ||
+                     !globalImageStyle.trim() ||
+                     !globalImageStyleDetail.trim() ||
+                     globalImageWidth < 128 ||
+                     globalImageHeight < 128 ||
+                     globalImageWidth % 64 !== 0 ||
+                     globalImageHeight % 64 !== 0 ||
+                     Array.from(selectedScriptsForImages).some(scriptId => {
+                       const settings = scriptImageSettings[scriptId];
+                       return !settings || settings.n_imgs < 1;
+                     })
+                    )
+                    ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed border border-gray-600'
+                    : 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white hover:scale-105 active:scale-95 shadow-purple-500/50'
+                  }
+                `}
+              >
+                {loadingImageGeneration ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Gerando Imagens...</span>
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-6 h-6" />
+                    <span>Gerar Imagens para {selectedScriptsForImages.size} Roteiro{selectedScriptsForImages.size > 1 ? 's' : ''}</span>
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-bold">{selectedScriptsForImages.size}</span>
+                    </div>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Generated Images Results */}
+          {generatedImages.length > 0 && (
+            <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-green-400/20 p-6 mt-8">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                  Imagens Geradas com Sucesso
+                  <span className="ml-2 px-3 py-1 bg-green-500/30 text-green-200 text-sm rounded-full">
+                    {generatedImages.length} roteiro{generatedImages.length > 1 ? 's' : ''}
+                  </span>
+                </h3>
+                <p className="text-green-200/80 text-sm mt-2">
+                  Clique nos cards para visualizar as imagens geradas
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {generatedImages.map((item) => (
+                  <div
+                    key={item.id_roteiro}
+                    onClick={() => setSelectedImageModal(item)}
+                    className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-4 cursor-pointer hover:border-green-400/50 transition-all duration-200 hover:scale-105"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="px-2 py-1 bg-green-500/20 text-green-200 text-xs rounded-full">
+                        Roteiro #{item.id_roteiro}
+                      </span>
+                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-200 text-xs rounded-full">
+                        {item.images_path.length} imagens
+                      </span>
+                    </div>
+
+                    <h4 className="text-white font-medium mb-3 line-clamp-2 text-sm">
+                      {item.titulo}
+                    </h4>
+
+                    {/* Preview of first 3 images */}
+                    <div className="flex space-x-1 mb-3">
+                      {item.images_path.slice(0, 3).map((imagePath, index) => (
+                        <div
+                          key={index}
+                          className="w-16 h-12 bg-gray-800/60 rounded border border-green-500/20 overflow-hidden"
+                        >
+                          <img
+                            src={imagePath}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA2NCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yMiAyMEwyNiAyNEwzNCAyMEw0MiAyOEgyMlYyMFoiIGZpbGw9IiM2QjczODAiLz4KPGNpcmNsZSBjeD0iMjgiIGN5PSIyMCIgcj0iMyIgZmlsbD0iIzZCNzM4MCIvPgo8L3N2Zz4K';
+                            }}
+                          />
+                        </div>
+                      ))}
+                      {item.images_path.length > 3 && (
+                        <div className="w-16 h-12 bg-green-900/40 rounded border border-green-500/20 flex items-center justify-center">
+                          <span className="text-green-200 text-xs font-medium">
+                            +{item.images_path.length - 3}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-green-300/80 text-xs">
+                        Clique para ver todas
+                      </div>
+                      <div className="w-5 h-5 rounded-full border border-green-400 flex items-center justify-center">
+                        <span className="text-green-400 text-xs">→</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Script Detail Modal */}
@@ -1674,6 +2383,151 @@ export default function GenerateContentPage() {
           </div>
         </div>
       )}
+
+      {/* Image Gallery Modal */}
+      {selectedImageModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          onClick={() => setSelectedImageModal(null)}
+        >
+          <div
+            className="bg-gray-900 rounded-2xl border border-green-700 w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-green-700 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                  <Video className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-medium text-white">Imagens Geradas</h2>
+                  <p className="text-sm text-green-400">Roteiro #{selectedImageModal.id_roteiro}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedImageModal(null)}
+                className="w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="p-6">
+                {/* Title */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Título do Roteiro
+                  </label>
+                  <div className="p-4 bg-black/50 border border-green-700 rounded-xl">
+                    <p className="text-green-100 font-medium">{selectedImageModal.titulo}</p>
+                  </div>
+                </div>
+
+                {/* Images Grid */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Imagens Geradas ({selectedImageModal.images_path.length})
+                  </label>
+                </div>
+              </div>
+
+              {/* Scrollable Images Grid */}
+              <div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {selectedImageModal.images_path.map((imagePath, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-800/50 border border-green-600/30 rounded-lg overflow-hidden hover:border-green-500/50 transition-all duration-200 hover:scale-105 cursor-pointer group"
+                      onClick={() => window.open(imagePath, '_blank')}
+                    >
+                      <div className="aspect-square relative">
+                        <img
+                          src={imagePath}
+                          alt={`Imagem ${index + 1} - ${selectedImageModal.titulo}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik04MCA4MEw5MCA5MEwxMTAgODBMMTMwIDEwMEg4MFY4MFoiIGZpbGw9IiM2QjczODAiLz4KPGNpcmNsZSBjeD0iOTAiIGN5PSI4MCIgcj0iOCIgZmlsbD0iIzZCNzM4MCIvPgo8L3N2Zz4K';
+                          }}
+                        />
+
+                        {/* Image overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                              <span className="text-white text-sm">🔍</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Image number */}
+                        <div className="absolute top-2 left-2">
+                          <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-xs rounded-full">
+                            {index + 1}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3">
+                        <p className="text-gray-300 text-xs text-center">
+                          Imagem {index + 1}
+                        </p>
+                        <p className="text-green-400/80 text-xs text-center mt-1">
+                          Clique para abrir em nova aba
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-green-700 p-4 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-400">
+                    Total: {selectedImageModal.images_path.length} imagens geradas
+                  </div>
+                  <button
+                    onClick={() => {
+                      // Download all images logic could be added here
+                      selectedImageModal.images_path.forEach((url, index) => {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `imagem_${index + 1}.jpg`;
+                        a.target = '_blank';
+                        a.click();
+                      });
+                    }}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    Baixar Todas
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(75, 85, 99, 0.3);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(147, 51, 234, 0.6);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(147, 51, 234, 0.8);
+        }
+      `}</style>
     </div>
   );
 }
