@@ -21,7 +21,6 @@ export default function VoiceSelector({
   const [error, setError] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
 
-  console.log('🎨 VoiceSelector renderizado:', { selectedVoiceId, label });
 
   useEffect(() => {
     loadVoices();
@@ -44,61 +43,31 @@ export default function VoiceSelector({
   const handlePlayPreview = async (voice: VoiceData, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    console.log('🎵 Reproduzindo preview:', voice.nome_voz, `(${voice.plataforma})`);
-
-    console.log('🎵 VoiceSelector: Iniciando preview de voz', {
-      voice_id: voice.voice_id,
-      nome_voz: voice.nome_voz,
-      plataforma: voice.plataforma,
-      preview_url: voice.preview_url,
-      temPreviewUrl: !!voice.preview_url,
-      jaEstaTocando: playingVoiceId === voice.voice_id
-    });
     
     // Se já está tocando esta voz, parar
     if (playingVoiceId === voice.voice_id) {
-      console.log('🎵 VoiceSelector: Parando áudio atual');
       audioService.stopCurrentAudio();
       setPlayingVoiceId(null);
       return;
     }
 
     try {
-      console.log('🎵 VoiceSelector: Chamando audioService.playVoicePreview...');
       const audio = await audioService.playVoicePreview(voice);
-      
-      console.log('🎵 VoiceSelector: Resultado do playVoicePreview:', {
-        audioElement: !!audio,
-        src: audio?.src,
-        readyState: audio?.readyState
-      });
       
       if (audio) {
         setPlayingVoiceId(voice.voice_id);
 
         // Limpar estado quando o áudio terminar
         audio.addEventListener('ended', () => {
-          console.log('🎵 VoiceSelector: Áudio finalizado');
           setPlayingVoiceId(null);
         });
-        
+
         audio.addEventListener('error', () => {
-          console.log('🎵 VoiceSelector: Erro no áudio');
           setPlayingVoiceId(null);
-        });
-      } else {
-        console.warn('🎵 VoiceSelector: Não foi possível criar o elemento de áudio', {
-          voice: voice.nome_voz,
-          plataforma: voice.plataforma
         });
       }
     } catch (error) {
-      console.error('🎵 VoiceSelector: Erro ao reproduzir preview:', {
-        voice: voice.nome_voz,
-        plataforma: voice.plataforma,
-        error: error.message,
-        stack: error.stack
-      });
+      console.error('Erro ao reproduzir preview:', error);
       // Mostrar mensagem de erro para o usuário
       alert(`Erro ao reproduzir preview da voz ${voice.nome_voz}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
@@ -111,19 +80,6 @@ export default function VoiceSelector({
     return v.id === selectedVoiceId;
   });
 
-  console.log('🔍 VoiceSelector RENDER DEBUG:', {
-    voices_total: voices.length,
-    selectedVoiceId,
-    selectedVoice: selectedVoice ? {
-      id: selectedVoice.id,
-      nome_voz: selectedVoice.nome_voz,
-      plataforma: selectedVoice.plataforma,
-      preview_url: selectedVoice.preview_url
-    } : null,
-    temSelectedVoice: !!selectedVoice,
-    podeTocarPreview: selectedVoice ? (selectedVoice.preview_url || selectedVoice.plataforma === 'Fish-Audio') : false,
-    primeiras_3_voices: voices.slice(0, 3).map(v => ({ id: v.id, nome: v.nome_voz, plataforma: v.plataforma }))
-  });
 
   const groupedVoices = voices.reduce((acc, voice) => {
     if (!acc[voice.plataforma]) {
@@ -186,13 +142,6 @@ export default function VoiceSelector({
       {/* Voice Preview Section */}
       {selectedVoice && (
         <div className="mt-3 bg-gray-800 border border-gray-700 p-3">
-          {console.log('🎵 VoiceSelector: Renderizando preview section para:', {
-            voice_id: selectedVoice.voice_id,
-            nome_voz: selectedVoice.nome_voz,
-            plataforma: selectedVoice.plataforma,
-            preview_url: selectedVoice.preview_url,
-            temPreviewUrl: !!selectedVoice.preview_url
-          })}
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="text-white text-sm font-medium mb-1">
