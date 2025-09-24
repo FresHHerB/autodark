@@ -21,6 +21,7 @@ import {
   FileText,
   Volume2
 } from 'lucide-react';
+import ImageModelCard from '../components/ImageModelCard';
 import DashboardHeader from '../components/DashboardHeader';
 
 interface API {
@@ -41,6 +42,13 @@ interface Voice {
   audio_file_path?: string;
 }
 
+interface ImageModel {
+  id: number;
+  name: string;
+  air: string;
+  created_at: string;
+}
+
 export default function SettingsPage() {
   const [apis, setApis] = useState<API[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -50,12 +58,33 @@ export default function SettingsPage() {
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Image Models State
+  const [imageModels, setImageModels] = useState<ImageModel[]>([]);
+  const [isLoadingImageModels, setIsLoadingImageModels] = useState(true);
+
   const platforms = ['Fish-Audio', 'ElevenLabs', 'Minimax'];
-  const allowedPlatforms = ['Fish-Audio', 'ElevenLabs', 'Minimax'];
+  const allowedPlatforms = ['Fish-Audio', 'ElevenLabs', 'Minimax', 'Runware'];
   const [showApiModal, setShowApiModal] = useState(false);
   const [editingApi, setEditingApi] = useState<API | null>(null);
   const [apiForm, setApiForm] = useState({ plataforma: '', api_key: '' });
   const [isSavingApi, setIsSavingApi] = useState(false);
+
+  // Image Model Modal State
+  const [showImageModelModal, setShowImageModelModal] = useState(false);
+  const [editingImageModel, setEditingImageModel] = useState<ImageModel | null>(null);
+  const [imageModelForm, setImageModelForm] = useState({
+    air: '',
+    plataforma: 'Runware',
+  });
+  const [isSavingImageModel, setIsSavingImageModel] = useState(false);
+  const [isCollectingModelData, setIsCollectingModelData] = useState(false);
+  const [collectedModelData, setCollectedModelData] = useState<{
+    nome_modelo: string;
+    categoria: string;
+    descricao: string;
+    tags: string[];
+  } | null>(null);
+  const [autoCollectModelTimeout, setAutoCollectModelTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Voice Modal State
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -85,6 +114,7 @@ export default function SettingsPage() {
   useEffect(() => {
     loadApis();
     loadVoices();
+    loadImageModels();
   }, []);
 
   useEffect(() => {
@@ -237,6 +267,26 @@ export default function SettingsPage() {
     }
   };
 
+  const loadImageModels = async () => {
+    setIsLoadingImageModels(true);
+    try {
+      const { data, error } = await supabase
+        .from('modelos_imagem')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setMessage({ type: 'error', text: 'Erro ao carregar modelos de imagem.' });
+      } else {
+        setImageModels(data || []);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erro de conexão.' });
+    } finally {
+      setIsLoadingImageModels(false);
+    }
+  };
+
   // Collect voice data automatically using edge functions
   const collectVoiceData = async (voiceId: string, platform: string) => {
     console.log('🎯 [collectVoiceData] Iniciando coleta:', { voiceId, platform });
@@ -258,7 +308,7 @@ export default function SettingsPage() {
     setManualEditReason('');
 
     try {
-      const apiData = apis.find(api => api.plataforma === platform);
+      const apiData = apis.find(api => api.plataforma.toLowerCase() === platform.toLowerCase());
       if (!apiData) {
         throw new Error(`API key não encontrada para ${platform}`);
       }
@@ -509,6 +559,414 @@ export default function SettingsPage() {
       });
   };
 
+  // Image Model Functions
+  const collectModelData = async (air: string, platform: string) => {
+    console.log('🚀 [collectModelData] === INICIANDO COLETA DE DADOS ===');
+    console.log('🎨 [collectModelData] Parâmetros recebidos:', { air, platform });
+    console.log('🎨 [collectModelData] Tipo dos parâmetros:', {
+      airType: typeof air,
+      airLength: air?.length || 0,
+      platformType: typeof platform,
+      platformLength: platform?.length || 0
+    });
+
+    if (!air.trim() || platform !== 'Runware') {
+      console.log('❌ [collectModelData] VALIDAÇÃO FALHOU - Campos vazios ou plataforma inválida');
+      console.log('❌ [collectModelData] air.trim():', air.trim());
+      console.log('❌ [collectModelData] platform:', platform);
+      console.log('❌ [collectModelData] platform === "Runware":', platform === 'Runware');
+      console.log('🧹 [collectModelData] Limpando dados coletados...');
+      setCollectedModelData(null);
+      return;
+    }
+
+    console.log('✅ [collectModelData] VALIDAÇÃO PASSOU - Iniciando coleta...');
+    console.log('🔄 [collectModelData] Configurando estados...');
+    setIsCollectingModelData(true);
+    setCollectedModelData(null);
+    console.log('🔄 [collectModelData] Estados configurados');
+
+    try {
+      console.log('🔍 [collectModelData] === BUSCANDO API KEY ===');
+      console.log('🔍 [collectModelData] APIs disponíveis:', apis.map(a => ({
+        plataforma: a.plataforma,
+        id: a.id,
+        hasApiKey: !!a.api_key,
+        keyLength: a.api_key?.length || 0
+      })));
+      console.log('🔍 [collectModelData] Buscando plataforma:', platform);
+
+      const apiData = apis.find(api => api.plataforma.toLowerCase() === platform.toLowerCase());
+      console.log('🔍 [collectModelData] Resultado da busca:', {
+        found: !!apiData,
+        platform,
+        availableAPIs: apis.map(a => a.plataforma),
+        matchedPlatform: apiData?.plataforma,
+        hasApiKey: !!apiData?.api_key,
+        apiKeyLength: apiData?.api_key?.length || 0
+      });
+
+      if (!apiData) {
+        throw new Error(`API key não encontrada para ${platform}`);
+      }
+
+      const requestPayload = {
+        air: air,
+        api_key: apiData.api_key
+      };
+      console.log('📤 [collectModelData] Enviando requisição para Edge Function:', {
+        url: 'https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model',
+        payload: { ...requestPayload, api_key: '***REDACTED***' }
+      });
+
+      let modelData;
+      try {
+        // Primeira tentativa: Edge Function
+        console.log('🚀 [collectModelData] === INICIANDO EDGE FUNCTION ===');
+        console.log('📤 [collectModelData] PAYLOAD sendo enviado:', JSON.stringify(requestPayload, null, 2));
+        console.log('📤 [collectModelData] HEADERS enviados:', {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY ? import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'UNDEFINED'}`,
+          'Content-Type': 'application/json',
+        });
+        console.log('📤 [collectModelData] URL:', 'https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model');
+
+        console.log('📡 Enviando requisição para Edge Function...');
+        const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-runware-model`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload)
+        });
+
+        console.log('📥 [collectModelData] === RESPOSTA DA EDGE FUNCTION ===');
+        console.log('📥 [collectModelData] Status:', response.status);
+        console.log('📥 [collectModelData] Status Text:', response.statusText);
+        console.log('📥 [collectModelData] OK:', response.ok);
+        console.log('📥 [collectModelData] Type:', response.type);
+        console.log('📥 [collectModelData] URL:', response.url);
+        console.log('📥 [collectModelData] Headers completos:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          let errorText;
+          try {
+            errorText = await response.text();
+            console.error('❌ [collectModelData] ERRO - Resposta da Edge Function (text):', errorText);
+
+            // Tentar parsear como JSON se possível
+            try {
+              const errorJson = JSON.parse(errorText);
+              console.error('❌ [collectModelData] ERRO - Como JSON:', JSON.stringify(errorJson, null, 2));
+            } catch (jsonError) {
+              console.log('ℹ️ [collectModelData] Resposta de erro não é JSON válido');
+            }
+          } catch (textError) {
+            console.error('❌ [collectModelData] ERRO - Não foi possível ler texto da resposta:', textError);
+            errorText = 'Erro ao ler resposta';
+          }
+          throw new Error(`Edge Function falhou: ${response.status} - ${errorText}`);
+        }
+
+        let result;
+        try {
+          const responseText = await response.text();
+          console.log('📊 [collectModelData] RESPOSTA RAW (texto):', responseText);
+
+          result = JSON.parse(responseText);
+          console.log('📊 [collectModelData] RESPOSTA PARSEADA (JSON):', JSON.stringify(result, null, 2));
+        } catch (parseError) {
+          console.error('❌ [collectModelData] ERRO ao parsear JSON da resposta:', parseError);
+          throw new Error('Resposta da Edge Function não é JSON válido');
+        }
+
+        if (!result.data) {
+          console.error('❌ [collectModelData] ERRO - Resposta sem propriedade "data":', result);
+          throw new Error('Resposta da Edge Function sem dados válidos');
+        }
+
+        modelData = result.data;
+        console.log('🔍 [collectModelData] MODEL DATA extraído:', JSON.stringify(modelData, null, 2));
+        console.log('✅ [collectModelData] === EDGE FUNCTION SUCESSO ===');
+
+      } catch (edgeFunctionError) {
+        console.log('🔄 [collectModelData] === INICIANDO FALLBACK - API DIRETA ===');
+        console.log('⚠️ [collectModelData] Edge Function falhou, motivo:', edgeFunctionError.message);
+        console.error('🔍 [collectModelData] Stack trace do erro:', edgeFunctionError.stack);
+
+        // Fallback: Chamada direta à API Runware
+        const taskUUID = crypto.randomUUID();
+        const directRequestBody = [
+          {
+            taskType: "modelSearch",
+            taskUUID: taskUUID,
+            search: air,
+            visibility: ["public", "community"],
+            limit: 1
+          }
+        ];
+
+        console.log('📤 [collectModelData] PAYLOAD da API direta:', JSON.stringify(directRequestBody, null, 2));
+        console.log('📤 [collectModelData] HEADERS da API direta:', {
+          'Authorization': `Bearer ${apiData.api_key ? apiData.api_key.substring(0, 15) + '...' : 'UNDEFINED'}`,
+          'Content-Type': 'application/json',
+        });
+        console.log('📤 [collectModelData] URL da API direta:', 'https://api.runware.ai/v1');
+        console.log('📤 [collectModelData] Task UUID:', taskUUID);
+        console.log('📤 [collectModelData] AIR pesquisado:', air);
+
+        console.log('📡 Enviando requisição para API Runware direta...');
+        const directResponse = await fetch('https://api.runware.ai/v1', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiData.api_key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(directRequestBody)
+        });
+
+        console.log('📥 [collectModelData] === RESPOSTA DA API DIRETA ===');
+        console.log('📥 [collectModelData] Status:', directResponse.status);
+        console.log('📥 [collectModelData] Status Text:', directResponse.statusText);
+        console.log('📥 [collectModelData] OK:', directResponse.ok);
+        console.log('📥 [collectModelData] Type:', directResponse.type);
+        console.log('📥 [collectModelData] URL:', directResponse.url);
+        console.log('📥 [collectModelData] Headers completos:', Object.fromEntries(directResponse.headers.entries()));
+
+        if (!directResponse.ok) {
+          let errorText;
+          try {
+            errorText = await directResponse.text();
+            console.error('❌ [collectModelData] ERRO - Resposta da API direta (text):', errorText);
+
+            // Tentar parsear como JSON se possível
+            try {
+              const errorJson = JSON.parse(errorText);
+              console.error('❌ [collectModelData] ERRO - Como JSON:', JSON.stringify(errorJson, null, 2));
+            } catch (jsonError) {
+              console.log('ℹ️ [collectModelData] Resposta de erro da API direta não é JSON válido');
+            }
+          } catch (textError) {
+            console.error('❌ [collectModelData] ERRO - Não foi possível ler texto da resposta da API direta:', textError);
+            errorText = 'Erro ao ler resposta';
+          }
+          throw new Error(`Runware API error: ${directResponse.status} - ${errorText}`);
+        }
+
+        let directResponseData;
+        try {
+          const responseText = await directResponse.text();
+          console.log('📊 [collectModelData] RESPOSTA RAW da API direta (texto):', responseText);
+
+          directResponseData = JSON.parse(responseText);
+          console.log('📊 [collectModelData] RESPOSTA PARSEADA da API direta (JSON):', JSON.stringify(directResponseData, null, 2));
+        } catch (parseError) {
+          console.error('❌ [collectModelData] ERRO ao parsear JSON da resposta da API direta:', parseError);
+          throw new Error('Resposta da API Runware não é JSON válido');
+        }
+
+        // Verificar se temos resultados
+        console.log('🔍 [collectModelData] Verificando estrutura de dados...');
+        console.log('🔍 [collectModelData] directResponseData?.data:', !!directResponseData?.data);
+        console.log('🔍 [collectModelData] directResponseData.data.length:', directResponseData?.data?.length || 0);
+
+        if (directResponseData?.data?.[0]) {
+          console.log('🔍 [collectModelData] Primeiro item data:', JSON.stringify(directResponseData.data[0], null, 2));
+          console.log('🔍 [collectModelData] directResponseData.data[0].results:', !!directResponseData.data[0].results);
+          console.log('🔍 [collectModelData] directResponseData.data[0].results.length:', directResponseData.data[0].results?.length || 0);
+        }
+
+        if (!directResponseData?.data?.[0]?.results || directResponseData.data[0].results.length === 0) {
+          console.error('❌ [collectModelData] ERRO - Nenhum resultado encontrado para:', air);
+          console.log('🔍 [collectModelData] Estrutura recebida:', JSON.stringify(directResponseData, null, 2));
+          throw new Error(`Nenhum modelo encontrado para o AIR: ${air}`);
+        }
+
+        // Processar dados igual à Edge Function
+        const rawModelData = directResponseData.data[0].results[0];
+        console.log('📦 [collectModelData] RAW MODEL DATA:', JSON.stringify(rawModelData, null, 2));
+
+        modelData = {
+          air: rawModelData.air,
+          nome_modelo: rawModelData.name || 'Nome não disponível',
+          plataforma: 'Runware',
+          categoria: rawModelData.category || 'Não especificado',
+          descricao: rawModelData.comment || '',
+          tags: rawModelData.tags || [],
+          preview_url: rawModelData.heroImage || '',
+          creator: 'Runware',
+          base_model: rawModelData.architecture || '',
+          type: rawModelData.type || '',
+          version: rawModelData.version || '',
+          download_count: 0,
+          like_count: 0,
+          raw_data: rawModelData
+        };
+
+        console.log('🔧 [collectModelData] MODEL DATA processado:', JSON.stringify(modelData, null, 2));
+        console.log('✅ [collectModelData] === API DIRETA SUCESSO ===');
+      }
+
+      console.log('🔍 [collectModelData] Dados processados do modelo:', modelData);
+
+      console.log('🔧 [collectModelData] === PROCESSAMENTO FINAL ===');
+
+      const collectedData = {
+        nome_modelo: modelData.nome_modelo || 'Nome não disponível',
+        categoria: modelData.categoria || 'Não especificado',
+        descricao: modelData.descricao || '',
+        tags: modelData.tags || []
+      };
+
+      console.log('💾 [collectModelData] COLLECTED DATA que será salvo no state:', JSON.stringify(collectedData, null, 2));
+      console.log('💾 [collectModelData] Campos individuais:');
+      console.log('  📝 nome_modelo:', collectedData.nome_modelo);
+      console.log('  📁 categoria:', collectedData.categoria);
+      console.log('  📄 descricao:', collectedData.descricao);
+      console.log('  🏷️ tags:', collectedData.tags);
+      console.log('  🏷️ tags.length:', collectedData.tags?.length || 0);
+
+      console.log('🔄 [collectModelData] Chamando setCollectedModelData...');
+      setCollectedModelData(collectedData);
+      console.log('✅ [collectModelData] setCollectedModelData executado');
+
+      console.log('✅ [collectModelData] === COLETA CONCLUÍDA COM SUCESSO ===');
+
+    } catch (error) {
+      console.error('❌ [collectModelData] Erro ao coletar dados do modelo:', error);
+      console.error('🔍 [collectModelData] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      setCollectedModelData(null);
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao coletar dados do modelo' });
+    } finally {
+      console.log('🏁 [collectModelData] Finalizando coleta');
+      setIsCollectingModelData(false);
+    }
+  };
+
+  const handleImageModelFormChange = (field: string, value: string) => {
+    console.log('📝 [handleImageModelFormChange] Campo alterado:', { field, value });
+    setImageModelForm(prev => ({ ...prev, [field]: value }));
+
+    if (autoCollectModelTimeout) {
+      console.log('⏰ [handleImageModelFormChange] Limpando timeout anterior');
+      clearTimeout(autoCollectModelTimeout);
+    }
+
+    const newTimeout = setTimeout(() => {
+      const updatedForm = { ...imageModelForm, [field]: value };
+      console.log('⏰ [handleImageModelFormChange] Timeout executado, form:', updatedForm);
+      if (updatedForm.air.trim() && updatedForm.plataforma.trim()) {
+        console.log('✅ [handleImageModelFormChange] Condições atendidas, iniciando coleta');
+        collectModelData(updatedForm.air, updatedForm.plataforma);
+      }
+    }, 800);
+
+    console.log('⏰ [handleImageModelFormChange] Novo timeout definido');
+    setAutoCollectModelTimeout(newTimeout);
+  };
+
+  const openImageModelModal = (model?: ImageModel) => {
+    if (model) {
+      setEditingImageModel(model);
+      setImageModelForm({
+        air: model.air,
+        plataforma: 'Runware'
+      });
+      setCollectedModelData({
+        nome_modelo: model.name,
+        categoria: 'Carregado',
+        descricao: '',
+        tags: []
+      });
+    } else {
+      setEditingImageModel(null);
+      setImageModelForm({
+        air: '',
+        plataforma: 'Runware'
+      });
+      setCollectedModelData(null);
+    }
+
+    if (autoCollectModelTimeout) {
+      clearTimeout(autoCollectModelTimeout);
+      setAutoCollectModelTimeout(null);
+    }
+
+    setShowImageModelModal(true);
+  };
+
+  const closeImageModelModal = () => {
+    if (autoCollectModelTimeout) {
+      clearTimeout(autoCollectModelTimeout);
+      setAutoCollectModelTimeout(null);
+    }
+
+    setShowImageModelModal(false);
+    setEditingImageModel(null);
+    setImageModelForm({
+      air: '',
+      plataforma: 'Runware'
+    });
+    setCollectedModelData(null);
+  };
+
+  const saveImageModel = async () => {
+    if (!imageModelForm.air.trim() || !collectedModelData) {
+      setMessage({ type: 'error', text: 'Preencha o AIR e colete os dados automaticamente.' });
+      return;
+    }
+
+    setIsSavingImageModel(true);
+    try {
+      if (editingImageModel) {
+        const { error } = await supabase
+          .from('modelos_imagem')
+          .update({
+            name: collectedModelData.nome_modelo,
+            air: imageModelForm.air
+          })
+          .eq('id', editingImageModel.id);
+
+        if (error) throw error;
+        setMessage({ type: 'success', text: 'Modelo atualizado com sucesso!' });
+      } else {
+        const { error } = await supabase
+          .from('modelos_imagem')
+          .insert([{
+            name: collectedModelData.nome_modelo,
+            air: imageModelForm.air
+          }]);
+
+        if (error) throw error;
+        setMessage({ type: 'success', text: 'Modelo adicionado com sucesso!' });
+      }
+
+      closeImageModelModal();
+      loadImageModels();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erro ao salvar modelo.' });
+    } finally {
+      setIsSavingImageModel(false);
+    }
+  };
+
+  const deleteImageModel = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este modelo?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('modelos_imagem')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setMessage({ type: 'success', text: 'Modelo excluído com sucesso!' });
+      loadImageModels();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erro ao excluir modelo.' });
+    }
+  };
+
   // API Functions
   const openApiModal = (api?: API) => {
     if (api) {
@@ -645,7 +1103,7 @@ export default function SettingsPage() {
     }
 
     // Find the platform ID in the apis table
-    const platformApi = apis.find(api => api.plataforma === voiceForm.plataforma);
+    const platformApi = apis.find(api => api.plataforma.toLowerCase() === voiceForm.plataforma.toLowerCase());
     if (!platformApi) {
       setMessage({ type: 'error', text: 'API da plataforma não encontrada. Configure a API primeiro.' });
       return;
@@ -715,7 +1173,7 @@ export default function SettingsPage() {
     try {
       if (voice.plataforma === 'ElevenLabs') {
         // Get API key for ElevenLabs
-        const apiData = apis.find(api => api.plataforma === voice.plataforma);
+        const apiData = apis.find(api => api.plataforma.toLowerCase() === voice.plataforma.toLowerCase());
         if (!apiData) {
           throw new Error(`API key não encontrada para ${voice.plataforma}`);
         }
@@ -779,7 +1237,7 @@ export default function SettingsPage() {
 
       } else if (voice.plataforma === 'Fish-Audio') {
         // Get API key for Fish-Audio
-        const apiData = apis.find(api => api.plataforma === voice.plataforma);
+        const apiData = apis.find(api => api.plataforma.toLowerCase() === voice.plataforma.toLowerCase());
         if (!apiData) {
           throw new Error(`API key não encontrada para ${voice.plataforma}`);
         }
@@ -935,53 +1393,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Grid Layout for APIs and Voices */}
+        {/* Grid Layout for Voices and Image Models */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-          {/* APIs Section */}
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-medium text-white mb-2">APIs</h2>
-                <p className="text-gray-400">Gerencie suas chaves de API das plataformas</p>
-              </div>
-              <button
-                onClick={() => openApiModal()}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Adicionar API</span>
-              </button>
-            </div>
-
-            {isLoadingApis ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>Carregando APIs...</span>
-                </div>
-              </div>
-            ) : apis.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Key className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-light text-white mb-2">Nenhuma API configurada</h3>
-                <p className="text-gray-400">Adicione suas chaves de API para começar</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {apis.map((api) => (
-                  <ApiCard
-                    key={api.id}
-                    api={api}
-                    onEdit={() => openApiModal(api)}
-                    onDelete={() => deleteApi(api.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Voices Section */}
           <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -1093,13 +1506,101 @@ export default function SettingsPage() {
             </div>
           )}
           </div>
+
+          {/* Image Models Section */}
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-medium text-white mb-2">Modelos de Imagem ({imageModels.length})</h2>
+                <p className="text-gray-400">Gerencie seus modelos de IA para geração de imagens</p>
+              </div>
+              <button
+                onClick={() => openImageModelModal()}
+                className="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Modelo</span>
+              </button>
+            </div>
+
+            {isLoadingImageModels ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-3 text-gray-400">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Carregando modelos...</span>
+                </div>
+              </div>
+            ) : imageModels.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-light text-white mb-2">Nenhum modelo encontrado</h3>
+                <p className="text-gray-400">Adicione seus modelos de IA para começar</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {imageModels.map((model) => (
+                  <ImageModelCard
+                    key={model.id}
+                    model={model}
+                    onEdit={() => openImageModelModal(model)}
+                    onDelete={() => deleteImageModel(model.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* APIs Section */}
+        <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-medium text-white mb-2">APIs</h2>
+              <p className="text-gray-400">Gerencie suas chaves de API das plataformas</p>
+            </div>
+            <button
+              onClick={() => openApiModal()}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar API</span>
+            </button>
+          </div>
+
+          {isLoadingApis ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-3 text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Carregando APIs...</span>
+              </div>
+            </div>
+          ) : apis.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-light text-white mb-2">Nenhuma API configurada</h3>
+              <p className="text-gray-400">Adicione suas chaves de API para começar</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {apis.map((api) => (
+                <ApiCard
+                  key={api.id}
+                  api={api}
+                  onEdit={() => openApiModal(api)}
+                  onDelete={() => deleteApi(api.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modals */}
-      <>
-        {/* API Modal */}
-        {showApiModal && (
+      {/* API Modal */}
+      {showApiModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 w-full max-w-md mx-4">
                 <div className="flex items-center justify-between mb-6">
@@ -1369,7 +1870,159 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-      </>
+
+        {/* Image Model Modal */}
+        {showImageModelModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-medium text-white">
+                    {editingImageModel ? 'Editar Modelo' : 'Adicionar Modelo'}
+                  </h3>
+                  <button
+                    onClick={closeImageModelModal}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Plataforma <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={imageModelForm.plataforma}
+                      onChange={(e) => handleImageModelFormChange('plataforma', e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      <option value="Runware">Runware</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      AIR (Model Identifier) <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={imageModelForm.air}
+                        onChange={(e) => handleImageModelFormChange('air', e.target.value)}
+                        placeholder="Ex: google:4@1"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent pr-12"
+                      />
+                      {isCollectingModelData && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Cole o AIR do modelo da plataforma Runware (formato: provider:model@version)
+                    </p>
+                  </div>
+
+                  {/* Collected Model Data Display */}
+                  {collectedModelData && (
+                    <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-white">Dados Coletados</h4>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Nome do Modelo - Editável */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">
+                            Nome do Modelo <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={collectedModelData.nome_modelo}
+                            onChange={(e) => setCollectedModelData(prev => prev ? { ...prev, nome_modelo: e.target.value } : null)}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200"
+                            placeholder="Nome do modelo"
+                            required
+                          />
+                        </div>
+
+                        {/* Categoria - Editável */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">
+                            Categoria
+                          </label>
+                          <input
+                            type="text"
+                            value={collectedModelData.categoria}
+                            onChange={(e) => setCollectedModelData(prev => prev ? { ...prev, categoria: e.target.value } : null)}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200"
+                            placeholder="Ex: realistic, anime, artistic"
+                          />
+                        </div>
+
+                        {/* Descrição - Editável */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">
+                            Descrição
+                          </label>
+                          <textarea
+                            value={collectedModelData.descricao}
+                            onChange={(e) => setCollectedModelData(prev => prev ? { ...prev, descricao: e.target.value } : null)}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200"
+                            placeholder="Descrição do modelo"
+                            rows={3}
+                          />
+                        </div>
+
+                        {/* Tags - Read only display */}
+                        {collectedModelData.tags && collectedModelData.tags.length > 0 && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-400 mb-1">
+                              Tags
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {collectedModelData.tags.map((tag, index) => (
+                                <span key={index} className="px-2 py-1 bg-orange-900/30 text-orange-400 border border-orange-800 rounded text-xs">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end space-x-4 mt-8">
+                  <button
+                    onClick={closeImageModelModal}
+                    className="px-6 py-2 text-gray-400 hover:text-white transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveImageModel}
+                    disabled={isSavingImageModel || !collectedModelData || !collectedModelData.nome_modelo.trim()}
+                    className="flex items-center space-x-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white rounded-lg transition-all duration-200"
+                  >
+                    {isSavingImageModel ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>{editingImageModel ? 'Atualizar' : 'Adicionar'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
     </div>
   );
 }
