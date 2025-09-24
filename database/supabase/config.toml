@@ -1,0 +1,29 @@
+# A string used to distinguish different Supabase projects on the same host. Defaults to the working directory name when running supabase init.
+project_id = "vstsnxvwvsaodulrvfjz"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[functions]
+# Network permissions for all functions
+[functions."fetch-fish-audio-voice"]
+[functions."list-fish-audio-voices"]
+[functions."fetch-elevenlabs-voice"]
+[functions."list-elevenlabs-voices"]
+[functions."fetch-minimax-voice"]
+[functions."list-minimax-voices"]
+
+[auth]
+enabled = true
