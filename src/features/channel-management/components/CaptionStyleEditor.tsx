@@ -248,18 +248,58 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
         },
         highlight: {
           color: highlightStyle.texto_cor || '#FFFFFF',
-          textShadow: `
-            0 0 ${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'},
-            0 0 ${highlightBorder * 1.5}px ${highlightStyle.highlight_cor || '#D60000'},
-            0 0 ${highlightBorder * 2}px ${highlightStyle.highlight_cor || '#D60000'},
-            0 0 ${highlightBorder * 2.5}px ${highlightStyle.highlight_cor || '#D60000'}
-          `,
+          WebkitTextStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
+          textStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
+          paintOrder: 'stroke fill',
         },
       };
     }
   };
 
   const previewStyles = getPreviewStyles();
+
+  // Generate dynamic preview text for Karaoke mode based on words_per_line and max_lines
+  const generateKaraokePreview = () => {
+    const sampleWords = [
+      'Esta', 'é', 'uma', 'demonstração', 'visual', 'de', 'legendas', 'no', 'estilo',
+      'karaoke', 'com', 'destaque', 'palavra', 'por', 'palavra', 'ajuste', 'os', 'controles'
+    ];
+
+    const wordsPerLine = highlightStyle.words_per_line || 4;
+    const maxLines = highlightStyle.max_lines || 2;
+
+    // Calculate total words to display
+    const totalWords = wordsPerLine * maxLines;
+    const words = sampleWords.slice(0, totalWords);
+
+    // Split words into lines
+    const lines: string[][] = [];
+    for (let i = 0; i < words.length; i += wordsPerLine) {
+      lines.push(words.slice(i, i + wordsPerLine));
+    }
+
+    // Highlight middle word in middle line
+    const highlightLineIndex = Math.floor(lines.length / 2);
+    const highlightWordIndex = Math.floor((lines[highlightLineIndex]?.length || 0) / 2);
+
+    return lines.map((line, lineIndex) => (
+      <div key={lineIndex} style={{ marginBottom: lineIndex < lines.length - 1 ? '4px' : '0' }}>
+        {line.map((word, wordIndex) => {
+          const isHighlighted = lineIndex === highlightLineIndex && wordIndex === highlightWordIndex;
+          return (
+            <span key={wordIndex}>
+              {isHighlighted ? (
+                <span style={previewStyles.highlight}>{word}</span>
+              ) : (
+                <span>{word}</span>
+              )}
+              {wordIndex < line.length - 1 && ' '}
+            </span>
+          );
+        })}
+      </div>
+    ));
+  };
 
   return (
     <div className="space-y-8">
@@ -347,11 +387,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
               ) : (
                 <div style={previewStyles.background}>
                   <div style={previewStyles.text}>
-                    Esta é{' '}
-                    <span style={previewStyles.highlight}>
-                      uma
-                    </span>{' '}
-                    legenda karaoke
+                    {generateKaraokePreview()}
                   </div>
                 </div>
               )}
@@ -364,8 +400,17 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
               </div>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              As mudanças nos controles ao lado são refletidas instantaneamente nesta prévia.
-              O visual final será renderizado no vídeo com a mesma aparência.
+              {captionType === 'highlight' ? (
+                <>
+                  O preview ajusta automaticamente a quantidade de linhas e palavras conforme você altera os controles.
+                  A palavra destacada representa o efeito karaoke em ação.
+                </>
+              ) : (
+                <>
+                  As mudanças nos controles ao lado são refletidas instantaneamente nesta prévia.
+                  O visual final será renderizado no vídeo com a mesma aparência.
+                </>
+              )}
             </p>
           </div>
         </div>
