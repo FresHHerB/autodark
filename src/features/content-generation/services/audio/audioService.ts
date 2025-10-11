@@ -48,18 +48,29 @@ export class AudioService {
     try {
       const { data, error } = await supabase
         .from('vozes')
-        .select('*')
+        .select(`
+          id,
+          nome_voz,
+          voice_id,
+          idioma,
+          genero,
+          created_at,
+          id_plataforma,
+          apis!vozes_id_plataforma_fkey (
+            plataforma
+          )
+        `)
         .order('nome_voz', { ascending: true });
 
       if (error) throw error;
 
-      const voices = (data || []).map(voice => ({
+      const voices = (data || []).map((voice: any) => ({
         voice_id: voice.voice_id,
         nome_voz: voice.nome_voz,
-        plataforma: voice.plataforma as PlatformType,
+        plataforma: voice.apis?.plataforma || 'Outros' as PlatformType,
         idioma: voice.idioma || 'Não especificado',
         genero: voice.genero || 'Não especificado',
-        preview_url: voice.preview_url || '',
+        preview_url: '',
         description: '',
         created_at: voice.created_at,
         id: voice.id
@@ -77,21 +88,42 @@ export class AudioService {
    */
   async getVoicesByPlatformFromDatabase(platform: PlatformType): Promise<VoiceData[]> {
     try {
+      // First, get the platform ID from apis table
+      const { data: apiData, error: apiError } = await supabase
+        .from('apis')
+        .select('id')
+        .eq('plataforma', platform)
+        .single();
+
+      if (apiError) throw apiError;
+      if (!apiData) throw new Error(`Platform ${platform} not found in apis table`);
+
       const { data, error } = await supabase
         .from('vozes')
-        .select('*')
-        .eq('plataforma', platform)
+        .select(`
+          id,
+          nome_voz,
+          voice_id,
+          idioma,
+          genero,
+          created_at,
+          id_plataforma,
+          apis!vozes_id_plataforma_fkey (
+            plataforma
+          )
+        `)
+        .eq('id_plataforma', apiData.id)
         .order('nome_voz', { ascending: true });
-      
+
       if (error) throw error;
-      
-      return (data || []).map(voice => ({
+
+      return (data || []).map((voice: any) => ({
         voice_id: voice.voice_id,
         nome_voz: voice.nome_voz,
-        plataforma: voice.plataforma as PlatformType,
+        plataforma: voice.apis?.plataforma || platform as PlatformType,
         idioma: voice.idioma || 'Não especificado',
         genero: voice.genero || 'Não especificado',
-        preview_url: voice.preview_url || '',
+        preview_url: '',
         description: '',
         created_at: voice.created_at,
         id: voice.id

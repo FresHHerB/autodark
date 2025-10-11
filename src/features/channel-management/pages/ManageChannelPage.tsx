@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VoiceSelector } from '@features/content-generation/components';
+import { CaptionStyleEditor, CaptionStyleConfig } from '../components';
 import { supabase, Canal } from '@shared/lib';
+import { apiService } from '@shared/services';
 
 export default function ManageChannelPage() {
   const navigate = useNavigate();
@@ -13,7 +15,13 @@ export default function ManageChannelPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedChannelForModal, setSelectedChannelForModal] = useState<Canal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [selectedVoiceId, setSelectedVoiceId] = useState<number | undefined>();
+  const [captionStyleConfig, setCaptionStyleConfig] = useState<CaptionStyleConfig>({
+    type: 'highlight',
+    style: {},
+  });
+  const [activeTab, setActiveTab] = useState<'general' | 'captions'>('general');
 
   // Fetch channels from Supabase
   React.useEffect(() => {
@@ -46,20 +54,49 @@ export default function ManageChannelPage() {
   const handleChannelClick = async (canal: Canal) => {
     setSelectedChannelForModal(canal);
     setSelectedVoiceId(canal.voz_prefereida || undefined);
+    setSaveSuccess(false);
+
+    // Load caption style if exists, otherwise use empty config
+    // The CaptionStyleEditor will initialize with defaults via useEffect
+    if (canal.caption_style) {
+      setCaptionStyleConfig(canal.caption_style as CaptionStyleConfig);
+    } else {
+      // Initialize with empty style - CaptionStyleEditor will populate defaults
+      setCaptionStyleConfig({
+        type: 'highlight',
+        style: {},
+      });
+    }
+
     setModalOpen(true);
   };
 
   const handleSavePrompts = async () => {
     if (!selectedChannelForModal) return;
-    
+
     setIsSaving(true);
+    setSaveSuccess(false);
     try {
+      // Call API webhook to update channel
+      await apiService.updateChannel({
+        update_type: 'updateChannel',
+        id_canal: selectedChannelForModal.id,
+        voice_id: selectedVoiceId || null,
+        prompt_titulo: selectedChannelForModal.prompt_titulo,
+        prompt_roteiro: selectedChannelForModal.prompt_roteiro,
+        caption_style: captionStyleConfig,
+        media_chars: selectedChannelForModal.media_chars || null,
+      });
+
+      // Also update in Supabase for local persistence
       const { error } = await supabase
         .from('canais')
         .update({
           prompt_titulo: selectedChannelForModal.prompt_titulo,
           prompt_roteiro: selectedChannelForModal.prompt_roteiro,
-          voz_prefereida: selectedVoiceId || null
+          voz_prefereida: selectedVoiceId || null,
+          caption_style: captionStyleConfig,
+          media_chars: selectedChannelForModal.media_chars || null,
         })
         .eq('id', selectedChannelForModal.id);
 
@@ -68,17 +105,26 @@ export default function ManageChannelPage() {
       }
 
       // Update local state
-      setChannels(prev => prev.map(channel => 
-        channel.id === selectedChannelForModal.id 
-          ? { ...selectedChannelForModal, voz_prefereida: selectedVoiceId || null }
+      setChannels(prev => prev.map(channel =>
+        channel.id === selectedChannelForModal.id
+          ? {
+              ...selectedChannelForModal,
+              voz_prefereida: selectedVoiceId || null,
+              caption_style: captionStyleConfig as any,
+            }
           : channel
       ));
-      
-      setModalOpen(false);
-      setSelectedChannelForModal(null);
-      setSelectedVoiceId(undefined);
+
+      // Show success message
+      setSaveSuccess(true);
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
     } catch (error) {
-      console.error('Error saving prompts:', error);
+      console.error('Error saving channel settings:', error);
+      alert('Erro ao salvar configurações do canal. Verifique o console para mais detalhes.');
     } finally {
       setIsSaving(false);
     }
@@ -220,84 +266,279 @@ export default function ManageChannelPage() {
 
       </main>
 
-      {/* Channel Prompts Modal */}
+      {/* Channel Settings Modal - Modern Design */}
       {modalOpen && selectedChannelForModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-800">
-              <h3 className="text-lg font-light text-white">
-                Editar Prompts - {selectedChannelForModal.nome_canal}
-              </h3>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 w-full max-w-7xl max-h-[95vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-gray-800">
+              <div>
+                <h2 className="text-2xl font-light text-white mb-1">
+                  Configurações do Canal
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {selectedChannelForModal.nome_canal}
+                </p>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-all rounded"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {/* Seleção de Voz */}
-                <VoiceSelector
-                  selectedVoiceId={selectedVoiceId}
-                  onVoiceSelect={setSelectedVoiceId}
-                  label="Voz Preferida"
-                />
 
-                {/* Prompt Título */}
-                <div>
-                  <label className="block text-white font-medium mb-3">
-                    Prompt Título
-                  </label>
-                  <textarea
-                    value={selectedChannelForModal.prompt_titulo}
-                    onChange={(e) => setSelectedChannelForModal(prev => 
-                      prev ? { ...prev, prompt_titulo: e.target.value } : null
-                    )}
-                    className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 resize-none"
-                    rows={4}
-                    placeholder="Digite o prompt para geração de títulos..."
-                  />
-                </div>
-
-                {/* Prompt Roteiro */}
-                <div>
-                  <label className="block text-white font-medium mb-3">
-                    Prompt Roteiro
-                  </label>
-                  <textarea
-                    value={selectedChannelForModal.prompt_roteiro}
-                    onChange={(e) => setSelectedChannelForModal(prev => 
-                      prev ? { ...prev, prompt_roteiro: e.target.value } : null
-                    )}
-                    className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 resize-none"
-                    rows={6}
-                    placeholder="Digite o prompt para geração de roteiros..."
-                  />
-                </div>
+            {/* Tabs Navigation */}
+            <div className="border-b border-gray-800 px-8 bg-gray-900/50">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActiveTab('general')}
+                  className={`
+                    px-6 py-4 text-sm font-medium transition-all relative
+                    ${activeTab === 'general'
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-gray-300'
+                    }
+                  `}
+                >
+                  <span>Geral</span>
+                  {activeTab === 'general' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('captions')}
+                  className={`
+                    px-6 py-4 text-sm font-medium transition-all relative
+                    ${activeTab === 'captions'
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-gray-300'
+                    }
+                  `}
+                >
+                  <span>Estilo de Legendas</span>
+                  {activeTab === 'captions' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
+                  )}
+                </button>
               </div>
             </div>
-            
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-800">
-              <button
-                onClick={handleCloseModal}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSavePrompts}
-                disabled={isSaving}
-                className="bg-white text-black px-6 py-2 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {activeTab === 'general' && (
+                <div className="p-8">
+                  <div className="max-w-5xl mx-auto space-y-8">
+                    {/* Voice Configuration Card */}
+                    <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+                      <div className="mb-6">
+                        <h3 className="text-lg font-medium text-white mb-2">
+                          Configuração de Voz e Caracteres
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          Selecione a voz padrão e defina a média de caracteres por roteiro
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6 items-start">
+                        <VoiceSelector
+                          selectedVoiceId={selectedVoiceId}
+                          onVoiceSelect={setSelectedVoiceId}
+                          label="Voz Padrão"
+                        />
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">
+                            Média de Caracteres
+                          </label>
+                          <input
+                            type="number"
+                            value={selectedChannelForModal.media_chars || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Limit to 7 characters
+                              if (value.length <= 7) {
+                                setSelectedChannelForModal(prev =>
+                                  prev ? { ...prev, media_chars: value ? parseInt(value) : null } : null
+                                );
+                              }
+                            }}
+                            placeholder="Ex: 1500"
+                            maxLength={7}
+                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 rounded transition-all"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Número de caracteres
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prompts Card */}
+                    <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+                      <div className="mb-6">
+                        <h3 className="text-lg font-medium text-white mb-2">
+                          Prompts de Geração
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          Configure os prompts que serão usados para gerar títulos e roteiros
+                        </p>
+                      </div>
+
+                      <div className="space-y-6">
+                        {/* Prompt Título */}
+                        <div>
+                          <label className="block text-white font-medium mb-3 text-sm">
+                            Prompt de Título
+                            <span className="text-gray-500 font-normal ml-2">
+                              (Define como os títulos são gerados)
+                            </span>
+                          </label>
+                          <textarea
+                            value={selectedChannelForModal.prompt_titulo}
+                            onChange={(e) => setSelectedChannelForModal(prev =>
+                              prev ? { ...prev, prompt_titulo: e.target.value } : null
+                            )}
+                            className="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 resize-none rounded transition-all"
+                            rows={4}
+                            placeholder="Ex: Gere um título chamativo e envolvente sobre [tema] que incentive cliques..."
+                          />
+                          <div className="mt-2 flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              Use variáveis como [tema] para personalizar
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {selectedChannelForModal.prompt_titulo.length} caracteres
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Prompt Roteiro */}
+                        <div>
+                          <label className="block text-white font-medium mb-3 text-sm">
+                            Prompt de Roteiro
+                            <span className="text-gray-500 font-normal ml-2">
+                              (Define como os roteiros são criados)
+                            </span>
+                          </label>
+                          <textarea
+                            value={selectedChannelForModal.prompt_roteiro}
+                            onChange={(e) => setSelectedChannelForModal(prev =>
+                              prev ? { ...prev, prompt_roteiro: e.target.value } : null
+                            )}
+                            className="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 resize-none rounded transition-all"
+                            rows={8}
+                            placeholder="Ex: Crie um roteiro envolvente sobre [tema] com introdução impactante, desenvolvimento claro e conclusão marcante..."
+                          />
+                          <div className="mt-2 flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              Seja específico sobre tom, estrutura e estilo
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {selectedChannelForModal.prompt_roteiro.length} caracteres
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Info Card */}
+                    <div className="bg-blue-900/20 border border-blue-800/30 p-4 rounded-lg">
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                            <span className="text-blue-400 text-sm">💡</span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-300 mb-1">
+                            Dica de Prompts Eficientes
+                          </h4>
+                          <p className="text-xs text-blue-200/70">
+                            Prompts bem estruturados geram conteúdo mais consistente. Inclua tom de voz,
+                            estrutura desejada e exemplos quando possível. Teste e refine seus prompts
+                            para obter os melhores resultados.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'captions' && (
+                <div className="p-8">
+                  <div className="max-w-6xl mx-auto">
+                    <div className="bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
+                      <CaptionStyleEditor
+                        initialConfig={captionStyleConfig}
+                        onChange={setCaptionStyleConfig}
+                      />
+                    </div>
+
+                    {/* Caption Info */}
+                    <div className="mt-6 bg-purple-900/20 border border-purple-800/30 p-4 rounded-lg">
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                            <span className="text-purple-400 text-sm">✨</span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-purple-300 mb-1">
+                            Sobre os Estilos de Legenda
+                          </h4>
+                          <p className="text-xs text-purple-200/70">
+                            <strong>Tradicional:</strong> Legendas por segmento, ideais para conteúdo mais formal.<br />
+                            <strong>Karaoke:</strong> Destaque palavra por palavra, perfeito para shorts e reels dinâmicos.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between px-8 py-6 border-t border-gray-800 bg-gray-900/50">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-400">
+                  {activeTab === 'general' && 'Configure os prompts e voz padrão do canal'}
+                  {activeTab === 'captions' && 'Personalize o estilo das legendas geradas'}
+                </div>
+                {saveSuccess && (
+                  <div className="flex items-center gap-2 bg-green-900/30 border border-green-700/50 px-4 py-2 rounded text-green-400 text-sm animate-fade-in">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Alterações salvas com sucesso!</span>
+                  </div>
                 )}
-                {isSaving ? 'Salvando...' : 'Salvar'}
-              </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleCloseModal}
+                  className="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-all rounded"
+                >
+                  Fechar
+                </button>
+                <button
+                  onClick={handleSavePrompts}
+                  disabled={isSaving}
+                  className="bg-white text-black px-8 py-2.5 hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 rounded font-medium shadow-lg hover:shadow-xl"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Salvar Alterações</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

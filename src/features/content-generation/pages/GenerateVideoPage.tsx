@@ -1,124 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, Settings, Wand2, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Settings, Wand2, FileText, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { PromptModal } from '@shared/components/modals';
+import { supabase } from '@shared/lib/supabase';
 
 interface Channel {
-  id: string;
-  name: string;
-  description: string;
-  videoCount: number;
-  config: {
-    titlePrompt: string;
-    scriptPrompt: string;
-    mainTheme: string;
-    tags: string;
-    descriptionPrompt: string;
-    imageStyle: string;
-    wordCount: number;
-    voice: string;
-  };
+  id: number;
+  nome_canal: string;
+  prompt_roteiro: string;
+  prompt_titulo: string;
+  voz_prefereida?: number;
+  media_chars?: number;
+  prompt_thumb?: string;
+  url_canal?: string;
+  caption_style?: any;
 }
 
-const mockChannels: Channel[] = [
-  {
-    id: '1',
-    name: 'ToonshineStudio',
-    description: 'Canal de histórias infantis animadas',
-    videoCount: 47,
-    config: {
-      titlePrompt: 'Crie um título envolvente para um vídeo sobre [TEMA]. O título deve ser chamativo, usar palavras-chave relevantes e despertar curiosidade. Mantenha entre 50-60 caracteres para otimização no YouTube.',
-      scriptPrompt: 'Escreva um roteiro envolvente para um vídeo de [DURAÇÃO] minutos sobre [TEMA]. Inclua: introdução cativante, desenvolvimento claro do conteúdo, exemplos práticos e conclusão memorável. Use linguagem conversacional e inclua momentos para engajamento.',
-      mainTheme: 'Histórias infantis educativas',
-      tags: 'histórias infantis, educação, animação, crianças, contos, moral',
-      descriptionPrompt: 'Escreva uma descrição completa para um vídeo sobre [TEMA]. Inclua: resumo do conteúdo, benefícios para o espectador, call-to-action para inscrição e hashtags relevantes. Mantenha tom amigável e profissional.',
-      imageStyle: 'Ilustração colorida estilo cartoon',
-      wordCount: 150,
-      voice: 'feminina-suave'
-    }
-  },
-  {
-    id: '2',
-    name: 'TechReviewBR',
-    description: 'Reviews de tecnologia em português',
-    videoCount: 23,
-    config: {
-      titlePrompt: 'Crie um título técnico e atrativo para review de [PRODUTO]. Use termos como "REVIEW", "VALE A PENA?" ou "ANÁLISE COMPLETA". Mantenha entre 50-60 caracteres.',
-      scriptPrompt: 'Escreva um roteiro de review técnico para [PRODUTO]. Inclua: especificações, prós e contras, comparações, preço e veredicto final. Use linguagem técnica mas acessível.',
-      mainTheme: 'Reviews de tecnologia',
-      tags: 'tecnologia, review, análise, gadgets, eletrônicos, tech',
-      descriptionPrompt: 'Escreva uma descrição técnica para review de [PRODUTO]. Inclua especificações, links de compra e timestamps do vídeo.',
-      imageStyle: 'Fotografia profissional de produto',
-      wordCount: 200,
-      voice: 'masculina-grave'
-    }
-  },
-  {
-    id: '3',
-    name: 'CookingMaster',
-    description: 'Receitas rápidas e fáceis',
-    videoCount: 156,
-    config: {
-      titlePrompt: 'Crie um título apetitoso para receita de [PRATO]. Use palavras como "FÁCIL", "RÁPIDO", "DELICIOSO". Inclua tempo de preparo se relevante.',
-      scriptPrompt: 'Escreva um roteiro de culinária para [PRATO]. Inclua: ingredientes, modo de preparo passo a passo, dicas importantes e apresentação final.',
-      mainTheme: 'Receitas culinárias',
-      tags: 'culinária, receitas, cozinha, comida, gastronomia, chef',
-      descriptionPrompt: 'Escreva uma descrição saborosa para receita de [PRATO]. Inclua lista de ingredientes, tempo de preparo e dicas extras.',
-      imageStyle: 'Fotografia gastronômica profissional',
-      wordCount: 120,
-      voice: 'feminina-energetica'
-    }
-  },
-  {
-    id: '4',
-    name: 'FitnessLife',
-    description: 'Exercícios e vida saudável',
-    videoCount: 89,
-    config: {
-      titlePrompt: 'Crie um título motivacional para treino de [TIPO]. Use palavras energéticas como "QUEIME", "TONIFIQUE", "TRANSFORME". Inclua duração do treino.',
-      scriptPrompt: 'Escreva um roteiro de treino para [TIPO]. Inclua: aquecimento, exercícios principais com repetições, dicas de execução e alongamento final.',
-      mainTheme: 'Fitness e exercícios',
-      tags: 'fitness, exercícios, treino, saúde, musculação, cardio',
-      descriptionPrompt: 'Escreva uma descrição motivacional para treino de [TIPO]. Inclua benefícios, equipamentos necessários e avisos de segurança.',
-      imageStyle: 'Fotografia fitness dinâmica',
-      wordCount: 180,
-      voice: 'masculina-jovem'
-    }
-  },
-  {
-    id: '5',
-    name: 'GameplayZone',
-    description: 'Gameplays e análises de jogos',
-    videoCount: 234,
-    config: {
-      titlePrompt: 'Crie um título gamer para [JOGO]. Use termos como "GAMEPLAY", "PRIMEIRA VEZ", "REAÇÃO" ou "ANÁLISE". Seja empolgante e use caps quando apropriado.',
-      scriptPrompt: 'Escreva um roteiro de gameplay para [JOGO]. Inclua: introdução do jogo, comentários durante a gameplay, reações autênticas e conclusão com rating.',
-      mainTheme: 'Gaming e entretenimento',
-      tags: 'games, gameplay, jogos, gaming, entretenimento, diversão',
-      descriptionPrompt: 'Escreva uma descrição gamer para [JOGO]. Inclua informações do jogo, plataforma, onde comprar e sua opinião pessoal.',
-      imageStyle: 'Screenshot do jogo com overlay gamer',
-      wordCount: 160,
-      voice: 'masculina-jovem'
-    }
-  },
-  {
-    id: '6',
-    name: 'TravelVlog',
-    description: 'Vlogs de viagem pelo mundo',
-    videoCount: 67,
-    config: {
-      titlePrompt: 'Crie um título inspirador para vlog de [DESTINO]. Use palavras como "EXPLORANDO", "DESCOBRINDO", "AVENTURA EM". Desperte wanderlust.',
-      scriptPrompt: 'Escreva um roteiro de vlog para [DESTINO]. Inclua: chegada, principais atrações, experiências locais, dicas de viagem e reflexões pessoais.',
-      mainTheme: 'Viagens e turismo',
-      tags: 'viagem, turismo, destinos, aventura, cultura, vlog',
-      descriptionPrompt: 'Escreva uma descrição inspiradora para vlog de [DESTINO]. Inclua roteiro da viagem, custos aproximados e dicas práticas.',
-      imageStyle: 'Fotografia de viagem cinematográfica',
-      wordCount: 140,
-      voice: 'feminina-suave'
-    }
-  }
-];
+interface Roteiro {
+  id: number;
+  roteiro: string;
+  canal_id: number;
+  created_at: string;
+  titulo: string | null;
+  audio_path: string | null;
+  text_thumb: string | null;
+  images_path: string[] | null;
+  transcricao_timestamp: string | null;
+}
 
 const voiceOptions = [
   { value: 'feminina-suave', label: 'Feminina Suave' },
@@ -131,7 +40,12 @@ const voiceOptions = [
 
 export default function GenerateVideoPage() {
   const navigate = useNavigate();
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
+  const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
+  const [isLoadingRoteiros, setIsLoadingRoteiros] = useState(false);
+  const [selectedRoteiroId, setSelectedRoteiroId] = useState<number | null>(null);
   const [idea, setIdea] = useState('');
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
@@ -139,7 +53,7 @@ export default function GenerateVideoPage() {
   const [generatedScript, setGeneratedScript] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedModel, setSelectedModel] = useState('sonnet-4');
-  const [config, setConfig] = useState<Channel['config'] | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState('feminina-suave');
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     type: 'title' | 'script' | 'description' | null;
@@ -150,30 +64,92 @@ export default function GenerateVideoPage() {
     content: ''
   });
 
-const modelOptions = [
-  { value: 'sonnet-4', label: 'Sonnet-4' },
-  { value: 'gpt-5', label: 'GPT-5' },
-  { value: 'gemini-2.5-pro', label: 'Gemini-2.5-Pro' }
-];
+  const modelOptions = [
+    { value: 'sonnet-4', label: 'Sonnet-4' },
+    { value: 'gpt-5', label: 'GPT-5' },
+    { value: 'gemini-2.5-pro', label: 'Gemini-2.5-Pro' }
+  ];
 
-  const selectedChannel = mockChannels.find(c => c.id === selectedChannelId);
+  const selectedChannel = channels.find(c => c.id === selectedChannelId);
+
+  // Buscar canais do Supabase ao carregar a página
+  useEffect(() => {
+    fetchChannels();
+  }, []);
+
+  const fetchChannels = async () => {
+    try {
+      setIsLoadingChannels(true);
+      const { data, error } = await supabase
+        .from('canais')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar canais:', error);
+        return;
+      }
+
+      if (data) {
+        setChannels(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar canais:', error);
+    } finally {
+      setIsLoadingChannels(false);
+    }
+  };
+
+  const fetchRoteiros = async (canalId: number) => {
+    try {
+      setIsLoadingRoteiros(true);
+      const { data, error } = await supabase
+        .from('roteiros')
+        .select('*')
+        .eq('canal_id', canalId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar roteiros:', error);
+        return;
+      }
+
+      if (data) {
+        setRoteiros(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar roteiros:', error);
+    } finally {
+      setIsLoadingRoteiros(false);
+    }
+  };
 
   const handleChannelSelect = (channelId: string) => {
-    setSelectedChannelId(channelId);
-    const channel = mockChannels.find(c => c.id === channelId);
-    if (channel) {
-      setConfig({ ...channel.config });
-    }
+    const id = parseInt(channelId);
+    setSelectedChannelId(id || null);
     setGeneratedTitle('');
     setGeneratedScript('');
     setIdea('');
+    setRoteiros([]);
+    setSelectedRoteiroId(null);
+
+    if (id) {
+      fetchRoteiros(id);
+    }
+  };
+
+  const handleSelectRoteiro = (roteiro: Roteiro) => {
+    setSelectedRoteiroId(roteiro.id);
+    setGeneratedTitle(roteiro.titulo || '');
+    setGeneratedScript(roteiro.roteiro);
+    setIdea(''); // Clear the idea input as we're using an existing script
   };
 
   const handleGenerateTitle = async () => {
     if (!idea.trim() || !selectedChannel) return;
-    
+
     setIsGeneratingTitle(true);
-    
+
     // Simular geração de título
     setTimeout(() => {
       const titles = [
@@ -191,9 +167,9 @@ const modelOptions = [
 
   const handleGenerateScript = async () => {
     if (!idea.trim() || !selectedChannel) return;
-    
+
     setIsGeneratingScript(true);
-    
+
     // Simular geração de roteiro
     setTimeout(() => {
       const script = `Olá pessoal! Hoje vamos falar sobre ${idea}.
@@ -208,21 +184,21 @@ E por fim, algumas dicas práticas que você pode aplicar hoje mesmo!
 
 [CONCLUSÃO]
 Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ative o sininho para não perder nenhum vídeo!`;
-      
+
       setGeneratedScript(script);
       setIsGeneratingScript(false);
     }, 4000);
   };
 
   const openModal = (type: 'title' | 'script' | 'description') => {
-    if (!config) return;
-    
+    if (!selectedChannel) return;
+
     const contentMap = {
-      title: config.titlePrompt,
-      script: config.scriptPrompt,
-      description: config.descriptionPrompt
+      title: selectedChannel.prompt_titulo || '',
+      script: selectedChannel.prompt_roteiro || '',
+      description: selectedChannel.prompt_thumb || ''
     };
-    
+
     setModalState({
       isOpen: true,
       type,
@@ -231,21 +207,17 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
   };
 
   const handleModalSave = (content: string) => {
-    if (!modalState.type || !config) return;
-    
-    const updates = {
-      title: { titlePrompt: content },
-      script: { scriptPrompt: content },
-      description: { descriptionPrompt: content }
-    };
-    
-    setConfig(prev => prev ? { ...prev, ...updates[modalState.type!] } : null);
+    if (!modalState.type || !selectedChannel) return;
+
+    // Atualizar o canal com o novo prompt
+    // TODO: Implementar atualização no Supabase
+    console.log('Salvando prompt:', modalState.type, content);
   };
 
   return (
     <div className="min-h-screen bg-black">
       <DashboardHeader />
-      
+
       <main className="w-[90%] mx-auto px-6 py-8">
         <div className="flex items-center gap-4 mb-8">
           <button
@@ -267,17 +239,20 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
           <h2 className="text-lg font-light text-white mb-4">
             Selecionar Canal
           </h2>
-          
+
           <div className="relative">
             <select
-              value={selectedChannelId}
+              value={selectedChannelId || ''}
               onChange={(e) => handleChannelSelect(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none"
+              disabled={isLoadingChannels}
+              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none disabled:opacity-50"
             >
-              <option value="">Selecione um canal...</option>
-              {mockChannels.map((channel) => (
+              <option value="">
+                {isLoadingChannels ? 'Carregando canais...' : 'Selecione um canal...'}
+              </option>
+              {channels.map((channel) => (
                 <option key={channel.id} value={channel.id}>
-                  {channel.name} ({channel.videoCount} vídeos)
+                  {channel.nome_canal}
                 </option>
               ))}
             </select>
@@ -286,22 +261,133 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
 
           {selectedChannel && (
             <div className="mt-4 p-4 bg-gray-800 border border-gray-700">
-              <h3 className="text-white font-medium mb-1">{selectedChannel.name}</h3>
-              <p className="text-gray-400 text-sm mb-2">{selectedChannel.description}</p>
-              <p className="text-gray-500 text-xs">{selectedChannel.videoCount} vídeos clonados</p>
+              <h3 className="text-white font-medium mb-1">{selectedChannel.nome_canal}</h3>
+              {selectedChannel.url_canal && (
+                <p className="text-gray-400 text-sm mb-2">{selectedChannel.url_canal}</p>
+              )}
+              <div className="flex gap-2 text-xs text-gray-500">
+                {selectedChannel.media_chars && (
+                  <span>Média de caracteres: {selectedChannel.media_chars}</span>
+                )}
+              </div>
             </div>
           )}
         </div>
 
+        {/* Roteiros Section */}
+        {selectedChannel && (
+          <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-light text-white">
+                Roteiros do Canal
+              </h2>
+              {selectedRoteiroId && (
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Roteiro selecionado</span>
+                </div>
+              )}
+            </div>
+
+            {isLoadingRoteiros ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+              </div>
+            ) : roteiros.length === 0 ? (
+              <div className="bg-gray-800 border border-gray-700 p-8 text-center">
+                <FileText className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">
+                  Nenhum roteiro encontrado para este canal
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {roteiros.map((roteiro) => (
+                  <div
+                    key={roteiro.id}
+                    onClick={() => handleSelectRoteiro(roteiro)}
+                    className={`bg-gray-800 border p-4 hover:border-gray-600 transition-all cursor-pointer relative ${
+                      selectedRoteiroId === roteiro.id
+                        ? 'border-blue-500 ring-2 ring-blue-500/50'
+                        : 'border-gray-700'
+                    }`}
+                  >
+                    {selectedRoteiroId === roteiro.id && (
+                      <div className="absolute top-2 right-2">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-white font-medium text-sm line-clamp-2 flex-1 pr-6">
+                        {roteiro.titulo || 'Sem título'}
+                      </h3>
+                    </div>
+
+                    <p className="text-gray-400 text-xs line-clamp-3 mb-4">
+                      {roteiro.roteiro.substring(0, 150)}...
+                    </p>
+
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(roteiro.created_at).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {roteiro.audio_path && (
+                        <div className="flex items-center gap-1 text-xs text-green-400">
+                          <Volume2 className="w-3 h-3" />
+                          <span>Áudio</span>
+                        </div>
+                      )}
+                      {roteiro.images_path && roteiro.images_path.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-blue-400">
+                          <ImageIcon className="w-3 h-3" />
+                          <span>{roteiro.images_path.length} img</span>
+                        </div>
+                      )}
+                      {roteiro.transcricao_timestamp && (
+                        <div className="flex items-center gap-1 text-xs text-purple-400">
+                          <FileCheck className="w-3 h-3" />
+                          <span>Legendas</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Main Generation Section */}
         {selectedChannel && (
           <div className="space-y-8">
+            {/* Info banner when roteiro is selected */}
+            {selectedRoteiroId && (
+              <div className="bg-blue-900/20 border border-blue-500/50 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-blue-300 text-sm font-medium mb-1">
+                      Trabalhando com roteiro existente
+                    </p>
+                    <p className="text-blue-400/80 text-xs">
+                      O título e roteiro foram carregados do roteiro selecionado. Você pode editá-los abaixo ou gerar um novo conteúdo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Idea Input and Title Generation */}
             <div className="bg-gray-900 border border-gray-800 p-6">
               <h3 className="text-lg font-light text-white mb-4">
                 1. Inserir Ideia e Gerar Título
               </h3>
-              
+
               <div className="space-y-4">
                 <div className="flex gap-3">
                   <input
@@ -347,7 +433,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
               <h3 className="text-lg font-light text-white mb-4">
                 2. Gerar Roteiro
               </h3>
-              
+
               <div className="mb-4">
                 <label className="block text-gray-400 text-sm mb-2">
                   Modelo de IA:
@@ -367,7 +453,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                 </div>
               </div>
-              
+
               <button
                 onClick={handleGenerateScript}
                 disabled={!idea.trim() || isGeneratingScript}
@@ -421,7 +507,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                 )}
               </button>
 
-              {showAdvanced && config && (
+              {showAdvanced && selectedChannel && (
                 <div className="border-t border-gray-800 p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Prompt Gerador de Título */}
@@ -429,7 +515,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                       <h4 className="text-white font-medium mb-3">Prompt Gerador de Título</h4>
                       <div className="bg-gray-700 border border-gray-600 p-3">
                         <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {config.titlePrompt}
+                          {selectedChannel.prompt_titulo || 'Nenhum prompt definido'}
                         </p>
                         <button
                           onClick={() => openModal('title')}
@@ -445,7 +531,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                       <h4 className="text-white font-medium mb-3">Prompt Roteiro</h4>
                       <div className="bg-gray-700 border border-gray-600 p-3">
                         <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {config.scriptPrompt}
+                          {selectedChannel.prompt_roteiro || 'Nenhum prompt definido'}
                         </p>
                         <button
                           onClick={() => openModal('script')}
@@ -456,50 +542,20 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                       </div>
                     </div>
 
-                    {/* Tema Principal */}
+                    {/* Prompt Thumbnail */}
                     <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Tema Principal</h4>
-                      <input
-                        type="text"
-                        value={config.mainTheme}
-                        onChange={(e) => setConfig(prev => prev ? { ...prev, mainTheme: e.target.value } : null)}
-                        className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-                      />
-                    </div>
-
-                    {/* Tags do Canal */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Tags do Canal</h4>
-                      <textarea
-                        value={config.tags}
-                        onChange={(e) => setConfig(prev => prev ? { ...prev, tags: e.target.value } : null)}
-                        className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500 resize-none"
-                        rows={2}
-                      />
-                    </div>
-
-                    {/* Estilo de Imagem */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Estilo de Imagem</h4>
-                      <input
-                        type="text"
-                        value={config.imageStyle}
-                        onChange={(e) => setConfig(prev => prev ? { ...prev, imageStyle: e.target.value } : null)}
-                        className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-                      />
-                    </div>
-
-                    {/* Quantidade de Palavras */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Quantidade de Palavras</h4>
-                      <input
-                        type="number"
-                        value={config.wordCount}
-                        onChange={(e) => setConfig(prev => prev ? { ...prev, wordCount: parseInt(e.target.value) || 0 } : null)}
-                        className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-                        min="50"
-                        max="1000"
-                      />
+                      <h4 className="text-white font-medium mb-3">Prompt Thumbnail</h4>
+                      <div className="bg-gray-700 border border-gray-600 p-3">
+                        <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                          {selectedChannel.prompt_thumb || 'Nenhum prompt definido'}
+                        </p>
+                        <button
+                          onClick={() => openModal('description')}
+                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                        >
+                          Mostrar mais
+                        </button>
+                      </div>
                     </div>
 
                     {/* Voz */}
@@ -507,8 +563,8 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                       <h4 className="text-white font-medium mb-3">Voz</h4>
                       <div className="relative">
                         <select
-                          value={config.voice}
-                          onChange={(e) => setConfig(prev => prev ? { ...prev, voice: e.target.value } : null)}
+                          value={selectedVoice}
+                          onChange={(e) => setSelectedVoice(e.target.value)}
                           className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm pr-8 focus:outline-none focus:border-gray-500 appearance-none"
                         >
                           {voiceOptions.map((option) => (
@@ -521,21 +577,31 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                       </div>
                     </div>
 
-                    {/* Prompt Descrição */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Prompt Descrição</h4>
-                      <div className="bg-gray-700 border border-gray-600 p-3">
-                        <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {config.descriptionPrompt}
-                        </p>
-                        <button
-                          onClick={() => openModal('description')}
-                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                        >
-                          Mostrar mais
-                        </button>
+                    {/* Média de Caracteres */}
+                    {selectedChannel.media_chars && (
+                      <div className="bg-gray-800 border border-gray-700 p-4">
+                        <h4 className="text-white font-medium mb-3">Média de Caracteres</h4>
+                        <input
+                          type="number"
+                          value={selectedChannel.media_chars}
+                          readOnly
+                          className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
+                        />
                       </div>
-                    </div>
+                    )}
+
+                    {/* URL do Canal */}
+                    {selectedChannel.url_canal && (
+                      <div className="bg-gray-800 border border-gray-700 p-4">
+                        <h4 className="text-white font-medium mb-3">URL do Canal</h4>
+                        <input
+                          type="text"
+                          value={selectedChannel.url_canal}
+                          readOnly
+                          className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -566,7 +632,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
           </div>
         )}
 
-        {!selectedChannel && (
+        {!selectedChannel && !isLoadingChannels && (
           <div className="bg-gray-900 border border-gray-800 p-12 text-center">
             <p className="text-gray-400">
               Selecione um canal para começar a gerar vídeos
@@ -582,7 +648,7 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
         title={
           modalState.type === 'title' ? 'Prompt Gerador de Título' :
           modalState.type === 'script' ? 'Prompt Roteiro' :
-          'Prompt Descrição'
+          'Prompt Thumbnail'
         }
         content={modalState.content}
         onSave={handleModalSave}

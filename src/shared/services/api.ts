@@ -28,6 +28,7 @@ class ApiService {
       generateScript: import.meta.env.VITE_WEBHOOK_GENERATE_SCRIPT,
       processVideo: import.meta.env.VITE_WEBHOOK_PROCESS_VIDEO,
       publishVideo: import.meta.env.VITE_WEBHOOK_PUBLISH_VIDEO,
+      update: import.meta.env.VITE_WEBHOOK_UPDATE || '/webhook/update',
     };
 
     return `${this.baseUrl}${webhooks[key as keyof typeof webhooks] || ''}`;
@@ -140,6 +141,25 @@ class ApiService {
     return this.call(this.getWebhook('publishVideo'), {
       method: 'POST',
       body: JSON.stringify({ videoId, scheduleDate }),
+    });
+  }
+
+  // Channel management methods
+  async updateChannel(payload: {
+    update_type: string;
+    id_canal: number;
+    voice_id?: number | null;
+    prompt_titulo?: string;
+    prompt_roteiro?: string;
+    caption_style?: {
+      type: 'segments' | 'highlight';
+      style: any;
+    };
+    media_chars?: number | null;
+  }) {
+    return this.call(this.getWebhook('update'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   }
 }

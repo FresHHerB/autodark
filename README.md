@@ -62,6 +62,19 @@
 - Configuração de prompts personalizados por canal
 - Histórico de conteúdo gerado
 
+### 7. **Gestão Avançada de Canais** 🆕
+- **Editor de Estilo de Legendas**: Configuração visual completa de legendas
+  - **Modo Tradicional**: Legendas por segmento com controle de fonte, cor e contorno
+  - **Modo Karaoke**: Destaque palavra por palavra com efeito glow personalizado
+  - Preview em tempo real com proporção 1080p
+  - Controles de posicionamento e espaçamento
+- **Configuração de Canal**:
+  - Seleção de voz padrão com preview integrado
+  - Média de caracteres por roteiro (controle de duração)
+  - Prompts personalizados para título e roteiro
+  - Interface com tabs para melhor organização
+- **Preview de Áudio**: Teste de vozes ElevenLabs e Fish-Audio diretamente no modal
+
 ## 🛠 Tecnologias Utilizadas
 
 ### Frontend
@@ -209,6 +222,55 @@ npm run dev
 - Modal de galeria com preview das imagens
 - Download individual ou em lote
 
+### Gerenciamento de Canais (`/manage-channel`) 🆕
+
+**Interface Moderna com Tabs:**
+
+#### **Aba Geral**
+- **Configuração de Voz e Caracteres**:
+  - Dropdown de vozes organizadas por plataforma
+  - Campo de média de caracteres (controle de duração)
+  - Alinhamento responsivo em grid
+- **Prompts de Geração**:
+  - Prompt de Título: Define como títulos são gerados
+  - Prompt de Roteiro: Define estrutura e estilo dos roteiros
+  - Contador de caracteres em tempo real
+  - Placeholders com exemplos práticos
+
+#### **Aba Estilo de Legendas**
+- **Tipo de Legenda**:
+  - **Tradicional (Segments)**: Legendas por segmento
+  - **Karaoke (Highlight)**: Destaque palavra por palavra
+
+**Controles Tradicionais:**
+- Fonte, tamanho e negrito
+- Cor do texto e contorno
+- Estilo da borda (outline, caixa, arredondado)
+- Largura da borda
+- Alinhamento na tela (9 posições)
+- Margem vertical
+
+**Controles Karaoke:**
+- Fonte e tamanho customizáveis
+- Cor do texto e fundo com opacidade
+- Cor do highlight com intensidade de glow
+- Cantos arredondados configuráveis
+- Padding horizontal e vertical
+- Palavras por linha e máximo de linhas
+- Alinhamento em 9 posições
+
+**Preview em Tempo Real:**
+- Proporção 1080p (escala automática)
+- Visualização instantânea das mudanças
+- Background realista para teste de visibilidade
+- Indicador de modo preview
+
+**Comportamento:**
+- Modal permanece aberto após salvar
+- Mensagem de sucesso temporária (3 segundos)
+- Sincronização com webhook N8N
+- Persistência em Supabase
+
 ### Configurações (`/settings`)
 - **Gerenciamento de APIs**: Configuração automática com coleta de metadados
 - **Modelos de Áudio**: Cadastro e teste de vozes personalizadas
@@ -341,10 +403,11 @@ autodark/
 │   │   │   ├── components/
 │   │   │   │   ├── VideoCard.tsx
 │   │   │   │   ├── VideoReviewModal.tsx
-│   │   │   │   └── ImageModelCard.tsx
+│   │   │   │   ├── ImageModelCard.tsx
+│   │   │   │   └── CaptionStyleEditor.tsx  # Editor visual de legendas
 │   │   │   ├── pages/
 │   │   │   │   ├── CloneChannelPage.tsx
-│   │   │   │   ├── ManageChannelPage.tsx
+│   │   │   │   ├── ManageChannelPage.tsx   # Modal com tabs (Geral + Legendas)
 │   │   │   │   ├── PublishSchedulePage.tsx
 │   │   │   │   └── ReviewEditPage.tsx
 │   │   │   └── hooks/
@@ -369,8 +432,38 @@ autodark/
 
 #### `canais`
 - Informações dos canais configurados
-- Prompts personalizados
-- Configurações específicas
+- `prompt_titulo`: Prompt para geração de títulos
+- `prompt_roteiro`: Prompt para geração de roteiros
+- `voz_prefereida`: ID da voz padrão (FK para `vozes`)
+- `media_chars`: Média de caracteres por roteiro
+- `caption_style`: JSONB com configurações de legenda
+  ```json
+  {
+    "type": "highlight" | "segments",
+    "style": {
+      // Karaoke (highlight)
+      "fonte": "Arial Black",
+      "tamanho_fonte": 72,
+      "texto_cor": "#FFFFFF",
+      "fundo_cor": "#000000",
+      "fundo_opacidade": 50,
+      "fundo_arredondado": true,
+      "highlight_cor": "#D60000",
+      "highlight_borda": 12,
+      "padding_horizontal": 40,
+      "padding_vertical": 80,
+      "position": "bottom_center",
+      "words_per_line": 4,
+      "max_lines": 2
+
+      // Tradicional (segments)
+      "font": { "name": "Arial", "size": 36, "bold": true },
+      "colors": { "primary": "#FFFFFF", "outline": "#000000" },
+      "border": { "style": 1, "width": 3 },
+      "position": { "alignment": "bottom_center", "marginVertical": 20 }
+    }
+  }
+  ```
 
 #### `roteiros`
 - Roteiros gerados
@@ -446,9 +539,34 @@ npm run build
 2. **Variáveis de Ambiente**: Mover URLs hardcoded para .env
 3. **Error Boundaries**: Implementar error boundaries do React
 4. **Testing**: Adicionar testes unitários e de integração
+5. **Exportação de Configurações**: Permitir exportar/importar configs de canal
+
+---
+
+## 📝 Changelog
+
+### Versão 2.1 (Atual) - Sistema de Legendas Avançado
+- ✅ **Editor Visual de Legendas**: Configuração completa com preview em tempo real
+- ✅ **Dois Modos de Legenda**: Tradicional e Karaoke com controles específicos
+- ✅ **Gestão de Canais Aprimorada**: Modal com tabs e interface moderna
+- ✅ **Preview de Áudio Integrado**: Teste de vozes ElevenLabs e Fish-Audio
+- ✅ **Média de Caracteres**: Controle de duração por roteiro
+- ✅ **Sincronização N8N**: Webhook `/webhook/update` com `update_type`
+- ✅ **Persistência Completa**: Caption styles salvos em JSONB no Supabase
+
+### Versão 2.0 - Geração de Imagens
+- ✅ Integração com Runware API
+- ✅ UI redesenhada para geração de conteúdo
+- ✅ Sistema de imagens com galeria e download
+
+### Versão 1.0 - Lançamento Inicial
+- ✅ Clonagem de canais do YouTube
+- ✅ Geração de títulos e roteiros
+- ✅ Síntese de voz multi-plataforma
+- ✅ Sistema de autenticação
 
 ---
 
 **AutoDark** - Automação inteligente para criação de conteúdo no YouTube com IA.
 
-*Versão: 2.0 - Atualizada com geração de imagens e UI redesenhada*
+*Versão: 2.1 - Sistema de Legendas Avançado e Gestão de Canais*

@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Play, Square, Volume2 } from 'lucide-react';
 import { VoiceData, audioService } from '@features/content-generation/services/audio';
+import { supabase } from '@shared/lib';
 
 interface VoiceSelectorProps {
   selectedVoiceId?: number;
   onVoiceSelect: (voiceId: number) => void;
   label?: string;
   className?: string;
+}
+
+interface API {
+  id: number;
+  plataforma: string;
+  api_key: string;
 }
 
 export default function VoiceSelector({
@@ -16,13 +23,15 @@ export default function VoiceSelector({
   className = ""
 }: VoiceSelectorProps) {
   const [voices, setVoices] = useState<VoiceData[]>([]);
+  const [apis, setApis] = useState<API[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
-
+  const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadVoices();
+    loadApis();
   }, []);
 
   const loadVoices = async () => {
@@ -39,36 +48,185 @@ export default function VoiceSelector({
     }
   };
 
+  const loadApis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apis')
+        .select('*');
+
+      if (error) throw error;
+      setApis(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar APIs:', err);
+    }
+  };
+
+  const generateVoiceTest = async (voice: VoiceData): Promise<string> => {
+    try {
+      if (voice.plataforma === 'ElevenLabs') {
+        const apiData = apis.find(api => api.plataforma.toLowerCase() === voice.plataforma.toLowerCase());
+        if (!apiData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        let voiceData;
+        try {
+          // Primeira tentativa: Edge Function
+          const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-elevenlabs-voice`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              voice_id: voice.voice_id,
+              api_key: apiData.api_key
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Edge Function falhou: ${response.status}`);
+          }
+
+          const result = await response.json();
+          voiceData = result.data;
+        } catch (edgeFunctionError) {
+          // Fallback: Chamada direta à API ElevenLabs
+          const directResponse = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
+            method: 'GET',
+            headers: {
+              'xi-api-key': apiData.api_key,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!directResponse.ok) {
+            const errorText = await directResponse.text();
+            throw new Error(`Erro ElevenLabs API: ${directResponse.status} - ${errorText}`);
+          }
+
+          const rawData = await directResponse.json();
+
+          voiceData = {
+            preview_url: rawData.preview_url || '',
+            raw_data: rawData
+          };
+        }
+
+        if (!voiceData.preview_url) {
+          throw new Error('Nenhum preview de áudio disponível para esta voz ElevenLabs');
+        }
+
+        return voiceData.preview_url;
+
+      } else if (voice.plataforma === 'Fish-Audio') {
+        const apiData = apis.find(api => api.plataforma.toLowerCase() === voice.plataforma.toLowerCase());
+        if (!apiData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        let voiceData;
+        try {
+          // Primeira tentativa: Edge Function
+          const response = await fetch(`https://vstsnxvwvsaodulrvfjz.supabase.co/functions/v1/fetch-fish-audio-voice`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              voice_id: voice.voice_id,
+              api_key: apiData.api_key
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Edge Function falhou: ${response.status}`);
+          }
+
+          const result = await response.json();
+          voiceData = result.data;
+        } catch (edgeFunctionError) {
+          // Fallback: Chamada direta à API Fish-Audio
+          const directResponse = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiData.api_key}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!directResponse.ok) {
+            const errorText = await directResponse.text();
+            throw new Error(`Erro Fish-Audio API: ${directResponse.status} - ${errorText}`);
+          }
+
+          const rawData = await directResponse.json();
+
+          voiceData = {
+            preview_url: rawData.samples?.[0]?.audio || '',
+            raw_data: rawData
+          };
+        }
+
+        if (!voiceData.preview_url) {
+          throw new Error('Nenhum preview de áudio disponível para esta voz Fish-Audio');
+        }
+
+        return voiceData.preview_url;
+      }
+
+      if (voice.plataforma === 'Minimax') {
+        throw new Error('Teste de voz não disponível para Minimax');
+      }
+
+      throw new Error('Plataforma não suportada para teste');
+    } catch (error) {
+      console.error('Erro ao gerar teste de voz:', error);
+      throw error;
+    }
+  };
+
   const handlePlayPreview = async (voice: VoiceData, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    
     // Se já está tocando esta voz, parar
-    if (playingVoiceId === voice.voice_id) {
-      audioService.stopCurrentAudio();
+    if (playingVoiceId === voice.voice_id && playingAudio) {
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+      setPlayingAudio(null);
       setPlayingVoiceId(null);
       return;
     }
 
+    // Parar qualquer áudio tocando
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+    }
+
     try {
-      const audio = await audioService.playVoicePreview(voice);
-      
-      if (audio) {
-        setPlayingVoiceId(voice.voice_id);
+      const audioUrl = await generateVoiceTest(voice);
+      const audio = new Audio(audioUrl);
 
-        // Limpar estado quando o áudio terminar
-        audio.addEventListener('ended', () => {
-          setPlayingVoiceId(null);
-        });
+      audio.addEventListener('ended', () => {
+        setPlayingVoiceId(null);
+        setPlayingAudio(null);
+      });
 
-        audio.addEventListener('error', () => {
-          setPlayingVoiceId(null);
-        });
-      }
+      audio.addEventListener('error', () => {
+        setPlayingVoiceId(null);
+        setPlayingAudio(null);
+      });
+
+      await audio.play();
+      setPlayingVoiceId(voice.voice_id);
+      setPlayingAudio(audio);
     } catch (error) {
       console.error('Erro ao reproduzir preview:', error);
-      // Mostrar mensagem de erro para o usuário
       alert(`Erro ao reproduzir preview da voz ${voice.nome_voz}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      setPlayingVoiceId(null);
+      setPlayingAudio(null);
     }
   };
 
@@ -152,7 +310,7 @@ export default function VoiceSelector({
             </div>
             
             {/* Preview Button */}
-            {(selectedVoice.preview_url || selectedVoice.plataforma === 'Fish-Audio') ? (
+            {(selectedVoice.preview_url || selectedVoice.plataforma === 'Fish-Audio' || selectedVoice.plataforma === 'ElevenLabs') ? (
               <button
                 onClick={(e) => handlePlayPreview(selectedVoice, e)}
                 className={`

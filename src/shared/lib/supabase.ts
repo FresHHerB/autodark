@@ -62,13 +62,18 @@ export interface ChannelConfig {
 }
 
 export interface Canal {
-  id: string;
-  nome: string;
-  descricao?: string;
+  id: number;
+  nome_canal: string;
+  prompt_titulo: string;
+  prompt_roteiro: string;
+  prompt_thumb?: string;
+  voz_prefereida?: number | null;
+  media_chars?: number | null;
   url_canal?: string;
-  total_videos?: number;
+  titulos?: any;
+  roteiros?: any;
+  caption_style?: any;
   created_at: string;
-  updated_at: string;
 }
 
 export interface ApiCredential {
