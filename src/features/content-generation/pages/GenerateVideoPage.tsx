@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, Settings, Wand2, FileText, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle, Clock, Play } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
-import { PromptModal } from '@shared/components/modals';
 import { supabase } from '@shared/lib/supabase';
+import { apiService } from '@shared/services';
 
 interface Channel {
   id: number;
   nome_canal: string;
-  prompt_roteiro: string;
-  prompt_titulo: string;
-  voz_prefereida?: number;
-  media_chars?: number;
-  prompt_thumb?: string;
   url_canal?: string;
-  caption_style?: any;
+  media_chars?: number;
 }
 
 interface Roteiro {
@@ -24,19 +19,26 @@ interface Roteiro {
   created_at: string;
   titulo: string | null;
   audio_path: string | null;
-  text_thumb: string | null;
   images_path: string[] | null;
   transcricao_timestamp: string | null;
 }
 
-const voiceOptions = [
-  { value: 'feminina-suave', label: 'Feminina Suave' },
-  { value: 'masculina-grave', label: 'Masculina Grave' },
-  { value: 'feminina-energetica', label: 'Feminina Energética' },
-  { value: 'masculina-jovem', label: 'Masculina Jovem' },
-  { value: 'infantil-feminina', label: 'Infantil Feminina' },
-  { value: 'infantil-masculina', label: 'Infantil Masculina' }
-];
+interface VideoSchedule {
+  id: number;
+  data: string;
+  hora: string;
+}
+
+interface VideoZoomTypes {
+  id: number;
+  zoomTypes: string[];
+}
+
+const ZOOM_OPTIONS = [
+  { value: 'zoomin', label: 'Zoom In' },
+  { value: 'zoomout', label: 'Zoom Out' },
+  { value: 'zoompanright', label: 'Zoom Pan Right' }
+] as const;
 
 export default function GenerateVideoPage() {
   const navigate = useNavigate();
@@ -45,34 +47,14 @@ export default function GenerateVideoPage() {
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [isLoadingRoteiros, setIsLoadingRoteiros] = useState(false);
-  const [selectedRoteiroId, setSelectedRoteiroId] = useState<number | null>(null);
-  const [idea, setIdea] = useState('');
-  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
-  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
-  const [generatedTitle, setGeneratedTitle] = useState('');
-  const [generatedScript, setGeneratedScript] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('sonnet-4');
-  const [selectedVoice, setSelectedVoice] = useState('feminina-suave');
-  const [modalState, setModalState] = useState<{
-    isOpen: boolean;
-    type: 'title' | 'script' | 'description' | null;
-    content: string;
-  }>({
-    isOpen: false,
-    type: null,
-    content: ''
-  });
-
-  const modelOptions = [
-    { value: 'sonnet-4', label: 'Sonnet-4' },
-    { value: 'gpt-5', label: 'GPT-5' },
-    { value: 'gemini-2.5-pro', label: 'Gemini-2.5-Pro' }
-  ];
+  const [selectedRoteiros, setSelectedRoteiros] = useState<Set<number>>(new Set());
+  const [schedules, setSchedules] = useState<Map<number, VideoSchedule>>(new Map());
+  const [zoomTypes, setZoomTypes] = useState<Map<number, string[]>>(new Map());
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const selectedChannel = channels.find(c => c.id === selectedChannelId);
 
-  // Buscar canais do Supabase ao carregar a página
+  // Buscar canais ao carregar a página
   useEffect(() => {
     fetchChannels();
   }, []);
@@ -82,7 +64,7 @@ export default function GenerateVideoPage() {
       setIsLoadingChannels(true);
       const { data, error } = await supabase
         .from('canais')
-        .select('*')
+        .select('id, nome_canal, url_canal, media_chars')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -107,6 +89,9 @@ export default function GenerateVideoPage() {
         .from('roteiros')
         .select('*')
         .eq('canal_id', canalId)
+        .not('audio_path', 'is', null)
+        .not('images_path', 'is', null)
+        .not('transcricao_timestamp', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -115,7 +100,13 @@ export default function GenerateVideoPage() {
       }
 
       if (data) {
-        setRoteiros(data);
+        // Filtrar apenas roteiros com arrays não vazios
+        const filteredRoteiros = data.filter(roteiro =>
+          roteiro.images_path &&
+          Array.isArray(roteiro.images_path) &&
+          roteiro.images_path.length > 0
+        );
+        setRoteiros(filteredRoteiros);
       }
     } catch (error) {
       console.error('Erro ao buscar roteiros:', error);
@@ -127,92 +118,148 @@ export default function GenerateVideoPage() {
   const handleChannelSelect = (channelId: string) => {
     const id = parseInt(channelId);
     setSelectedChannelId(id || null);
-    setGeneratedTitle('');
-    setGeneratedScript('');
-    setIdea('');
     setRoteiros([]);
-    setSelectedRoteiroId(null);
+    setSelectedRoteiros(new Set());
+    setSchedules(new Map());
+    setZoomTypes(new Map());
 
     if (id) {
       fetchRoteiros(id);
     }
   };
 
-  const handleSelectRoteiro = (roteiro: Roteiro) => {
-    setSelectedRoteiroId(roteiro.id);
-    setGeneratedTitle(roteiro.titulo || '');
-    setGeneratedScript(roteiro.roteiro);
-    setIdea(''); // Clear the idea input as we're using an existing script
-  };
+  const toggleRoteiroSelection = (roteiroId: number) => {
+    setSelectedRoteiros(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(roteiroId)) {
+        newSet.delete(roteiroId);
+        // Remove schedule and zoom types when deselecting
+        setSchedules(prevSchedules => {
+          const newSchedules = new Map(prevSchedules);
+          newSchedules.delete(roteiroId);
+          return newSchedules;
+        });
+        setZoomTypes(prevZoomTypes => {
+          const newZoomTypes = new Map(prevZoomTypes);
+          newZoomTypes.delete(roteiroId);
+          return newZoomTypes;
+        });
+      } else {
+        newSet.add(roteiroId);
+        // Initialize schedule with current date/time
+        const now = new Date();
+        const timezoneOffset = 3 * 60; // GMT-3 in minutes
+        const localTime = new Date(now.getTime() - timezoneOffset * 60000);
 
-  const handleGenerateTitle = async () => {
-    if (!idea.trim() || !selectedChannel) return;
+        setSchedules(prevSchedules => {
+          const newSchedules = new Map(prevSchedules);
+          newSchedules.set(roteiroId, {
+            id: roteiroId,
+            data: localTime.toISOString().split('T')[0],
+            hora: localTime.toTimeString().slice(0, 5)
+          });
+          return newSchedules;
+        });
 
-    setIsGeneratingTitle(true);
-
-    // Simular geração de título
-    setTimeout(() => {
-      const titles = [
-        `${idea} - Você Precisa Ver Isso!`,
-        `A Verdade Sobre ${idea} Que Ninguém Te Conta`,
-        `${idea}: O Guia Completo Para Iniciantes`,
-        `Como ${idea} Mudou Minha Vida (INCRÍVEL!)`,
-        `${idea} - Tutorial Passo a Passo`
-      ];
-      const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-      setGeneratedTitle(randomTitle);
-      setIsGeneratingTitle(false);
-    }, 3000);
-  };
-
-  const handleGenerateScript = async () => {
-    if (!idea.trim() || !selectedChannel) return;
-
-    setIsGeneratingScript(true);
-
-    // Simular geração de roteiro
-    setTimeout(() => {
-      const script = `Olá pessoal! Hoje vamos falar sobre ${idea}.
-
-[INTRODUÇÃO]
-Você já se perguntou sobre ${idea}? Neste vídeo, vou te mostrar tudo que você precisa saber!
-
-[DESENVOLVIMENTO]
-Primeiro, vamos entender o básico sobre ${idea}...
-Em seguida, vou te mostrar as principais características...
-E por fim, algumas dicas práticas que você pode aplicar hoje mesmo!
-
-[CONCLUSÃO]
-Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ative o sininho para não perder nenhum vídeo!`;
-
-      setGeneratedScript(script);
-      setIsGeneratingScript(false);
-    }, 4000);
-  };
-
-  const openModal = (type: 'title' | 'script' | 'description') => {
-    if (!selectedChannel) return;
-
-    const contentMap = {
-      title: selectedChannel.prompt_titulo || '',
-      script: selectedChannel.prompt_roteiro || '',
-      description: selectedChannel.prompt_thumb || ''
-    };
-
-    setModalState({
-      isOpen: true,
-      type,
-      content: contentMap[type]
+        // Initialize with all zoom types selected by default
+        setZoomTypes(prevZoomTypes => {
+          const newZoomTypes = new Map(prevZoomTypes);
+          newZoomTypes.set(roteiroId, ['zoomin', 'zoomout', 'zoompanright']);
+          return newZoomTypes;
+        });
+      }
+      return newSet;
     });
   };
 
-  const handleModalSave = (content: string) => {
-    if (!modalState.type || !selectedChannel) return;
-
-    // Atualizar o canal com o novo prompt
-    // TODO: Implementar atualização no Supabase
-    console.log('Salvando prompt:', modalState.type, content);
+  const updateSchedule = (roteiroId: number, field: 'data' | 'hora', value: string) => {
+    setSchedules(prevSchedules => {
+      const newSchedules = new Map(prevSchedules);
+      const current = newSchedules.get(roteiroId);
+      if (current) {
+        newSchedules.set(roteiroId, {
+          ...current,
+          [field]: value
+        });
+      }
+      return newSchedules;
+    });
   };
+
+  const toggleZoomType = (roteiroId: number, zoomType: string) => {
+    setZoomTypes(prevZoomTypes => {
+      const newZoomTypes = new Map(prevZoomTypes);
+      const current = newZoomTypes.get(roteiroId) || [];
+
+      if (current.includes(zoomType)) {
+        // Remove if already selected
+        newZoomTypes.set(roteiroId, current.filter(t => t !== zoomType));
+      } else {
+        // Add if not selected
+        newZoomTypes.set(roteiroId, [...current, zoomType]);
+      }
+
+      return newZoomTypes;
+    });
+  };
+
+  // Convert date and time to timestamptz format (ISO 8601 with GMT-3)
+  const getTimestamptz = (data: string, hora: string): string => {
+    // Combine date and time: "2025-10-12" + "14:30" = "2025-10-12T14:30:00-03:00"
+    return `${data}T${hora}:00-03:00`;
+  };
+
+  const handleGenerateVideos = async () => {
+    if (selectedRoteiros.size === 0) {
+      alert('Selecione pelo menos um roteiro para gerar vídeo');
+      return;
+    }
+
+    // Validate schedules
+    for (const roteiroId of selectedRoteiros) {
+      const schedule = schedules.get(roteiroId);
+      if (!schedule || !schedule.data || !schedule.hora) {
+        alert('Preencha data e hora de agendamento para todos os roteiros selecionados');
+        return;
+      }
+    }
+
+    try {
+      setIsGenerating(true);
+
+      // Build payload with timestamptz format and zoom types
+      const videos = Array.from(selectedRoteiros).map(roteiroId => {
+        const schedule = schedules.get(roteiroId)!;
+        const zoom = zoomTypes.get(roteiroId) || [];
+        return {
+          id: roteiroId,
+          data_publicar: getTimestamptz(schedule.data, schedule.hora),
+          zoom_types: zoom
+        };
+      });
+
+      const payload = { videos };
+
+      console.log('Enviando payload:', payload);
+
+      // Call webhook
+      await apiService.generateVideos(payload);
+
+      alert(`${selectedRoteiros.size} vídeo(s) agendado(s) com sucesso!`);
+
+      // Reset selections
+      setSelectedRoteiros(new Set());
+      setSchedules(new Map());
+      setZoomTypes(new Map());
+    } catch (error) {
+      console.error('Erro ao gerar vídeos:', error);
+      alert('Erro ao agendar vídeos. Verifique o console para mais detalhes.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const selectedRoteirosArray = Array.from(selectedRoteiros);
 
   return (
     <div className="min-h-screen bg-black">
@@ -227,9 +274,9 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-light text-white">Gerar Vídeo</h1>
+            <h1 className="text-2xl font-light text-white">Gerar Vídeos</h1>
             <p className="text-gray-400 text-sm">
-              Crie vídeos automaticamente usando IA baseada nos dados coletados
+              Selecione roteiros prontos e agende a geração dos vídeos
             </p>
           </div>
         </div>
@@ -260,16 +307,11 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
           </div>
 
           {selectedChannel && (
-            <div className="mt-4 p-4 bg-gray-800 border border-gray-700">
+            <div className="mt-4 p-4 bg-gray-800 border border-gray-700 rounded">
               <h3 className="text-white font-medium mb-1">{selectedChannel.nome_canal}</h3>
               {selectedChannel.url_canal && (
                 <p className="text-gray-400 text-sm mb-2">{selectedChannel.url_canal}</p>
               )}
-              <div className="flex gap-2 text-xs text-gray-500">
-                {selectedChannel.media_chars && (
-                  <span>Média de caracteres: {selectedChannel.media_chars}</span>
-                )}
-              </div>
             </div>
           )}
         </div>
@@ -277,14 +319,21 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
         {/* Roteiros Section */}
         {selectedChannel && (
           <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-light text-white">
-                Roteiros do Canal
-              </h2>
-              {selectedRoteiroId && (
-                <div className="flex items-center gap-2 text-sm text-blue-400">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Roteiro selecionado</span>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-light text-white mb-1">
+                  Roteiros Prontos para Geração
+                </h2>
+                <p className="text-sm text-gray-400">
+                  Apenas roteiros com áudio, imagens e legendas completos
+                </p>
+              </div>
+              {selectedRoteiros.size > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-900/30 border border-blue-500/50 rounded">
+                  <CheckCircle className="w-4 h-4 text-blue-400" />
+                  <span className="text-blue-300 text-sm font-medium">
+                    {selectedRoteiros.size} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
+                  </span>
                 </div>
               )}
             </div>
@@ -294,365 +343,190 @@ Espero que tenham gostado do conteúdo sobre ${idea}! Se inscreva no canal e ati
                 <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
               </div>
             ) : roteiros.length === 0 ? (
-              <div className="bg-gray-800 border border-gray-700 p-8 text-center">
-                <FileText className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-400">
-                  Nenhum roteiro encontrado para este canal
+              <div className="bg-gray-800 border border-gray-700 p-12 text-center rounded">
+                <Play className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 mb-2">
+                  Nenhum roteiro pronto encontrado
+                </p>
+                <p className="text-gray-500 text-sm">
+                  Roteiros precisam ter áudio, imagens e legendas gerados
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {roteiros.map((roteiro) => (
-                  <div
-                    key={roteiro.id}
-                    onClick={() => handleSelectRoteiro(roteiro)}
-                    className={`bg-gray-800 border p-4 hover:border-gray-600 transition-all cursor-pointer relative ${
-                      selectedRoteiroId === roteiro.id
-                        ? 'border-blue-500 ring-2 ring-blue-500/50'
-                        : 'border-gray-700'
-                    }`}
-                  >
-                    {selectedRoteiroId === roteiro.id && (
-                      <div className="absolute top-2 right-2">
-                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                {roteiros.map((roteiro) => {
+                  const isSelected = selectedRoteiros.has(roteiro.id);
+                  const schedule = schedules.get(roteiro.id);
+                  const selectedZoomTypes = zoomTypes.get(roteiro.id) || [];
+
+                  return (
+                    <div
+                      key={roteiro.id}
+                      onClick={() => toggleRoteiroSelection(roteiro.id)}
+                      className={`bg-gray-800 border p-4 rounded-lg transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-500 ring-2 ring-blue-500/30'
+                          : 'border-gray-700 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex flex-col h-full">
+                        {/* Header with checkbox */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="flex-shrink-0 pt-0.5">
+                            <div
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'bg-blue-500 border-blue-500'
+                                  : 'border-gray-600'
+                              }`}
+                            >
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-white font-medium text-sm mb-1 truncate" title={roteiro.titulo || 'Sem título'}>
+                              {roteiro.titulo ? (roteiro.titulo.length > 40 ? `${roteiro.titulo.substring(0, 40)}...` : roteiro.titulo) : 'Sem título'}
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Content preview */}
+                        <p className="text-gray-400 text-xs mb-3 line-clamp-2">
+                          {roteiro.roteiro.substring(0, 100)}...
+                        </p>
+
+                        {/* Metadata */}
+                        <div className="flex items-center gap-3 mb-3 flex-wrap">
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Calendar className="w-3 h-3" />
+                            <span>{new Date(roteiro.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-green-400">
+                            <Volume2 className="w-3 h-3" />
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-blue-400">
+                            <ImageIcon className="w-3 h-3" />
+                            <span>{roteiro.images_path?.length || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-purple-400">
+                            <FileCheck className="w-3 h-3" />
+                          </div>
+                        </div>
+
+                        {/* Schedule Box - Only visible when selected */}
+                        {isSelected && schedule && (
+                          <div
+                            className="mt-auto p-3 bg-gray-900 border border-gray-700 rounded"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="w-3.5 h-3.5 text-blue-400" />
+                              <h4 className="text-white text-xs font-medium">
+                                Agendamento (GMT-3)
+                              </h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  Data
+                                </label>
+                                <input
+                                  type="date"
+                                  value={schedule.data}
+                                  onChange={(e) => updateSchedule(roteiro.id, 'data', e.target.value)}
+                                  className="w-full bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-xs rounded focus:outline-none focus:border-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-gray-400 text-xs mb-1">
+                                  Hora
+                                </label>
+                                <input
+                                  type="time"
+                                  value={schedule.hora}
+                                  onChange={(e) => updateSchedule(roteiro.id, 'hora', e.target.value)}
+                                  className="w-full bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-xs rounded focus:outline-none focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Zoom Types */}
+                            <div className="border-t border-gray-700 pt-3">
+                              <label className="block text-gray-400 text-xs mb-2">
+                                Tipo de Zoom:
+                              </label>
+                              <div className="flex flex-wrap gap-3">
+                                {ZOOM_OPTIONS.map((option) => (
+                                  <label
+                                    key={option.value}
+                                    className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedZoomTypes.includes(option.value)}
+                                      onChange={() => toggleZoomType(roteiro.id, option.value)}
+                                      className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                                    />
+                                    <span className="text-gray-300 text-xs">{option.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-white font-medium text-sm line-clamp-2 flex-1 pr-6">
-                        {roteiro.titulo || 'Sem título'}
-                      </h3>
                     </div>
-
-                    <p className="text-gray-400 text-xs line-clamp-3 mb-4">
-                      {roteiro.roteiro.substring(0, 150)}...
-                    </p>
-
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(roteiro.created_at).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {roteiro.audio_path && (
-                        <div className="flex items-center gap-1 text-xs text-green-400">
-                          <Volume2 className="w-3 h-3" />
-                          <span>Áudio</span>
-                        </div>
-                      )}
-                      {roteiro.images_path && roteiro.images_path.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-blue-400">
-                          <ImageIcon className="w-3 h-3" />
-                          <span>{roteiro.images_path.length} img</span>
-                        </div>
-                      )}
-                      {roteiro.transcricao_timestamp && (
-                        <div className="flex items-center gap-1 text-xs text-purple-400">
-                          <FileCheck className="w-3 h-3" />
-                          <span>Legendas</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* Main Generation Section */}
-        {selectedChannel && (
-          <div className="space-y-8">
-            {/* Info banner when roteiro is selected */}
-            {selectedRoteiroId && (
-              <div className="bg-blue-900/20 border border-blue-500/50 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-blue-300 text-sm font-medium mb-1">
-                      Trabalhando com roteiro existente
-                    </p>
-                    <p className="text-blue-400/80 text-xs">
-                      O título e roteiro foram carregados do roteiro selecionado. Você pode editá-los abaixo ou gerar um novo conteúdo.
-                    </p>
-                  </div>
-                </div>
+        {/* Generate Button */}
+        {selectedRoteiros.size > 0 && (
+          <div className="bg-gray-900 border border-gray-800 p-6 sticky bottom-0 z-10">
+            <div className="flex items-center justify-between">
+              <div className="text-white">
+                <p className="text-sm text-gray-400 mb-1">
+                  {selectedRoteiros.size} roteiro{selectedRoteiros.size > 1 ? 's' : ''} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Verifique os agendamentos antes de confirmar
+                </p>
               </div>
-            )}
-
-            {/* Idea Input and Title Generation */}
-            <div className="bg-gray-900 border border-gray-800 p-6">
-              <h3 className="text-lg font-light text-white mb-4">
-                1. Inserir Ideia e Gerar Título
-              </h3>
-
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={idea}
-                    onChange={(e) => setIdea(e.target.value)}
-                    placeholder="Ex: Como fazer slime colorido em casa"
-                    className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 px-4 py-3 focus:outline-none focus:border-gray-600 transition-colors"
-                  />
-                  <button
-                    onClick={handleGenerateTitle}
-                    disabled={!idea.trim() || isGeneratingTitle}
-                    className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-                  >
-                    {isGeneratingTitle ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Wand2 className="w-4 h-4" />
-                    )}
-                    Gerar Título
-                  </button>
-                </div>
-
-                {/* Generated Title */}
-                {generatedTitle && (
-                  <div className="bg-gray-800 border border-gray-700 p-4">
-                    <label className="block text-gray-400 text-sm mb-2">
-                      Título Gerado:
-                    </label>
-                    <input
-                      type="text"
-                      value={generatedTitle}
-                      onChange={(e) => setGeneratedTitle(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 text-white px-4 py-3 focus:outline-none focus:border-gray-500"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Script Generation */}
-            <div className="bg-gray-900 border border-gray-800 p-6">
-              <h3 className="text-lg font-light text-white mb-4">
-                2. Gerar Roteiro
-              </h3>
-
-              <div className="mb-4">
-                <label className="block text-gray-400 text-sm mb-2">
-                  Modelo de IA:
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none"
-                  >
-                    {modelOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                </div>
-              </div>
-
               <button
-                onClick={handleGenerateScript}
-                disabled={!idea.trim() || isGeneratingScript}
-                className="w-full bg-green-600 text-white py-4 px-6 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={handleGenerateVideos}
+                disabled={isGenerating}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg font-medium"
               >
-                {isGeneratingScript ? (
+                {isGenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Gerando Roteiro com {modelOptions.find(m => m.value === selectedModel)?.label}...
+                    <span>Agendando...</span>
                   </>
                 ) : (
                   <>
-                    <FileText className="w-5 h-5" />
-                    Gerar Roteiro
+                    <Play className="w-5 h-5" />
+                    <span>
+                      Gerar {selectedRoteiros.size} Vídeo{selectedRoteiros.size > 1 ? 's' : ''}
+                    </span>
                   </>
                 )}
               </button>
-
-              {/* Generated Script */}
-              {generatedScript && (
-                <div className="mt-4 bg-gray-800 border border-gray-700 p-4">
-                  <label className="block text-gray-400 text-sm mb-2">
-                    Roteiro Gerado:
-                  </label>
-                  <textarea
-                    value={generatedScript}
-                    onChange={(e) => setGeneratedScript(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 text-white px-4 py-3 focus:outline-none focus:border-gray-500 resize-none"
-                    rows={12}
-                  />
-                </div>
-              )}
             </div>
-
-            {/* Advanced Settings (Collapsible) */}
-            <div className="bg-gray-900 border border-gray-800">
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full p-6 flex items-center justify-between text-left hover:bg-gray-850 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Settings className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-lg font-light text-white">
-                    Configurações Avançadas
-                  </h3>
-                </div>
-                {showAdvanced ? (
-                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-
-              {showAdvanced && selectedChannel && (
-                <div className="border-t border-gray-800 p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Prompt Gerador de Título */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Prompt Gerador de Título</h4>
-                      <div className="bg-gray-700 border border-gray-600 p-3">
-                        <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {selectedChannel.prompt_titulo || 'Nenhum prompt definido'}
-                        </p>
-                        <button
-                          onClick={() => openModal('title')}
-                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                        >
-                          Mostrar mais
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Prompt Roteiro */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Prompt Roteiro</h4>
-                      <div className="bg-gray-700 border border-gray-600 p-3">
-                        <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {selectedChannel.prompt_roteiro || 'Nenhum prompt definido'}
-                        </p>
-                        <button
-                          onClick={() => openModal('script')}
-                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                        >
-                          Mostrar mais
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Prompt Thumbnail */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Prompt Thumbnail</h4>
-                      <div className="bg-gray-700 border border-gray-600 p-3">
-                        <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                          {selectedChannel.prompt_thumb || 'Nenhum prompt definido'}
-                        </p>
-                        <button
-                          onClick={() => openModal('description')}
-                          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                        >
-                          Mostrar mais
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Voz */}
-                    <div className="bg-gray-800 border border-gray-700 p-4">
-                      <h4 className="text-white font-medium mb-3">Voz</h4>
-                      <div className="relative">
-                        <select
-                          value={selectedVoice}
-                          onChange={(e) => setSelectedVoice(e.target.value)}
-                          className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm pr-8 focus:outline-none focus:border-gray-500 appearance-none"
-                        >
-                          {voiceOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    {/* Média de Caracteres */}
-                    {selectedChannel.media_chars && (
-                      <div className="bg-gray-800 border border-gray-700 p-4">
-                        <h4 className="text-white font-medium mb-3">Média de Caracteres</h4>
-                        <input
-                          type="number"
-                          value={selectedChannel.media_chars}
-                          readOnly
-                          className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-                        />
-                      </div>
-                    )}
-
-                    {/* URL do Canal */}
-                    {selectedChannel.url_canal && (
-                      <div className="bg-gray-800 border border-gray-700 p-4">
-                        <h4 className="text-white font-medium mb-3">URL do Canal</h4>
-                        <input
-                          type="text"
-                          value={selectedChannel.url_canal}
-                          readOnly
-                          className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Next Steps */}
-            {generatedTitle && generatedScript && (
-              <div className="bg-gray-900 border border-green-500 p-6">
-                <h3 className="text-lg font-light text-white mb-4">
-                  ✅ Conteúdo Gerado com Sucesso!
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Título e roteiro foram gerados. Próximos passos disponíveis:
-                </p>
-                <div className="flex gap-3">
-                  <button className="bg-white text-black px-6 py-3 hover:bg-gray-200 transition-colors">
-                    Gerar Imagem
-                  </button>
-                  <button className="bg-purple-600 text-white px-6 py-3 hover:bg-purple-700 transition-colors">
-                    Gerar Áudio
-                  </button>
-                  <button className="bg-orange-600 text-white px-6 py-3 hover:bg-orange-700 transition-colors">
-                    Revisar/Editar
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {!selectedChannel && !isLoadingChannels && (
-          <div className="bg-gray-900 border border-gray-800 p-12 text-center">
+          <div className="bg-gray-900 border border-gray-800 p-12 text-center rounded">
             <p className="text-gray-400">
-              Selecione um canal para começar a gerar vídeos
+              Selecione um canal para visualizar os roteiros prontos
             </p>
           </div>
         )}
       </main>
-
-      {/* Modal */}
-      <PromptModal
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
-        title={
-          modalState.type === 'title' ? 'Prompt Gerador de Título' :
-          modalState.type === 'script' ? 'Prompt Roteiro' :
-          'Prompt Thumbnail'
-        }
-        content={modalState.content}
-        onSave={handleModalSave}
-      />
     </div>
   );
 }

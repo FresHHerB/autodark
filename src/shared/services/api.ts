@@ -29,6 +29,7 @@ class ApiService {
       processVideo: import.meta.env.VITE_WEBHOOK_PROCESS_VIDEO,
       publishVideo: import.meta.env.VITE_WEBHOOK_PUBLISH_VIDEO,
       update: import.meta.env.VITE_WEBHOOK_UPDATE || '/webhook/update',
+      generateVideo: import.meta.env.VITE_WEBHOOK_GERAR_VIDEO || '/webhook/gerarVideo',
     };
 
     return `${this.baseUrl}${webhooks[key as keyof typeof webhooks] || ''}`;
@@ -158,6 +159,20 @@ class ApiService {
     media_chars?: number | null;
   }) {
     return this.call(this.getWebhook('update'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Video generation methods
+  async generateVideos(payload: {
+    videos: Array<{
+      id: number;
+      data_publicar: string; // timestamptz format: "2025-10-12T14:30:00-03:00"
+      zoom_types: string[]; // Array of zoom types: ["zoomin", "zoomout", "zoompanright"]
+    }>;
+  }) {
+    return this.call(this.getWebhook('generateVideo'), {
       method: 'POST',
       body: JSON.stringify(payload),
     });
