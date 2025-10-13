@@ -223,7 +223,9 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
       const bgColor = `${highlightStyle.fundo_cor || '#000000'}${opacityHex}`;
 
       const fontSize = (highlightStyle.tamanho_fonte || 72) * previewScale;
-      const highlightBorder = (highlightStyle.highlight_borda || 12) * previewScale;
+      // FFmpeg renders borders more prominently than CSS, so we use a larger multiplier
+      // to better represent the final video appearance (2x the normal scale)
+      const highlightBorder = (highlightStyle.highlight_borda || 12) * previewScale * 2;
       const paddingH = (highlightStyle.padding_horizontal || 40) * previewScale;
       const paddingV = (highlightStyle.padding_vertical || 80) * previewScale;
       const borderRadius = highlightStyle.fundo_arredondado ? (12 * previewScale) : 0;
