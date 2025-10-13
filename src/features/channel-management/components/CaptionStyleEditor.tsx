@@ -31,6 +31,7 @@ interface HighlightStyle {
   fundo_opacidade?: number;
   fundo_arredondado?: boolean;
   texto_cor?: string;
+  highlight_texto_cor?: string;
   highlight_cor?: string;
   highlight_borda?: number;
   padding_horizontal?: number;
@@ -144,6 +145,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
     fundo_opacidade: 50,
     fundo_arredondado: true,
     texto_cor: '#FFFFFF',
+    highlight_texto_cor: undefined, // Uses texto_cor by default if not set
     highlight_cor: '#D60000',
     highlight_borda: 12,
     padding_horizontal: 40,
@@ -249,7 +251,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
           color: highlightStyle.texto_cor || '#FFFFFF',
         },
         highlight: {
-          color: highlightStyle.texto_cor || '#FFFFFF',
+          color: highlightStyle.highlight_texto_cor || highlightStyle.texto_cor || '#FFFFFF',
           WebkitTextStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
           textStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
           paintOrder: 'stroke fill',
@@ -726,6 +728,28 @@ const HighlightControls: React.FC<{
         <div className="flex items-center gap-2 text-white font-bold text-base bg-gradient-to-r from-red-600/20 to-transparent -mx-6 px-6 py-3 border-l-4 border-red-500">
           <Palette className="w-5 h-5" />
           HIGHLIGHT (DESTAQUE)
+        </div>
+
+        <div>
+          <label className="block text-gray-400 text-xs mb-2 font-medium">Cor do Texto Destacado</label>
+          <div className="relative">
+            <input
+              type="color"
+              value={style.highlight_texto_cor || style.texto_cor || '#FFFFFF'}
+              onChange={(e) => onChange({ highlight_texto_cor: e.target.value })}
+              className="absolute left-0 top-0 w-10 h-full cursor-pointer rounded-l border-r-0"
+              style={{ padding: 0, margin: 0 }}
+            />
+            <input
+              type="text"
+              value={style.highlight_texto_cor || style.texto_cor || '#FFFFFF'}
+              onChange={(e) => onChange({ highlight_texto_cor: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 text-white pl-12 pr-2 py-2 text-xs focus:outline-none focus:border-gray-600 rounded"
+              placeholder="#FFFF00"
+              maxLength={9}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Cor da fonte quando a palavra está em destaque (deixe vazio para usar a cor do texto normal)</p>
         </div>
 
         <div>

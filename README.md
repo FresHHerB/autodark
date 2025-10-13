@@ -448,6 +448,7 @@ autodark/
       "fundo_cor": "#000000",
       "fundo_opacidade": 50,
       "fundo_arredondado": true,
+      "highlight_texto_cor": "#FFFF00",  // Cor do texto quando destacado (opcional)
       "highlight_cor": "#D60000",
       "highlight_borda": 12,
       "padding_horizontal": 40,
