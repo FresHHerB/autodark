@@ -6,6 +6,7 @@ import { DashboardPage } from '@features/dashboard';
 import { CloneChannelPage, ManageChannelPage, ReviewEditPage, PublishSchedulePage } from '@features/channel-management';
 import { GenerateContentPage, GenerateVideoPage } from '@features/content-generation';
 import { SettingsPage } from '@features/settings';
+import { ViewScriptsPage } from '@features/scripts';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -111,6 +112,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PublishSchedulePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/view-scripts"
+              element={
+                <ProtectedRoute>
+                  <ViewScriptsPage />
                 </ProtectedRoute>
               }
             />

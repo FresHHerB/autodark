@@ -1,205 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, AlertCircle, Eye, Filter } from 'lucide-react';
+import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, Calendar, Youtube, AlertCircle, Filter, X, Video } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
-import { VideoReviewModal } from '@features/channel-management/components';
+import { VideoPlayer } from '@shared/components/modals';
+import { useVideosWithChannels, VideoStatus, VideoWithChannel } from '@features/channel-management/hooks';
 
-interface VideoToReview {
-  id: string;
-  title: string;
-  script: string;
-  thumbnail: string;
-  status: 'pending' | 'approved' | 'needs-changes';
-  generatedAt: string;
-  channel: string;
-  idea: string;
-  estimatedDuration: string;
-}
 
-interface ChannelSection {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  videosToReview: VideoToReview[];
-}
-
-const mockChannelSections: ChannelSection[] = [
-  {
-    id: '1',
-    name: 'ToonshineStudio',
-    description: 'Canal de histórias infantis animadas',
+const statusConfig = {
+  animando_imagens: {
+    label: 'Animando Imagens',
+    icon: Loader2,
     color: 'blue',
-    videosToReview: [
-      {
-        id: '1',
-        title: 'Como Fazer Slime Colorido em Casa - Você Precisa Ver Isso!',
-        script: 'Olá pessoal! Hoje vamos falar sobre como fazer slime colorido em casa...',
-        thumbnail: 'https://images.pexels.com/photos/1648377/pexels-photo-1648377.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'pending',
-        generatedAt: '2024-01-20T10:30:00Z',
-        channel: 'ToonshineStudio',
-        idea: 'Como fazer slime colorido em casa',
-        estimatedDuration: '5:30'
-      },
-      {
-        id: '2',
-        title: 'A Verdade Sobre Brinquedos Educativos Que Ninguém Te Conta',
-        script: 'Você já se perguntou sobre brinquedos educativos? Neste vídeo, vou te mostrar tudo...',
-        thumbnail: 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'approved',
-        generatedAt: '2024-01-19T14:15:00Z',
-        channel: 'ToonshineStudio',
-        idea: 'Brinquedos educativos para crianças',
-        estimatedDuration: '7:45'
-      },
-      {
-        id: '3',
-        title: 'Histórias de Animais: Tutorial Passo a Passo',
-        script: 'Olá crianças! Hoje vamos contar uma história incrível sobre animais...',
-        thumbnail: 'https://images.pexels.com/photos/1170986/pexels-photo-1170986.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'needs-changes',
-        generatedAt: '2024-01-18T09:20:00Z',
-        channel: 'ToonshineStudio',
-        idea: 'Histórias de animais para crianças',
-        estimatedDuration: '4:20'
-      }
-    ]
+    isProcessing: true
   },
-  {
-    id: '2',
-    name: 'TechReviewBR',
-    description: 'Reviews de tecnologia em português',
-    color: 'green',
-    videosToReview: [
-      {
-        id: '4',
-        title: 'iPhone 15 Pro Max REVIEW - VALE A PENA? Análise Completa',
-        script: 'E aí pessoal! Hoje vamos fazer o review completo do iPhone 15 Pro Max...',
-        thumbnail: 'https://images.pexels.com/photos/1181673/pexels-photo-1181673.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'pending',
-        generatedAt: '2024-01-20T16:45:00Z',
-        channel: 'TechReviewBR',
-        idea: 'Review do iPhone 15 Pro Max',
-        estimatedDuration: '12:30'
-      },
-      {
-        id: '5',
-        title: 'MacBook Air M3 - ANÁLISE COMPLETA após 30 dias de uso',
-        script: 'Fala galera! Após 30 dias usando o MacBook Air M3, vou contar tudo...',
-        thumbnail: 'https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'approved',
-        generatedAt: '2024-01-19T11:30:00Z',
-        channel: 'TechReviewBR',
-        idea: 'Review MacBook Air M3',
-        estimatedDuration: '15:20'
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'CookingMaster',
-    description: 'Receitas rápidas e fáceis',
+  concatenando_videos: {
+    label: 'Concatenando Vídeos',
+    icon: Film,
     color: 'purple',
-    videosToReview: [
-      {
-        id: '6',
-        title: 'Bolo de Chocolate FÁCIL e RÁPIDO - 15 minutos no forno!',
-        script: 'Oi gente! Hoje vou ensinar uma receita de bolo de chocolate super fácil...',
-        thumbnail: 'https://images.pexels.com/photos/1181677/pexels-photo-1181677.jpeg?auto=compress&cs=tinysrgb&w=400',
-        status: 'needs-changes',
-        generatedAt: '2024-01-20T08:15:00Z',
-        channel: 'CookingMaster',
-        idea: 'Receita de bolo de chocolate fácil',
-        estimatedDuration: '8:45'
-      }
-    ]
-  }
-];
-
-const statusOptions = [
-  { value: 'pending', label: 'Pendente', color: 'yellow' },
-  { value: 'approved', label: 'Aprovado', color: 'green' },
-  { value: 'needs-changes', label: 'Precisa Alterações', color: 'red' }
-];
-
-const channelColors = {
-  blue: {
-    border: 'border-blue-500/20',
-    bg: 'bg-blue-500/5'
+    isProcessing: true
   },
-  green: {
-    border: 'border-green-500/20',
-    bg: 'bg-green-500/5'
+  adicionando_audio: {
+    label: 'Adicionando Áudio',
+    icon: Music,
+    color: 'pink',
+    isProcessing: true
   },
-  purple: {
-    border: 'border-purple-500/20',
-    bg: 'bg-purple-500/5'
+  adicionando_legenda: {
+    label: 'Adicionando Legenda',
+    icon: MessageSquare,
+    color: 'cyan',
+    isProcessing: true
   },
-  orange: {
-    border: 'border-orange-500/20',
-    bg: 'bg-orange-500/5'
+  video_completo: {
+    label: 'Vídeo Completo',
+    icon: CheckCircle,
+    color: 'green',
+    isProcessing: false
+  },
+  video_agendado: {
+    label: 'Vídeo Agendado',
+    icon: Calendar,
+    color: 'yellow',
+    isProcessing: false
+  },
+  video_publicado: {
+    label: 'Vídeo Publicado',
+    icon: Youtube,
+    color: 'red',
+    isProcessing: false
   }
 };
 
 export default function ReviewEditPage() {
   const navigate = useNavigate();
-  const [selectedVideo, setSelectedVideo] = useState<VideoToReview | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set(['pending', 'approved', 'needs-changes']));
+  const { videos, loading, error } = useVideosWithChannels();
+  const [selectedVideo, setSelectedVideo] = useState<VideoWithChannel | null>(null);
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
 
-  const handleVideoClick = (video: VideoToReview) => {
-    setSelectedVideo(video);
-    setIsModalOpen(true);
-  };
+  // Extract unique channels from videos
+  const channels = useMemo(() => {
+    const uniqueChannels = new Map<number, { id: number; name: string; profileImage: string }>();
+    videos.forEach(video => {
+      if (!uniqueChannels.has(video.channelId)) {
+        uniqueChannels.set(video.channelId, {
+          id: video.channelId,
+          name: video.channelName,
+          profileImage: video.channelProfileImage
+        });
+      }
+    });
+    return Array.from(uniqueChannels.values());
+  }, [videos]);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedVideo(null);
-  };
+  // Filter videos by selected channel
+  const filteredVideos = useMemo(() => {
+    if (selectedChannelId === null) return videos;
+    return videos.filter(v => v.channelId === selectedChannelId);
+  }, [videos, selectedChannelId]);
 
-  const handleGenerateVideo = (videoId: string) => {
-    console.log(`Generating video for ID: ${videoId}`);
-    handleCloseModal();
-  };
-
-  const handleApprove = (videoId: string) => {
-    console.log(`Approving video ID: ${videoId}`);
-  };
-
-  const handleRequestChanges = (videoId: string) => {
-    console.log(`Requesting changes for video ID: ${videoId}`);
-  };
-
-  const handleFilterToggle = (status: string) => {
-    const newFilters = new Set(selectedFilters);
-    if (newFilters.has(status)) {
-      newFilters.delete(status);
-    } else {
-      newFilters.add(status);
-    }
-    setSelectedFilters(newFilters);
-  };
-
-  const getStatusIcon = (status: VideoToReview['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'approved':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'needs-changes':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-    }
-  };
-
-  const getStatusLabel = (status: VideoToReview['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'Pendente';
-      case 'approved':
-        return 'Aprovado';
-      case 'needs-changes':
-        return 'Precisa Alterações';
+  const handleVideoClick = (video: VideoWithChannel) => {
+    if (!statusConfig[video.status].isProcessing && video.videoUrl) {
+      setSelectedVideo(video);
+      setIsPlayerOpen(true);
     }
   };
 
@@ -208,25 +91,152 @@ export default function ReviewEditPage() {
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  // Filter videos based on selected filters
-  const filteredChannelSections = mockChannelSections.map(channel => ({
-    ...channel,
-    videosToReview: channel.videosToReview.filter(video => selectedFilters.has(video.status))
-  })).filter(channel => channel.videosToReview.length > 0);
+  const processingStatuses: VideoStatus[] = ['animando_imagens', 'concatenando_videos', 'adicionando_audio', 'adicionando_legenda'];
+  const readyStatuses: VideoStatus[] = ['video_completo', 'video_agendado', 'video_publicado'];
 
-  const totalVideos = filteredChannelSections.reduce((total, channel) => total + channel.videosToReview.length, 0);
+  const getVideosByStatus = (status: VideoStatus) => {
+    return filteredVideos.filter(v => v.status === status);
+  };
+
+  const renderVideoCard = (video: VideoWithChannel) => {
+    const config = statusConfig[video.status];
+    const Icon = config.icon;
+    const isProcessing = config.isProcessing;
+
+    return (
+      <div
+        key={video.id}
+        onClick={() => handleVideoClick(video)}
+        className={`
+          bg-gray-800 border border-gray-700 overflow-hidden
+          ${!isProcessing ? 'cursor-pointer hover:border-gray-600 transition-all' : ''}
+        `}
+      >
+        {/* Thumbnail */}
+        <div className="relative aspect-video bg-gray-700">
+          {video.thumbnail ? (
+            <img
+              src={video.thumbnail}
+              alt={video.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center w-full h-full">
+              <Video className="w-16 h-16 text-gray-600" />
+            </div>
+          )}
+
+          {isProcessing && video.progress && (
+            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
+              <Icon className="w-8 h-8 text-white mb-3 animate-spin" />
+              <div className="w-3/4 bg-gray-700 h-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 transition-all duration-300"
+                  style={{ width: `${video.progress}%` }}
+                />
+              </div>
+              <span className="text-white text-sm mt-2">{video.progress}%</span>
+            </div>
+          )}
+
+          {!isProcessing && (
+            <div className="absolute inset-0 bg-black/20 hover:bg-black/10 transition-colors" />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          {/* Channel Info */}
+          <div className="flex items-center gap-2 mb-3">
+            <img
+              src={video.channelProfileImage}
+              alt={video.channelName}
+              className="w-6 h-6 rounded-full object-cover"
+            />
+            <span className="text-xs text-gray-400">{video.channelName}</span>
+          </div>
+
+          {/* Title */}
+          <h4 className="text-white text-sm font-medium leading-tight mb-2 line-clamp-2">
+            {video.title}
+          </h4>
+
+          {/* Date */}
+          <div className="text-xs text-gray-500">
+            {formatDate(video.createdAt)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStatusColumn = (status: VideoStatus) => {
+    const config = statusConfig[status];
+    const Icon = config.icon;
+    const videos = getVideosByStatus(status);
+
+    const colorClasses = {
+      blue: 'border-blue-500/30 bg-blue-500/5',
+      purple: 'border-purple-500/30 bg-purple-500/5',
+      pink: 'border-pink-500/30 bg-pink-500/5',
+      cyan: 'border-cyan-500/30 bg-cyan-500/5',
+      green: 'border-green-500/30 bg-green-500/5',
+      yellow: 'border-yellow-500/30 bg-yellow-500/5',
+      red: 'border-red-500/30 bg-red-500/5'
+    };
+
+    return (
+      <div className="flex-shrink-0 w-80">
+        <div className={`bg-gray-900 border ${colorClasses[config.color as keyof typeof colorClasses]} p-4 mb-4`}>
+          <div className="flex items-center gap-2 mb-1">
+            <Icon className="w-4 h-4 text-gray-400" />
+            <h3 className="text-sm font-medium text-white">{config.label}</h3>
+          </div>
+          <p className="text-xs text-gray-500">{videos.length} vídeo{videos.length !== 1 ? 's' : ''}</p>
+        </div>
+
+        <div className="space-y-3">
+          {videos.map(video => renderVideoCard(video))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-black">
       <DashboardHeader />
-      
+
       <main className="w-[90%] mx-auto px-6 py-8">
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+              <p className="text-gray-400">Carregando vídeos...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-500/30 p-6 mb-8">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-red-500" />
+              <div>
+                <h3 className="text-red-500 font-medium mb-1">Erro ao carregar vídeos</h3>
+                <p className="text-gray-400 text-sm">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate('/dashboard')}
@@ -234,143 +244,99 @@ export default function ReviewEditPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 className="text-2xl font-light text-white">Revisar/Editar</h1>
+          <div className="flex-1">
+            <h1 className="text-2xl font-light text-white">Visualização de Vídeos</h1>
             <p className="text-gray-400 text-sm">
-              Revise e edite o conteúdo gerado antes da publicação final ({totalVideos} vídeos)
+              Acompanhe o status de processamento e visualize seus vídeos prontos
             </p>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <h2 className="text-lg font-light text-white">Filtros</h2>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            {statusOptions.map((option) => {
-              const isSelected = selectedFilters.has(option.value);
-              const colorClasses = {
-                yellow: isSelected ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' : 'border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/50',
-                green: isSelected ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'border-green-500/30 text-green-400 hover:bg-green-500/10 hover:border-green-500/50',
-                red: isSelected ? 'bg-red-500/20 border-red-500/50 text-red-300' : 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50'
-              };
-              
-              return (
+        {/* Channel Filter */}
+        {channels.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-medium text-white">Filtrar por Canal</h3>
+              {selectedChannelId !== null && (
                 <button
-                  key={option.value}
-                  onClick={() => handleFilterToggle(option.value)}
+                  onClick={() => setSelectedChannelId(null)}
+                  className="ml-2 text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Limpar filtro
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {channels.map(channel => (
+                <button
+                  key={channel.id}
+                  onClick={() => setSelectedChannelId(channel.id === selectedChannelId ? null : channel.id)}
                   className={`
-                    px-4 py-2 border text-sm transition-all duration-200
-                    ${colorClasses[option.color as keyof typeof colorClasses]}
+                    flex items-center gap-2 px-4 py-2 border transition-all
+                    ${channel.id === selectedChannelId
+                      ? 'bg-blue-600 border-blue-500 text-white'
+                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600 hover:bg-gray-700'
+                    }
                   `}
                 >
-                  {option.label}
+                  <img
+                    src={channel.profileImage}
+                    alt={channel.name}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                  <span className="text-sm">{channel.name}</span>
+                  {channel.id === selectedChannelId && (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Processing Section */}
+        <div className="mb-12">
+          <h2 className="text-lg font-light text-white mb-4 flex items-center gap-2">
+            <Loader2 className="w-5 h-5 text-blue-400" />
+            Em Processamento
+          </h2>
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4 min-w-max">
+              {processingStatuses.map(status => renderStatusColumn(status))}
+            </div>
           </div>
         </div>
 
-        {/* Channel Sections */}
-        <div className="space-y-8">
-          {filteredChannelSections.map((channel) => {
-            const channelColorClasses = channelColors[channel.color as keyof typeof channelColors];
-            
-            return (
-              <div key={channel.id} className={`bg-gray-900 border ${channelColorClasses.border} ${channelColorClasses.bg} p-6`}>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-lg font-light text-white mb-1">
-                      {channel.name}
-                    </h2>
-                    <p className="text-gray-400 text-sm">
-                      {channel.description}
-                    </p>
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    {channel.videosToReview.length} vídeo{channel.videosToReview.length !== 1 ? 's' : ''} para revisar
-                  </div>
-                </div>
-
-                {/* Videos Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {channel.videosToReview.map((video) => (
-                    <div
-                      key={video.id}
-                      onClick={() => handleVideoClick(video)}
-                      className="group bg-gray-800 border border-gray-700 hover:border-gray-600 transition-all duration-200 cursor-pointer"
-                    >
-                      {/* Thumbnail */}
-                      <div className="relative aspect-video bg-gray-700 overflow-hidden">
-                        <img
-                          src={video.thumbnail}
-                          alt={video.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                        
-                        {/* Status Badge */}
-                        <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 px-2 py-1 text-xs text-white">
-                          {getStatusIcon(video.status)}
-                          {getStatusLabel(video.status)}
-                        </div>
-
-                        {/* Duration */}
-                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1">
-                          {video.estimatedDuration}
-                        </div>
-
-                        {/* View Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-black/50 p-3 rounded-full">
-                            <Eye className="w-5 h-5 text-white" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-4">
-                        <h4 className="text-white text-sm font-medium leading-tight mb-2 line-clamp-2">
-                          {video.title}
-                        </h4>
-                        
-                        <div className="text-xs text-gray-500 mb-3">
-                          Gerado em {formatDate(video.generatedAt)}
-                        </div>
-
-                        <div className="text-xs text-gray-400 line-clamp-2">
-                          Ideia: {video.idea}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {totalVideos === 0 && (
-          <div className="bg-gray-900 border border-gray-800 p-12 text-center">
-            <p className="text-gray-400">
-              Nenhum vídeo encontrado com os filtros selecionados
-            </p>
+        {/* Ready Section */}
+        <div>
+          <h2 className="text-lg font-light text-white mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            Vídeos Prontos
+          </h2>
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4 min-w-max">
+              {readyStatuses.map(status => renderStatusColumn(status))}
+            </div>
           </div>
+        </div>
+        </>
         )}
       </main>
 
-      {/* Review Modal */}
-      <VideoReviewModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        video={selectedVideo}
-        onGenerateVideo={handleGenerateVideo}
-        onApprove={handleApprove}
-        onRequestChanges={handleRequestChanges}
-      />
+      {/* Video Player Modal */}
+      {selectedVideo && (
+        <VideoPlayer
+          isOpen={isPlayerOpen}
+          videoUrl={selectedVideo.videoUrl || ''}
+          videoTitle={selectedVideo.title}
+          onClose={() => {
+            setIsPlayerOpen(false);
+            setSelectedVideo(null);
+          }}
+        />
+      )}
     </div>
   );
 }

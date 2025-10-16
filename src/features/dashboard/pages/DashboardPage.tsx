@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@shared/contexts';
 import { DashboardHeader, ActionCard } from '@features/dashboard/components';
-import { Copy, Video, Edit, Calendar, Settings, Eye } from 'lucide-react';
+import { Copy, Video, Edit, Calendar, Settings, PlaySquare } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -38,9 +38,9 @@ export default function DashboardPage() {
     },
     {
       id: 'review-edit',
-      title: 'Revisar/Editar',
-      description: 'Revise e edite o conteúdo gerado antes da publicação final',
-      icon: Eye,
+      title: 'Visualização de Vídeos',
+      description: 'Acompanhe o status de processamento e visualize seus vídeos prontos',
+      icon: PlaySquare,
       status: 'ready' as const,
       color: 'orange' as const,
       onClick: () => navigate('/review-edit')
