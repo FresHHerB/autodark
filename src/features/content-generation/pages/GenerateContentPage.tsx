@@ -22,6 +22,25 @@ interface GeneratedScript {
   audio_path?: string;
 }
 
+interface ImageInfo {
+  altura: number;
+  modelo: string;
+  prompt: string;
+  largura: number;
+}
+
+interface GeneratedImageItem {
+  index: number;
+  image_url: string;
+  image_info: ImageInfo;
+}
+
+interface GeneratedImagesData {
+  id_roteiro: number;
+  titulo: string;
+  images_info: GeneratedImageItem[];
+}
+
 interface Voice {
   id: number;
   nome_voz: string;
@@ -84,8 +103,30 @@ export default function GenerateContentPage() {
   const [globalImageWidth, setGlobalImageWidth] = useState<number>(1024);
   const [globalImageHeight, setGlobalImageHeight] = useState<number>(1024);
   const [scriptImageSettings, setScriptImageSettings] = useState<{[key: string]: {n_imgs: number}}>({});
-  const [generatedImages, setGeneratedImages] = useState<{id_roteiro: number, titulo: string, images_path: string[]}[]>([]);
-  const [selectedImageModal, setSelectedImageModal] = useState<{id_roteiro: number, titulo: string, images_path: string[]} | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImagesData[]>([]);
+  const [selectedImageModal, setSelectedImageModal] = useState<GeneratedImagesData | null>(null);
+  const [editingImagePrompt, setEditingImagePrompt] = useState<{id_roteiro: number, index: number, prompt: string} | null>(null);
+  const [regeneratingImage, setRegeneratingImage] = useState<{id_roteiro: number, index: number} | null>(null);
+  const [imageReloadTrigger, setImageReloadTrigger] = useState<{[key: string]: number}>({});
+
+  // Função para abrir modal e recarregar todas as imagens do roteiro
+  const openImageModal = (roteiroData: GeneratedImagesData) => {
+    // Força reload de todas as imagens deste roteiro
+    const timestamp = Date.now();
+    const updates: {[key: string]: number} = {};
+
+    roteiroData.images_info.forEach(img => {
+      const imageKey = `${roteiroData.id_roteiro}_${img.index}`;
+      updates[imageKey] = timestamp;
+    });
+
+    setImageReloadTrigger(prev => ({
+      ...prev,
+      ...updates
+    }));
+
+    setSelectedImageModal(roteiroData);
+  };
 
   // Load channels and voices on component mount
   useEffect(() => {
@@ -521,6 +562,53 @@ export default function GenerateContentPage() {
       alert('Erro ao gerar imagens. Tente novamente.');
     } finally {
       setLoadingImageGeneration(false);
+    }
+  };
+
+  const handleRegenerateImage = async (id_roteiro: number, index: number, updatedImageInfo: ImageInfo) => {
+    try {
+      setRegeneratingImage({ id_roteiro, index });
+
+      const payload = {
+        id_roteiro,
+        index,
+        image_info: updatedImageInfo,
+        tipo_geracao: 'regen_image'
+      };
+
+      const response = await execute(() =>
+        apiService.generateContent(payload)
+      );
+
+      // Webhook retorna qualquer resposta indicando sucesso
+      // A imagem foi atualizada no S3 no mesmo caminho
+      // Forçamos reload de TODAS as imagens do roteiro para garantir atualização
+
+      const timestamp = Date.now();
+      const updates: {[key: string]: number} = {};
+
+      // Encontra o roteiro para recarregar todas as imagens
+      const roteiro = generatedImages.find(r => r.id_roteiro === id_roteiro);
+      if (roteiro) {
+        roteiro.images_info.forEach(img => {
+          const imageKey = `${id_roteiro}_${img.index}`;
+          updates[imageKey] = timestamp;
+        });
+      }
+
+      // Atualiza o trigger de reload para forçar re-render de todas as imagens
+      setImageReloadTrigger(prev => ({
+        ...prev,
+        ...updates
+      }));
+
+      alert(`Imagem ${index} gerada com sucesso!`);
+      setEditingImagePrompt(null);
+    } catch (error) {
+      console.error('Error regenerating image:', error);
+      alert('Erro ao regenerar imagem. Tente novamente.');
+    } finally {
+      setRegeneratingImage(null);
     }
   };
 
@@ -2142,7 +2230,7 @@ export default function GenerateContentPage() {
                 {generatedImages.map((item) => (
                   <div
                     key={item.id_roteiro}
-                    onClick={() => setSelectedImageModal(item)}
+                    onClick={() => openImageModal(item)}
                     className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-4 cursor-pointer hover:border-green-400/50 transition-all duration-200 hover:scale-105"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -2150,7 +2238,7 @@ export default function GenerateContentPage() {
                         Roteiro #{item.id_roteiro}
                       </span>
                       <span className="px-2 py-1 bg-emerald-500/20 text-emerald-200 text-xs rounded-full">
-                        {item.images_path.length} imagens
+                        {item.images_info.length} imagens
                       </span>
                     </div>
 
@@ -2160,13 +2248,18 @@ export default function GenerateContentPage() {
 
                     {/* Preview of first 3 images */}
                     <div className="flex space-x-1 mb-3">
-                      {item.images_path.slice(0, 3).map((imagePath, index) => (
+                      {item.images_info.slice(0, 3).map((imageItem, index) => {
+                        const imageKey = `${item.id_roteiro}_${imageItem.index}`;
+                        const reloadKey = imageReloadTrigger[imageKey] || 0;
+
+                        return (
                         <div
                           key={index}
-                          className="w-16 h-12 bg-gray-800/60 rounded border border-green-500/20 overflow-hidden"
+                          className="w-20 aspect-video bg-gray-800/60 rounded border border-green-500/20 overflow-hidden"
                         >
                           <img
-                            src={imagePath}
+                            key={reloadKey}
+                            src={reloadKey > 0 ? `${imageItem.image_url}?t=${reloadKey}` : imageItem.image_url}
                             alt={`Preview ${index + 1}`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -2175,11 +2268,12 @@ export default function GenerateContentPage() {
                             }}
                           />
                         </div>
-                      ))}
-                      {item.images_path.length > 3 && (
-                        <div className="w-16 h-12 bg-green-900/40 rounded border border-green-500/20 flex items-center justify-center">
+                        );
+                      })}
+                      {item.images_info.length > 3 && (
+                        <div className="w-20 aspect-video bg-green-900/40 rounded border border-green-500/20 flex items-center justify-center">
                           <span className="text-green-200 text-xs font-medium">
-                            +{item.images_path.length - 3}
+                            +{item.images_info.length - 3}
                           </span>
                         </div>
                       )}
@@ -2396,24 +2490,31 @@ export default function GenerateContentPage() {
                 {/* Images Grid */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-300 mb-3">
-                    Imagens Geradas ({selectedImageModal.images_path.length})
+                    Imagens Geradas ({selectedImageModal.images_info.length})
                   </label>
                 </div>
               </div>
 
               {/* Scrollable Images Grid */}
               <div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {selectedImageModal.images_path.map((imagePath, index) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedImageModal.images_info.map((imageItem) => {
+                    const isEditing = editingImagePrompt?.id_roteiro === selectedImageModal.id_roteiro && editingImagePrompt?.index === imageItem.index;
+                    const isRegenerating = regeneratingImage?.id_roteiro === selectedImageModal.id_roteiro && regeneratingImage?.index === imageItem.index;
+                    const imageKey = `${selectedImageModal.id_roteiro}_${imageItem.index}`;
+                    const reloadKey = imageReloadTrigger[imageKey] || 0;
+
+                    return (
                     <div
-                      key={index}
-                      className="bg-gray-800/50 border border-green-600/30 rounded-lg overflow-hidden hover:border-green-500/50 transition-all duration-200 hover:scale-105 cursor-pointer group"
-                      onClick={() => window.open(imagePath, '_blank')}
+                      key={imageItem.index}
+                      className="bg-gray-800/50 border border-green-600/30 rounded-lg overflow-hidden flex flex-col"
                     >
-                      <div className="aspect-square relative">
+                      {/* Image Preview */}
+                      <div className="aspect-video relative group cursor-pointer" onClick={() => window.open(imageItem.image_url, '_blank')}>
                         <img
-                          src={imagePath}
-                          alt={`Imagem ${index + 1} - ${selectedImageModal.titulo}`}
+                          key={reloadKey}
+                          src={reloadKey > 0 ? `${imageItem.image_url}?t=${reloadKey}` : imageItem.image_url}
+                          alt={`Imagem ${imageItem.index} - ${selectedImageModal.titulo}`}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -2433,21 +2534,95 @@ export default function GenerateContentPage() {
                         {/* Image number */}
                         <div className="absolute top-2 left-2">
                           <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-xs rounded-full">
-                            {index + 1}
+                            #{imageItem.index}
                           </span>
                         </div>
                       </div>
 
-                      <div className="p-3">
-                        <p className="text-gray-300 text-xs text-center">
-                          Imagem {index + 1}
-                        </p>
-                        <p className="text-green-400/80 text-xs text-center mt-1">
-                          Clique para abrir em nova aba
-                        </p>
+                      {/* Image Info */}
+                      <div className="p-4 flex-1 flex flex-col space-y-3">
+                        {/* Metadata */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-400">Dimensões:</span>
+                            <span className="text-green-300">{imageItem.image_info.largura} x {imageItem.image_info.altura}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-400">Modelo:</span>
+                            <span className="text-green-300">{imageItem.image_info.modelo}</span>
+                          </div>
+                        </div>
+
+                        {/* Prompt Editor */}
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <label className="block text-xs font-medium text-gray-300">
+                              Editar Prompt:
+                            </label>
+                            <textarea
+                              value={editingImagePrompt.prompt}
+                              onChange={(e) => setEditingImagePrompt({ ...editingImagePrompt, prompt: e.target.value })}
+                              className="w-full px-3 py-2 bg-black/50 border border-green-600 rounded-lg text-white text-xs resize-none"
+                              rows={4}
+                              placeholder="Digite o novo prompt..."
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  handleRegenerateImage(
+                                    selectedImageModal.id_roteiro,
+                                    imageItem.index,
+                                    { ...imageItem.image_info, prompt: editingImagePrompt.prompt }
+                                  );
+                                }}
+                                disabled={isRegenerating}
+                                className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                {isRegenerating ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Gerando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="w-3 h-3" />
+                                    Gerar Novamente
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => setEditingImagePrompt(null)}
+                                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-400 line-clamp-2">
+                              {imageItem.image_info.prompt}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingImagePrompt({
+                                  id_roteiro: selectedImageModal.id_roteiro,
+                                  index: imageItem.index,
+                                  prompt: imageItem.image_info.prompt
+                                });
+                              }}
+                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              Editar e Regenerar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2455,15 +2630,15 @@ export default function GenerateContentPage() {
               <div className="border-t border-green-700 p-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-400">
-                    Total: {selectedImageModal.images_path.length} imagens geradas
+                    Total: {selectedImageModal.images_info.length} imagens geradas
                   </div>
                   <button
                     onClick={() => {
-                      // Download all images logic could be added here
-                      selectedImageModal.images_path.forEach((url, index) => {
+                      // Download all images logic
+                      selectedImageModal.images_info.forEach((imageItem) => {
                         const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `imagem_${index + 1}.jpg`;
+                        a.href = imageItem.image_url;
+                        a.download = `imagem_${imageItem.index}.jpg`;
                         a.target = '_blank';
                         a.click();
                       });
