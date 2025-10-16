@@ -221,6 +221,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
           fontSize: `${fontSize}px`,
           fontWeight: segmentsStyle.font?.bold ? 'bold' : 'normal',
           color: segmentsStyle.colors?.primary || '#FFFFFF',
+          textTransform: uppercase ? 'uppercase' : 'none',
           textShadow: `
             -${borderWidth}px -${borderWidth}px 0 ${segmentsStyle.colors?.outline || '#000000'},
             ${borderWidth}px -${borderWidth}px 0 ${segmentsStyle.colors?.outline || '#000000'},
@@ -262,9 +263,11 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
           fontSize: `${fontSize}px`,
           fontWeight: 'bold',
           color: highlightStyle.texto_cor || '#FFFFFF',
+          textTransform: uppercase ? 'uppercase' : 'none',
         },
         highlight: {
           color: highlightStyle.highlight_texto_cor || highlightStyle.texto_cor || '#FFFFFF',
+          textTransform: uppercase ? 'uppercase' : 'none',
           WebkitTextStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
           textStroke: `${highlightBorder}px ${highlightStyle.highlight_cor || '#D60000'}`,
           paintOrder: 'stroke fill',
