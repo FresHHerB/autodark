@@ -153,6 +153,7 @@ class ApiService {
     prompt_titulo: string;
     prompt_roteiro: string;
     caption_style: {
+      uppercase?: boolean;
       type: 'segments' | 'highlight';
       style: any;
     };

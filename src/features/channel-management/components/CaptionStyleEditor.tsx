@@ -42,6 +42,7 @@ interface HighlightStyle {
 }
 
 export interface CaptionStyleConfig {
+  uppercase?: boolean;
   type: CaptionType;
   style: SegmentsStyle | HighlightStyle;
 }
@@ -91,6 +92,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
   onChange,
 }) => {
   const [captionType, setCaptionType] = useState<CaptionType>(initialConfig?.type || 'highlight');
+  const [uppercase, setUppercase] = useState<boolean>(initialConfig?.uppercase ?? false);
   const [previewScale, setPreviewScale] = useState(1);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +162,7 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
   useEffect(() => {
     if (onChange) {
       onChange({
+        uppercase,
         type: captionType,
         style: captionType === 'segments' ? segmentsStyle : highlightStyle,
       });
@@ -170,21 +173,31 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
   const handleTypeChange = (type: CaptionType) => {
     setCaptionType(type);
     onChange?.({
+      uppercase,
       type,
       style: type === 'segments' ? segmentsStyle : highlightStyle,
+    });
+  };
+
+  const handleUppercaseChange = (value: boolean) => {
+    setUppercase(value);
+    onChange?.({
+      uppercase: value,
+      type: captionType,
+      style: captionType === 'segments' ? segmentsStyle : highlightStyle,
     });
   };
 
   const updateSegmentsStyle = (updates: Partial<SegmentsStyle>) => {
     const newStyle = { ...segmentsStyle, ...updates };
     setSegmentsStyle(newStyle);
-    onChange?.({ type: captionType, style: newStyle });
+    onChange?.({ uppercase, type: captionType, style: newStyle });
   };
 
   const updateHighlightStyle = (updates: Partial<HighlightStyle>) => {
     const newStyle = { ...highlightStyle, ...updates };
     setHighlightStyle(newStyle);
-    onChange?.({ type: captionType, style: newStyle });
+    onChange?.({ uppercase, type: captionType, style: newStyle });
   };
 
   // Helper to get computed styles for preview (scaled for 1080p representation)
@@ -307,6 +320,29 @@ export const CaptionStyleEditor: React.FC<CaptionStyleEditorProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* Uppercase Toggle */}
+      <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="block text-white font-medium text-sm mb-1">
+              Texto em Maiúsculas
+            </label>
+            <p className="text-xs text-gray-400">
+              Converte todo o texto das legendas para maiúsculas (UPPERCASE)
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={uppercase}
+              onChange={(e) => handleUppercaseChange(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+      </div>
+
       {/* Type Selector */}
       <div>
         <label className="block text-white font-medium mb-4 text-sm">
