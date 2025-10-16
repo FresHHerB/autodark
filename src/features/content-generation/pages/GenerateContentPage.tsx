@@ -4,6 +4,7 @@ import { apiService } from '@shared/services';
 import { DashboardHeader } from '@features/dashboard/components';
 import { Plus, Edit2, Save, X, FileText, Mic, Music, Loader2, Eye, Video, Search, ChevronDown, Play, Square, Download, VolumeX } from 'lucide-react';
 import { supabase, Canal } from '@shared/lib';
+import ImageLightbox from '@shared/components/modals/ImageLightbox';
 
 interface GeneratedTitle {
   id: string;
@@ -100,14 +101,20 @@ export default function GenerateContentPage() {
   const [imageModel, setImageModel] = useState<string>('');
   const [globalImageStyle, setGlobalImageStyle] = useState<string>('');
   const [globalImageStyleDetail, setGlobalImageStyleDetail] = useState<string>('');
-  const [globalImageWidth, setGlobalImageWidth] = useState<number>(1024);
-  const [globalImageHeight, setGlobalImageHeight] = useState<number>(1024);
+  const [globalImageWidth, setGlobalImageWidth] = useState<number>(1344);
+  const [globalImageHeight, setGlobalImageHeight] = useState<number>(768);
   const [scriptImageSettings, setScriptImageSettings] = useState<{[key: string]: {n_imgs: number}}>({});
   const [generatedImages, setGeneratedImages] = useState<GeneratedImagesData[]>([]);
   const [selectedImageModal, setSelectedImageModal] = useState<GeneratedImagesData | null>(null);
   const [editingImagePrompt, setEditingImagePrompt] = useState<{id_roteiro: number, index: number, prompt: string} | null>(null);
   const [regeneratingImage, setRegeneratingImage] = useState<{id_roteiro: number, index: number} | null>(null);
   const [imageReloadTrigger, setImageReloadTrigger] = useState<{[key: string]: number}>({});
+  const [lightboxImage, setLightboxImage] = useState<{url: string, alt: string} | null>(null);
+
+  // Style training states
+  const [styleImage, setStyleImage] = useState<File | null>(null);
+  const [styleImagePreview, setStyleImagePreview] = useState<string | null>(null);
+  const [collectingStyle, setCollectingStyle] = useState(false);
 
   // Função para abrir modal e recarregar todas as imagens do roteiro
   const openImageModal = (roteiroData: GeneratedImagesData) => {
@@ -319,6 +326,7 @@ export default function GenerateContentPage() {
     try {
       setLoadingScriptsForImages(true);
 
+      // Load scripts without images
       const { data, error } = await supabase
         .from('roteiros')
         .select('id, titulo, roteiro, canal_id')
@@ -344,6 +352,19 @@ export default function GenerateContentPage() {
       }));
 
       setExistingScriptsForImages(scripts);
+
+      // Load channel detailed_style
+      const { data: channelData, error: channelError } = await supabase
+        .from('canais')
+        .select('detailed_style')
+        .eq('id', parseInt(selectedChannelId))
+        .single();
+
+      if (!channelError && channelData?.detailed_style) {
+        const detailedStyle = channelData.detailed_style as { main_style?: string; detailed_style?: string };
+        setGlobalImageStyle(detailedStyle.main_style || '');
+        setGlobalImageStyleDetail(detailedStyle.detailed_style || '');
+      }
 
     } catch (error) {
       console.error('❌ Erro geral:', error);
@@ -488,6 +509,153 @@ export default function GenerateContentPage() {
         [field]: value
       }
     }));
+  };
+
+  // Handle style image upload
+  const handleStyleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setStyleImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setStyleImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle paste image
+  const handleStyleImagePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setStyleImage(file);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setStyleImagePreview(e.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+  };
+
+  // Handle collect style from image
+  const handleCollectStyle = async () => {
+    if (!styleImage) {
+      alert('Por favor, selecione ou cole uma imagem primeiro.');
+      return;
+    }
+
+    if (!selectedChannelId) {
+      alert('Por favor, selecione um canal primeiro.');
+      return;
+    }
+
+    try {
+      setCollectingStyle(true);
+
+      // Convert image to base64
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          // Remove data:image/xxx;base64, prefix to send only the base64 string
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(styleImage);
+      });
+
+      // Send to webhook (same as channel update)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const webhookPath = import.meta.env.VITE_WEBHOOK_UPDATE || '/webhook/update';
+      const webhookUrl = `${apiBaseUrl}${webhookPath}`;
+
+      console.log('🎨 Enviando imagem para coleta de estilo...');
+      console.log('URL:', webhookUrl);
+      console.log('Canal ID:', selectedChannelId);
+      console.log('Tamanho base64:', base64Data.length, 'caracteres');
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          update_type: 'updateStyle',
+          id_canal: parseInt(selectedChannelId),
+          image_data: base64Data
+        })
+      });
+
+      console.log('📥 Resposta do webhook:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro na resposta:', errorText);
+        throw new Error(`Erro ao coletar estilo: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Resultado completo:', result);
+
+      // Parse response - webhook returns array with output object
+      let mainStyle = '';
+      let detailedStyle = '';
+
+      if (Array.isArray(result) && result.length > 0 && result[0].output) {
+        // Format: [{ output: { main_style: "...", detailed_style: "..." } }]
+        mainStyle = result[0].output.main_style || '';
+        detailedStyle = result[0].output.detailed_style || '';
+        console.log('✓ Parsed from array format');
+      } else if (result.main_style || result.detailed_style) {
+        // Format: { main_style: "...", detailed_style: "..." }
+        mainStyle = result.main_style || '';
+        detailedStyle = result.detailed_style || '';
+        console.log('✓ Parsed from direct format');
+      }
+
+      // Update style fields with response
+      if (mainStyle) {
+        setGlobalImageStyle(mainStyle);
+        console.log('✓ Estilo principal atualizado:', mainStyle);
+      }
+      if (detailedStyle) {
+        setGlobalImageStyleDetail(detailedStyle);
+        console.log('✓ Detalhamento atualizado:', detailedStyle);
+      }
+
+      // Update Supabase with new styles
+      if (mainStyle || detailedStyle) {
+        const { error: updateError } = await supabase
+          .from('canais')
+          .update({
+            detailed_style: {
+              main_style: mainStyle,
+              detailed_style: detailedStyle
+            }
+          })
+          .eq('id', parseInt(selectedChannelId));
+
+        if (updateError) {
+          console.error('⚠️ Erro ao salvar estilo no Supabase:', updateError);
+        } else {
+          console.log('✓ Estilo salvo no Supabase');
+        }
+      }
+
+      alert('Estilo coletado com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao coletar estilo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`Erro ao coletar estilo: ${errorMessage}\n\nVerifique o console para mais detalhes.`);
+    } finally {
+      setCollectingStyle(false);
+    }
   };
 
   const handleGenerateImages = async () => {
@@ -2000,6 +2168,70 @@ export default function GenerateContentPage() {
               </h3>
 
               <div className="space-y-6">
+                {/* Style Training */}
+                <div>
+                  <h5 className="text-purple-200 text-sm font-medium mb-3">Treinamento de Estilo</h5>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-purple-300/80 mb-2">
+                        Imagem de Referência
+                      </label>
+                      <div
+                        className="relative border-2 border-dashed border-purple-500/40 rounded-lg p-6 bg-gray-800/40 hover:border-purple-500/60 transition-colors"
+                        onPaste={handleStyleImagePaste}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleStyleImageChange}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        {styleImagePreview ? (
+                          <div className="relative">
+                            <img
+                              src={styleImagePreview}
+                              alt="Preview"
+                              className="max-h-48 mx-auto rounded-lg"
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStyleImage(null);
+                                setStyleImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center text-purple-300/60">
+                            <p className="text-sm mb-1">Arraste uma imagem aqui ou clique para selecionar</p>
+                            <p className="text-xs">Você também pode colar (Ctrl+V) uma imagem</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCollectStyle}
+                      disabled={!styleImage || collectingStyle}
+                      className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-none font-medium"
+                    >
+                      {collectingStyle ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Coletando Estilo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-5 h-5" />
+                          <span>Coletar Estilo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Style Settings */}
                 <div>
                   <h5 className="text-purple-200 text-sm font-medium mb-3">Estilo Visual</h5>
@@ -2046,7 +2278,7 @@ export default function GenerateContentPage() {
                         max="2048"
                         step="64"
                         value={globalImageWidth}
-                        onChange={(e) => setGlobalImageWidth(parseInt(e.target.value) || 1024)}
+                        onChange={(e) => setGlobalImageWidth(parseInt(e.target.value) || 1344)}
                         className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                       />
                     </div>
@@ -2061,7 +2293,7 @@ export default function GenerateContentPage() {
                         max="2048"
                         step="64"
                         value={globalImageHeight}
-                        onChange={(e) => setGlobalImageHeight(parseInt(e.target.value) || 1024)}
+                        onChange={(e) => setGlobalImageHeight(parseInt(e.target.value) || 768)}
                         className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                       />
                     </div>
@@ -2510,7 +2742,7 @@ export default function GenerateContentPage() {
                       className="bg-gray-800/50 border border-green-600/30 rounded-lg overflow-hidden flex flex-col"
                     >
                       {/* Image Preview */}
-                      <div className="aspect-video relative group cursor-pointer" onClick={() => window.open(imageItem.image_url, '_blank')}>
+                      <div className="aspect-video relative group cursor-pointer" onClick={() => setLightboxImage({ url: imageItem.image_url, alt: `Imagem ${imageItem.index} - ${selectedImageModal.titulo}` })}>
                         <img
                           key={reloadKey}
                           src={reloadKey > 0 ? `${imageItem.image_url}?t=${reloadKey}` : imageItem.image_url}
@@ -2670,6 +2902,14 @@ export default function GenerateContentPage() {
           background: rgba(147, 51, 234, 0.8);
         }
       `}</style>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        isOpen={!!lightboxImage}
+        imageUrl={lightboxImage?.url || ''}
+        imageAlt={lightboxImage?.alt}
+        onClose={() => setLightboxImage(null)}
+      />
     </div>
   );
 }

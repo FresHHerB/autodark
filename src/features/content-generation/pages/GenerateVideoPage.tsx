@@ -85,7 +85,9 @@ export default function GenerateVideoPage() {
   const fetchRoteiros = async (canalId: number) => {
     try {
       setIsLoadingRoteiros(true);
-      const { data, error } = await supabase
+
+      // Buscar roteiros com audio_path e images_path
+      const { data: roteirosData, error: roteirosError } = await supabase
         .from('roteiros')
         .select('*')
         .eq('canal_id', canalId)
@@ -94,17 +96,33 @@ export default function GenerateVideoPage() {
         .not('transcricao_timestamp', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Erro ao buscar roteiros:', error);
+      if (roteirosError) {
+        console.error('Erro ao buscar roteiros:', roteirosError);
         return;
       }
 
-      if (data) {
-        // Filtrar apenas roteiros com arrays não vazios
-        const filteredRoteiros = data.filter(roteiro =>
+      // Buscar todos os IDs de roteiros que já possuem vídeos
+      const { data: videosData, error: videosError } = await supabase
+        .from('videos')
+        .select('id');
+
+      if (videosError) {
+        console.error('Erro ao buscar vídeos:', videosError);
+        return;
+      }
+
+      // Criar Set com IDs de roteiros que já têm vídeos
+      const videosIds = new Set(videosData?.map(v => v.id) || []);
+
+      if (roteirosData) {
+        // Filtrar apenas roteiros que:
+        // 1. Têm arrays de imagens não vazios
+        // 2. NÃO possuem vídeo gerado (id não está na tabela videos)
+        const filteredRoteiros = roteirosData.filter(roteiro =>
           roteiro.images_path &&
           Array.isArray(roteiro.images_path) &&
-          roteiro.images_path.length > 0
+          roteiro.images_path.length > 0 &&
+          !videosIds.has(roteiro.id) // ✅ Exclui roteiros que já têm vídeos
         );
         setRoteiros(filteredRoteiros);
       }

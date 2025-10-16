@@ -149,14 +149,14 @@ class ApiService {
   async updateChannel(payload: {
     update_type: string;
     id_canal: number;
-    voice_id?: number | null;
-    prompt_titulo?: string;
-    prompt_roteiro?: string;
-    caption_style?: {
+    voice_id: number | null;
+    prompt_titulo: string;
+    prompt_roteiro: string;
+    caption_style: {
       type: 'segments' | 'highlight';
       style: any;
     };
-    media_chars?: number | null;
+    media_chars: number | null;
   }) {
     return this.call(this.getWebhook('update'), {
       method: 'POST',
