@@ -1,0 +1,1073 @@
+{
+  "positive_prompt": {
+    "core_concept": {
+      "primary_action": "An intimate, breathtaking moment captured in ultra-realistic 8K as a human hand gently caresses a majestic lion's head, fingers gliding through the thick, golden mane with tender, deliberate movements",
+      "emotional_core": "A profound connection of mutual respect between human and wild nature, radiating trust, royalty, and serene power",
+      "visual_signature": "Masterpiece wildlife cinematography with luxury commercial aesthetic, BBC Planet Earth meets a high-fashion perfume advertisement"
+    },
+    "subject_primary": {
+      "lion_characteristics": {
+        "species": "adult African lion (Panthera leo)",
+        "facial_structure": "broad powerful muzzle, strong jaw, an imposing mane framing the face, rounded ears with darker interior fur",
+        "expression_details": "noble and serene countenance, a royal gaze, slight head tilt showing engagement, relaxed jaw indicating trust and non-aggression",
+        "eye_description": "penetrating golden eyes with amber highlights, visible limbal ring, crystal-clear corneal reflections showing the savanna sky and human silhouette, slow deliberate blinks lasting 0.8-1.2 seconds, subtle eye tracking following hand movement, moisture creating a natural gleam",
+        "nose_details": "large black leathery nose pad, wet glossy surface with mirror-like reflections, visible texture ridges and natural cracks, nostrils flaring gently with breathing rhythm (3-4 second cycles), subtle moisture droplets catching light",
+        "positioning": "centered frame composition, eye-level perspective creating equality and intimacy, face occupying 60-70% of frame"
+      },
+      "lion_micro_movements": {
+        "breathing": "deep, rhythmic chest expansion and contraction, 12-15 breaths per minute, visible shoulder movement, subtle rib cage rise and fall creating a gentle mane undulation",
+        "facial_expressions": "micro-muscle movements around eyes showing contentment, subtle eyebrow position shifts, whisker base twitching, nostril dilation during inhalation, jaw relaxation with slight lip movement",
+        "head_gestures": "minimal 2-3 degree tilt adjustments responding to hand touch, micro-rotations showing curiosity, subtle forward lean into the caress showing acceptance",
+        "ear_movements": "ears rotating independently 5-10 degrees tracking ambient savanna sounds, subtle back-forth oscillation, inner ear fur ruffling with movement",
+        "eye_behavior": "slow blinks every 4-6 seconds, eyelid movement showing natural moisture, brief micro-saccades, pupil subtle dilation in response to shifting light"
+      }
+    },
+    "subject_secondary": {
+      "hand_characteristics": {
+        "physical_details": "graceful feminine hand with natural skin tone (warm peachy undertones), visible metacarpal bone structure creating elegant definition, subtle vein visibility on dorsal surface, well-maintained natural nails with healthy pink nail beds, cuticles perfectly maintained, slight nail shine from natural oils",
+        "skin_texture": "realistic pore visibility, fine lines on knuckles and joints, natural skin irregularities, subsurface light scattering showing skin translucency, microvasculature creating subtle color variations",
+        "positioning": "approaching from right side of frame at 45-degree angle, fingers naturally curved conforming to the lion's head contour"
+      },
+      "hand_movement_choreography": {
+        "primary_gestures": [
+          "slow approach beginning outside frame, entering at 0.5 seconds with anticipatory hesitation",
+          "initial contact at 1.2 seconds, fingertips meeting mane with gentle pressure (20-30 grams force)",
+          "smooth gliding stroke from nose bridge toward forehead, 3-second duration, following natural fur growth pattern",
+          "fingers spreading slightly to maximize mane contact, creating wave-like displacement of guard hairs",
+          "thumb making circular micro-movements behind nose pad, creating intimate grooming gesture",
+          "palm making full contact at peak intimacy (4-second mark), conforming to head curvature",
+          "gentle retreat stroke maintaining contact, 2-second duration, fingers trailing through the mane",
+          "return stroke with increased confidence, slightly firmer pressure showing trust building"
+        ],
+        "micro_movements": "subtle finger independence, natural tremor (8-12 Hz physiological frequency), micro-adjustments responding to mane texture, instinctive tactile exploration, fingertip pressure variations creating realistic interaction",
+        "speed_dynamics": "variable tempo, accelerating through confident zones, decelerating during tentative moments, 15-25 cm/second average velocity, smooth ease-in/ease-out motion curves",
+        "physics_accuracy": "realistic inertia and momentum, natural hand weight affecting movement, gravity influence on hanging fingers, authentic joint rotation limits, tendon and ligament constraints visible through skin"
+      }
+    },
+    "interaction_dynamics": {
+      "tactile_response": {
+        "mane_displacement": "individual mane hairs parting around fingers creating visible furrows, 2-3mm mane compression depth under palm pressure, realistic hair dynamics with delayed spring-back recovery (0.3-0.5 second lag), under-mane exposure in compressed areas showing lighter coloring, progressive wave-like disturbance propagating outward from contact point",
+        "pressure_visualization": "slight skin depression under fingertips visible through shorter muzzle fur, natural tissue compression and immediate elastic recovery, realistic soft-body deformation physics, blood flow displacement creating momentary pale zones with rapid pink return",
+        "sensory_feedback_implied": "hand conforming to encountered resistance, natural hesitation at first contact, growing confidence visible in gesture evolution, exploratory finger movements suggesting texture discovery"
+      },
+      "behavioral_synchronization": {
+        "lion_response_to_touch": "leaning into caress by 1-2 centimeters showing acceptance, a low, deep purr beginning (vibration felt), eyes closing slightly during pleasurable contact moments, breathing rhythm synchronizing with stroking tempo, micro-expressions of contentment",
+        "mutual_timing": "hand movement pausing during lion's exhalation creating natural rhythm, both subjects achieving stillness at peak connection moment (4.5-second mark), synchronized micro-movements suggesting non-verbal communication",
+        "trust_indicators": "lion maintaining steady gaze rather than startling, relaxed ear position, absence of tension in facial muscles, voluntary closing of nictitating membrane showing security"
+      },
+      "spatial_relationship": {
+        "distance_dynamics": "initial 10cm separation closing to zero at contact, maintaining consistent pressure throughout stroke, subtle hand retreat during lion's nostril flare (respecting breath space), return to close proximity showing comfort establishment",
+        "angle_evolution": "hand approaching from 45-degree angle, rotating to parallel at full contact, conforming to spherical head geometry, natural wrist rotation visible (15-20 degree range)",
+        "depth_interaction": "fingers penetrating 2-4 cm into mane depth, palm making surface contact with guard hairs, fingertips potentially reaching skin layer at nose bridge where fur thins"
+      }
+    },
+    "mane_texture_mastery": {
+      "macro_structure": {
+        "outer_mane": "coarse, protective outer layer, 15-25cm length, rich tones of gold, blonde, and dark brown, individual hair diameter 150-200 microns, natural taper toward tips, slight wave pattern creating volume, wind-responsive with 0.2-0.5 second delay to air movement",
+        "mane_undercoat": "dense soft layer visible in parted areas, 5-8cm length, lighter beige-cream coloration, 40-60 micron diameter, creating insulation layer, fluffy texture with natural crimp",
+        "color_gradient": "rich gradient from dark brown at the neck base, transitioning to gold in the mane's body, lightening to blonde and sand tones at the tips, natural sun-bleaching on tips of hairs, subtle red undertones in direct sunlight, grey-silver hairs scattered indicating maturity"
+      },
+      "micro_detail": {
+        "individual_hairs": "each hair visible in sharp focus areas, natural irregular spacing, random orientation creating realistic chaos, visible hair follicle exit points on snout, natural sebum coating creating subtle sheen, split ends on older guard hairs showing weathering",
+        "light_interaction": "specular highlights on mane hair tips creating sparkle effect, subsurface scattering through individual translucent hairs creating luminous quality, rim lighting separating hair layers, anisotropic reflection following hair direction, Fresnel effect on grazing angles",
+        "dirt_and_debris": "realistic savanna interaction evidence: 3-5 tiny dried grass fragments lodged in mane, fine dust particles caught in undercoat, acacia pollen on snout hairs, natural oils creating slight matting in areas, evidence of previous water contact in slightly clumped sections"
+      },
+      "dynamic_behavior": {
+        "movement_physics": "realistic hair strand dynamics following contact, delayed secondary motion, natural clumping and separation, wind-responsive flutter at mane edges, gravity affecting longer strands, inertia creating lag behind lion's head movements",
+        "compression_recovery": "progressive spring-back after hand pressure release, non-uniform recovery rates (guard hairs faster than undercoat), temporary directional bias showing hand's passage, natural re-randomization over 2-3 seconds",
+        "edge_definition": "soft fuzzy silhouette against background where backlit, sharp defined edges where rim-lit, natural irregularity preventing CG appearance, individual flyaway hairs catching light creating halo effect"
+      }
+    },
+    "lighting_architecture": {
+      "primary_illumination": {
+        "sun_characteristics": "golden hour sunlight at 15-25 degrees above horizon, 5200K color temperature with warm bias, soft quality from atmospheric diffusion, 30-40% cloud coverage creating variable intensity",
+        "canopy_filtration": "sunlight fragmenting through the canopy of acacia and marula trees, creating a dynamic dappled pattern, 60% light reduction through leaves, green color contamination from leaf translucency, constantly shifting pattern from gentle breeze (leaf movement at 0.5-1 Hz frequency)",
+        "god_rays": "5-8 distinct volumetric light shafts penetrating canopy, 15-25 degree angles converging toward camera, visible atmospheric scattering within beams, intensity variation along beam length, subtle color shift from blue (Rayleigh scattering) to gold, edges soft but defined, photon density visualization"
+      },
+      "secondary_lighting": {
+        "ambient_bounce": "soft fill light from dry savanna floor reflection, 5-10% intensity of key light, slight ochre/yellow color cast, upward direction creating subtle under-lighting on lion's jaw",
+        "sky_light": "cool blue ambient from visible sky patches, 4500K color temperature, providing shadow area illumination, preventing crushed blacks, creating color temperature separation",
+        "water_reflection": "visible waterhole or stream behind lion creating dancing caustics, subtle animated reflections projecting onto lion's lower face, cool blue-cyan tint, 2-5% contribution to overall exposure"
+      },
+      "light_quality": {
+        "contrast_ratio": "4:1 to 6:1 between highlight and shadow areas, maintaining detail in both extremes, gentle falloff preventing harsh transitions, HDR capture preserving 12+ stops dynamic range",
+        "direction_mapping": "key light from 45-degree camera-left and elevated, creating Rembrandt-style triangle on camera-right cheek, rim light from 135-degree back-left creating edge separation, fill from below-right softening shadows",
+        "color_temperature_palette": "warm 5200K key light, neutral 5500K midtones, cool 6500K shadows creating color depth, subtle warm-to-cool gradient across frame guiding eye to subject"
+      },
+      "atmospheric_phenomena": {
+        "volumetric_effects": "visible atmospheric perspective, air thickness visualization through god rays, particulate matter illuminated in light shafts, depth cue through atmospheric haze, moisture creating slight diffusion",
+        "particle_suspension": [
+          "pollen grains: 20-30 micron diameter, golden yellow, slow falling trajectory at 0.5-1 cm/second, concentrated in god rays, slight rotation during fall",
+          "dust motes: 5-15 micron size, grey-brown color, Brownian motion creating random drift, faster movement in air currents, bright highlights when sun-struck",
+          "water droplets: rare 100-200 micron droplets from recent rain, spherical form, rainbow refraction visible, faster falling speed 20-30 cm/second",
+          "seed fluff: thistle or grass seeds, 2-3mm size, white-silver, tumbling motion, slowest fall rate 0.2-0.5 cm/second",
+          "savanna spores: microscopic, creating haze effect collectively, visible only in concentrated god rays"
+        ],
+        "particle_density": "300-500 particles visible in frame, concentration gradient with 3x density in light beams versus shadow areas, natural random distribution avoiding pattern recognition",
+        "particle_motion": "influenced by micro-air currents, subtle thermal convection creating rise in warm zones, gentle breeze (0.5-1 m/s) creating directional drift, turbulence around lion's breath creating disturbance"
+      }
+    },
+    "reflection_and_refraction": {
+      "eye_reflections": {
+        "corneal_surface": "convex mirror capturing 180-degree hemisphere, savanna sky visible with accurate perspective distortion, human hand silhouette visible during close approach, sun position indicated by bright spot, dynamic updates as viewing angle changes",
+        "environment_mapping": "blue sky dominant in upper reflection, dry savanna grass in lower, acacia silhouettes, proper depth and scale relationships, chromatic aberration at high-contrast edges mimicking real optics",
+        "catch_lights": "primary catch light from sun direction, 2-3 secondary highlights from sky and bounce light, positioned at 10-2 o'clock orientation, natural star pattern from iris texture, size proportional to light source solid angle"
+      },
+      "nose_reflections": {
+        "wet_surface_quality": "mirror-like glossy reflection, 80-90% reflectivity, slightly distorted by nose pad texture, moisture creating perfect specular surface, recent lick indicated by even coverage",
+        "reflected_environment": "upward-facing surface reflecting sky directly above, human hand visible during approach creating dynamic element, proper perspective with wide-angle distortion",
+        "highlight_characteristics": "primary sun highlight 5-8mm diameter, soft edges from slight surface irregularity, surrounding gradient from full reflection to diffuse scattering, subtle color fidelity showing environment's color palette"
+      },
+      "mane_micro_reflections": {
+        "guard_hair_specular": "anisotropic highlights following hair direction, sharp specular on hair tips where most smooth, softer reflection on hair shafts, intensity varying with angle to light source",
+        "cumulative_sheen": "overall lustrous quality from millions of micro-reflections, natural oiliness creating protective coating, healthy mane appearance, variation between recently groomed and weathered areas",
+        "color_shift": "edge lighting creating warm rim with cool interior (Fresnel principle), backlit hairs showing warm translucency, front-lit hairs showing true surface color with specular white highlights"
+      },
+      "environmental_reflections": {
+        "water_feature": "waterhole reflection showing inverted lion if camera angle permits, ripple distortion from gentle breeze, color shift from suspended sediment, sky reflection creating blue tone",
+        "moisture_on_surfaces": "dew on nearby leaves creating sparkle bokeh, water droplets on distant foliage, wet ground reflections, morning humidity visualization",
+        "inter-reflections": "light bouncing between surfaces, color bleeding from green foliage onto lion's mane shadow areas, warm light reflecting from lion onto human hand, realistic global illumination"
+      }
+    },
+    "depth_and_focus": {
+      "focal_plane": {
+        "critical_focus_zone": "razor-sharp focus on lion's eyes and nose forming geometric plane, 6-8 cm depth of acceptable sharpness at f/1.8, parallel to camera sensor, intersecting lion's face at slight angle",
+        "focus_subject": "primary focus on lion's right eye (camera left), secondary acceptable sharpness extending to left eye and nose tip, eyelashes in perfect resolution, individual fur strands countable",
+        "focus_fall_off": "rapid defocus gradient following optical physics, depth blur increasing exponentially with distance from focal plane, characteristic 85mm lens bokeh quality"
+      },
+      "bokeh_characteristics": {
+        "aperture_blade_rendering": "9-blade aperture creating near-circular bokeh shapes, slight nonagonal geometry visible in bright highlights, smooth creamy out-of-focus areas, no harsh edges or outlining",
+        "background_dissolution": "savanna elements dissolving into soft abstract shapes beyond 1.5 meters, grass tufts becoming luminous orbs, branch structures simplified to gentle streaks, color blending creating painterly quality",
+        "foreground_bokeh": "hand entering from slightly front-of-focus creating subtle blur on initial entry, adding depth and dimension, smooth focus transition as hand reaches focal plane",
+        "highlight_bokeh": "sparkles from backlit leaves creating circular bokeh discs 20-40mm diameter on sensor, soft-edged circles, gentle brightness gradient from center to edge, colorful due to leaf filtering (green tints), overlapping transparently",
+        "bokeh_color": "warm color bias in out-of-focus highlights, slight chromatic aberration creating color fringing (realistic for f/1.8), color separation between foreground and background bokeh"
+      },
+      "depth_layers": {
+        "layer_1_extreme_foreground": "0-30 cm from camera: potential for out-of-focus foliage frame elements, soft bokeh providing depth cue, warm color tones",
+        "layer_2_foreground": "30-80 cm: human hand entering frame, transitioning from slight blur to sharp focus as it reaches subject, maintaining bokeh on distant parts",
+        "layer_3_primary_subject": "80-120 cm: lion's face in critical focus zone, all key elements sharp, hero lighting, maximum detail rendering",
+        "layer_4_near_background": "120-200 cm: beginning defocus transition, savanna elements recognizable but soft, suggestion of tree trunks, gentle blur",
+        "layer_5_mid_background": "200-500 cm: significant bokeh effect, canopy structure visible but abstract, color blending, luminous quality",
+        "layer_6_far_background": "500+ cm: complete dissolution, pure color and light fields, sky patches as bright zones, maximum atmospheric perspective"
+      },
+      "depth_cues": {
+        "atmospheric_perspective": "progressive desaturation with distance, cool color shift in deeper savanna, contrast reduction in far background, detail loss through air thickness",
+        "size_gradients": "relative size diminishing with distance, leaf size decreasing, texture frequency increasing in perspective",
+        "overlap": "layers clearly overlapping establishing spatial relationships, hand overlapping lion overlapping savanna, clear depth stratification",
+        "focus_as_depth": "human visual system interpreting focus gradient as distance, directing attention to sharp areas, creating dimensional perception"
+      }
+    },
+    "composition_architecture": {
+      "framing_strategy": {
+        "aspect_ratio": "9:16 vertical portrait format optimized for mobile viewing, Instagram Reels, TikTok, YouTube Shorts",
+        "subject_placement": "lion's face occupying 60-70% of frame, centered horizontally with slight camera-right bias, vertically positioned with eyes on upper third line (rule of thirds), nose near center creating stable composition",
+        "negative_space": "minimal negative space creating intimacy, 10-15% of frame as background visible around lion's head, tight crop emphasizing connection over environment",
+        "breathing_room": "slight space above head preventing claustrophobic cropping, room for hand entry from right maintaining compositional balance"
+      },
+      "visual_hierarchy": {
+        "primary_focal_point": "lion's eyes - dominant through focus, lighting, and position, immediate attention capture, emotional connection point",
+        "secondary_element": "human hand - dynamic element creating narrative, movement draws eye, lighter tonality contrasting with dark mane",
+        "tertiary_elements": "nose (detail and reflection), mouth area (expression reading), ears (framing elements)",
+        "background_role": "supporting atmosphere, providing context without competition, color harmony with subject"
+      },
+      "geometric_structure": {
+        "lines_and_vectors": "hand movement creating diagonal leading line toward face, lion's snout forming central vertical axis, ear angles creating inverted triangle framing face, eyeline horizontal creating stable foundation",
+        "shapes": "lion's face as primary rounded form (approachable, friendly), triangular ear composition (stability), circular eyes (focal points), hand creating curved organic shape (grace)",
+        "symmetry_balance": "near-symmetrical lion face creating calm stability, asymmetrical hand placement creating dynamic tension, perfect balance between order and energy",
+        "golden_ratio": "key elements positioned approximating phi proportions, eye placement relating to face dimensions harmoniously, natural aesthetic appeal"
+      },
+      "directional_flow": {
+        "eye_movement_path": "entry through sharp eyes, following hand gesture downward, reading across nose detail, circular flow back to eyes, contained within frame preventing exit",
+        "motion_vectors": "hand movement right-to-left creating dynamic, lion's gaze toward camera holding attention, implicit depth movement from background forward to subject",
+        "psychological_vectors": "eye contact creating engagement, hand reaching creating empathy, combined vectors pulling viewer into scene emotionally"
+      },
+      "edge_treatment": {
+        "frame_edges": "soft vignette (10-15% darkening) at corners focusing attention centrally, natural not obvious, enhanced by bokeh darkness",
+        "subject_to_edge": "careful cropping preserving complete hand gesture, lion's ears touching frame edges anchoring composition, nose and eyes fully visible with buffer",
+        "entry_exit_points": "hand entering right edge as dynamic element, eye contact preventing attention escape, closed composition"
+      }
+    },
+    "color_theory_application": {
+      "color_palette": {
+        "dominant_colors": "rich golds, ochres, and burnt yellows (mane, landscape, 50% of palette), earthy browns (shadows, 20%), skin tones (hand, 10%), pale sky blue (15%), dry green accents (vegetation, 5%)",
+        "color_temperature_narrative": "overall warm bias creating comfort and invitation, cool shadows providing depth and dimension, warm-cool contrast enhancing three-dimensionality",
+        "saturation_strategy": "highly saturated subject (lion and hand) popping against desaturated background, focus through color intensity, natural not artificial saturation levels",
+        "value_distribution": "full tonal range from near-black (lion's eyes, nose) through midtones (mane, skin) to bright highlights (sun-struck mane tips, bokeh), histogram utilizing entire spectrum"
+      },
+      "color_relationships": {
+        "complementary_colors": "warm golden-yellows complemented by cool sky-and-shadow blues creating vibration and energy, natural color harmony from environment",
+        "analogous_colors": "golds flowing into browns through ochre transitions creating cohesion, gentle color progression preventing jarring shifts",
+        "color_accents": "bright highlight sparkles providing micro-contrast, pollen yellows as small color accents, cool blue in shadows and sky patches",
+        "color_weight": "warm colors advancing (lion and hand feeling closer), cool colors receding (background falling away), depth through color temperature"
+      },
+      "color_grading_intent": {
+        "mood_establishment": "warm grading creating nostalgia and comfort, golden hour romanticism, natural beauty emphasis, emotional warmth matching physical touch",
+        "skin_tone_priority": "hand skin tones maintained in natural range, avoiding color casts, healthy appearance, relatable and realistic",
+        "selective_coloring": "enhanced warm tones in subject, pushed yellows in landscape, preserved cool tones in shadows, creating separation and pop",
+        "film_emulation": "Kodak Portra 400 inspired palette - warm skin tones, rich yellows, smooth highlight rolloff, subtle grain structure, classic cinematic feel"
+      },
+      "color_contrast": {
+        "hue_contrast": "golden-yellow versus blue-cyan creating visual interest, warm foreground versus cool background enhancing depth",
+        "saturation_contrast": "saturated subject versus muted background directing focus, color intensity as attention guide",
+        "luminance_contrast": "bright highlights versus deep shadows creating drama, tonal separation defining form and volume"
+      }
+    },
+    "motion_choreography": {
+      "camera_movement": {
+        "primary_motion": "locked-off static camera with organic micro-movement, handheld breathing simulation (0.5-1mm random drift), subtle push-in (2% zoom over duration) increasing intimacy",
+        "stabilization": "95% stabilized maintaining composition, 5% organic movement preventing sterile look, realistic weight and inertia",
+        "secondary_motion": "subtle rack focus shifts (±2-3mm) following hand movement, maintaining critical focus on lion's eyes, imperceptible but adding dimension"
+      },
+      "subject_motion_timing": {
+        "hand_movement_arc": [
+          "0.0-0.5s: pre-approach anticipation, hand outside frame, muscle tension visible in forearm",
+          "0.5-1.2s: entry and approach, confident but gentle, natural deceleration as contact nears",
+          "1.2-1.5s: initial contact, moment of hesitation, fingertips meeting mane, both subjects reacting",
+          "1.5-3.5s: primary caress stroke, smooth confident glide, pressure increasing slightly, fingers spreading",
+          "3.5-4.5s: intimacy peak, full palm contact, stillness moment, maximum connection",
+          "4.5-6.0s: trailing exit, fingers lingering, reluctant separation, maintaining contact till last moment",
+          "6.0-7.0s: return stroke, building trust, increased confidence visible, rhythm established"
+        ],
+        "lion_response_timeline": [
+          "0.0-1.0s: alert curiosity, slight head tilt, eyes tracking approaching hand",
+          "1.0-2.0s: acceptance, leaning into touch, deep purr begins, nostril flare",
+          "2.0-4.0s: enjoyment, slow blink, facial muscles relaxing, micro-expressions of pleasure",
+          "4.0-6.0s: trust, full relaxation, breathing synchronized with caress, complete calm",
+          "6.0-8.0s: continued engagement, slight forward lean encouraging more contact, relationship established"
+        ]
+      },
+      "motion_principles": {
+        "ease_curves": "all movements following natural ease-in-out curves, no linear motion, realistic acceleration and deceleration, organic timing",
+        "overlapping_action": "hand joints moving in offset timing (wrist leads, fingers follow), mane responding with delay to touch, secondary motion enhancing realism",
+        "anticipation": "subtle preparatory movements before main actions, hand tensing before approach, lion's eyes tracking before contact",
+        "follow_through": "momentum carrying beyond actions, mane continuing to settle after hand passes, lion's head following hand slightly",
+        "staging": "clear silhouettes of actions, movements perpendicular to camera for maximum clarity, action timing preventing confusion"
+      },
+      "dynamic_elements": {
+        "wind_influence": "gentle breeze (0.5-1 m/s) creating subtle mane flutter at edges, more visible on ear fur and longer mane hairs, random intervals creating organic rhythm, grass rustling in background",
+        "breathing_dynamics": "lion's chest expansion creating 2-3cm amplitude movement, 15 breaths per minute, visible nostril movement, subtle shoulder rise and fall, coordinating with all other movements",
+        "micro_movements": "constant subtle motion preventing static look, ear twitches every 3-5 seconds, eye movements every 2-3 seconds, skin micro-expressions continuous, finger micro-adjustments"
+      },
+      "particle_motion": {
+        "floating_particles": "pollen, dust, and seeds moving through frame, wind-driven directional bias, occasional turbulent spirals, thermal convection creating upward drift in warm zones, speed variety from slow float to medium drift",
+        "god_ray_particles": "enhanced visibility in light shafts, 3x particle density in illuminated zones, sparkle effect when sun-struck, creating magical atmosphere",
+        "lion_breath_disturbance": "particles deflecting near nostrils during exhalation, turbulent flow creating local chaos, visualization of breath interaction with environment"
+      },
+      "temporal_rhythm": {
+        "pacing": "slow contemplative rhythm, extended holds on key moments, no rushed transitions, breathing space for emotional connection",
+        "beat_structure": "opening establishment (1s), approach and anticipation (1s), first contact climax (1s), intimate exploration (3s), emotional resolution (2s)",
+        "micro_rhythms": "breathing rhythms, blink rhythms, caress rhythm, particle float rhythm, all creating complex polyrhythmic natural feel",
+        "synchronization": "hand and lion movements finding harmony, breath synchronization, creating sense of unity and connection"
+      }
+    },
+    "atmospheric_immersion": {
+      "environmental_sound_implied": {
+        "auditory_atmosphere": "silent wind through tall grass, distant bird calls, lion's breathing, fabric sound from movement, finger gliding through mane, savanna ambience creating rich soundscape (visual implying audio)",
+        "acoustic_space": "savanna creating natural reverb, open air preventing echo, intimate close-miking perspective implying proximity"
+      },
+      "sensory_implication": {
+        "tactile_suggestion": "visual cues triggering tactile imagination: mane texture appearance, hand pressure visualization, skin contact, temperature implied through moisture and breath",
+        "olfactory_hints": "visual suggestion of dry earth smell, sun-baked grass, lion's natural musk, savanna freshness",
+        "temperature_impression": "warm sunlight areas versus cool shadows, breath moisture, body heat proximity, ambient savanna coolness"
+      },
+      "temporal_context": {
+        "time_of_day": "late afternoon golden hour, 1-2 hours before sunset, long shadows, warm light quality, day transitioning toward evening",
+        "seasonal_indicators": "golden-green foliage suggesting late rainy season, no extreme dry season colors, lush growth, seasonal prime",
+        "weather_conditions": "clear sky with scattered clouds, no rain, slight breeze, comfortable temperature, ideal lighting conditions"
+      },
+      "spatial_context": {
+        "location_implication": "natural African savanna habitat, protected area, peaceful sanctuary, away from human development, lion's territory",
+        "ecosystem_richness": "biodiversity visible through varied foliage, healthy ecosystem indicators, thriving environment, balanced ecosystem",
+        "safety_context": "calm safe encounter, no threat, mutual respect, controlled interaction, trust environment"
+      }
+    },
+    "technical_excellence": {
+      "rendering_quality": {
+        "resolution": "8K master resolution (7680×4320) for maximum detail capture, downscaled to 4K delivery (3840×2160) for optimal quality-filesize balance, portrait crop to 2160×3840 for 9:16 mobile format",
+        "bit_depth": "10-bit color depth (1.07 billion colors) preventing banding, smooth gradients, professional color grading headroom",
+        "color_space": "Rec.2020 wide color gamut capture, ACES workflow for scene-referred processing, P3-D65 delivery for display compatibility, HDR10 grading with SDR fallback",
+        "dynamic_range": "14+ stops captured, preserving highlight and shadow detail, HDR tone mapping for dramatic range compression, natural appearance maintained"
+      },
+      "temporal_quality": {
+        "frame_rate": "captured at 60fps for motion clarity, delivered at 24fps cinematic standard, per-frame motion blur matching 180-degree shutter angle, natural motion appearance",
+        "motion_blur": "realistic camera-accurate motion blur, 1/48s exposure equivalent, direction and intensity matching movement speed, no strobing or judder",
+        "temporal_stability": "zero flicker, consistent exposure frame-to-frame, smooth motion without stuttering, professional temporal anti-aliasing, no shimmering or crawling artifacts"
+      },
+      "optical_accuracy": {
+        "lens_characteristics": "Canon RF 85mm f/1.8 IS STM equivalent rendering, accurate bokeh shape, realistic vignetting, subtle barrel distortion corrected, chromatic aberration matched to real optics (minimal purple fringing)",
+        "depth_of_field": "mathematically accurate DOF for 85mm at f/1.8 on full-frame, 6-8cm sharp zone at subject distance, smooth focus falloff following optical physics",
+        "diffraction": "subtle diffraction effects at aperture edges, realistic star patterns on bright points, airy disc characteristics on highlights",
+        "flare_characteristics": "no lens flare (sun behind foliage), but potential for subtle veiling flare reducing contrast slightly, realistic handling of bright sources"
+      },
+      "texture_resolution": {
+        "mane_detail": "individual hairs at 4K on main subject, micro-texture visible, sub-pixel detail through temporal supersampling, no aliasing on fine hair strands",
+        "skin_detail": "pore visibility on human hand, fine line resolution, micro-texture at 200% zoom, realistic normal mapping creating dimensionality",
+        "environmental_detail": "leaf texture visible in focused areas, bark detail on background trees, natural material accuracy, proper texture frequency for distance"
+      },
+      "post_processing": {
+        "noise_handling": "subtle film grain overlay (0.5-1% intensity) for organic texture, matching 400 ISO equivalent, preventing clinical appearance"
+      }
+    }
+  }
+}
+
+
+{
+  "negative_prompt": {
+    "critical_exclusions": {
+      "artificial_appearance": [
+        "CGI look",
+        "obviously computer-generated",
+        "fake appearance",
+        "artificial rendering",
+        "video game graphics",
+        "3D rendered look",
+        "synthetic materials",
+        "plastic-like surfaces",
+        "wax museum quality",
+        "uncanny valley effect",
+        "lifeless eyes",
+        "dead stare",
+        "mannequin appearance",
+        "robotic movement",
+        "unnatural perfection",
+        "too clean",
+        "sterile appearance"
+      ],
+      
+      "motion_artifacts": [
+        "jittery movement",
+        "stuttering motion",
+        "judder",
+        "strobing effect",
+        "choppy animation",
+        "robotic gestures",
+        "linear motion curves",
+        "instant acceleration",
+        "no easing",
+        "unnatural speed",
+        "floating objects",
+        "physics violations",
+        "teleporting",
+        "morphing errors",
+        "warping distortions",
+        "temporal flickering",
+        "frame-to-frame inconsistency",
+        "shaking camera",
+        "unstable footage",
+        "motion blur artifacts",
+        "ghosting",
+        "trailing artifacts",
+        "incorrect motion vectors"
+      ],
+      
+      "anatomical_errors": {
+        "bear_anatomy": [
+          "wrong number of eyes",
+          "misplaced features",
+          "asymmetrical defects",
+          "extra ears",
+          "deformed snout",
+          "incorrect teeth showing",
+          "wrong eye spacing",
+          "disproportionate features",
+          "missing anatomy",
+          "extra limbs visible",
+          "incorrect bone structure",
+          "impossible neck angle",
+          "wrong head size",
+          "cartoon proportions",
+          "humanoid features on bear"
+        ],
+        "hand_anatomy": [
+          "wrong finger count",
+          "extra fingers",
+          "missing fingers",
+          "fused fingers",
+          "impossible finger bending",
+          "wrong thumb placement",
+          "broken joints",
+          "incorrect proportions",
+          "tiny hands",
+          "giant hands",
+          "missing fingernails",
+          "extra knuckles",
+          "backwards palm",
+          "impossible wrist rotation",
+          "disconnected hand",
+          "floating fingers",
+          "merged fingers"
+        ]
+      },
+      
+      "texture_problems": [
+        "blurry fur",
+        "muddy texture",
+        "loss of detail",
+        "oversharpened artifacts",
+        "halos around edges",
+        "noise in wrong places",
+        "smooth where should be textured",
+        "flat appearance",
+        "no micro-detail",
+        "repetitive patterns",
+        "tiling visible",
+        "texture stretching",
+        "low resolution textures",
+        "compression artifacts",
+        "pixelation",
+        "jpeg artifacts",
+        "banding in gradients",
+        "posterization",
+        "moire patterns",
+        "aliasing on edges",
+        "jagged lines",
+        "crawling pixels",
+        "shimmering texture"
+      ],
+      
+      "lighting_failures": [
+        "flat lighting",
+        "no shadows",
+        "incorrect shadows",
+        "multiple shadow directions",
+        "floating shadows",
+        "disconnected shadows",
+        "too dark",
+        "too bright",
+        "overexposed areas",
+        "blown highlights without detail",
+        "crushed blacks losing detail",
+        "unrealistic color temperature",
+        "wrong time of day appearance",
+        "studio lighting look",
+        "artificial three-point lighting",
+        "rim lighting from wrong direction",
+        "impossible light sources",
+        "light wrapping errors",
+        "no ambient occlusion",
+        "missing contact shadows",
+        "incorrect light falloff",
+        "uniform lighting",
+        "no depth from lighting",
+        "harsh edges on shadows",
+        "pixelated shadows",
+        "muddy shadows"
+      ],
+      
+      "color_grading_disasters": [
+        "oversaturated",
+        "neon colors",
+        "unnatural color cast",
+        "wrong skin tones",
+        "green skin",
+        "orange overload",
+        "cyan contamination",
+        "purple fur",
+        "incorrect white balance",
+        "color clipping",
+        "lost color information",
+        "monochromatic when shouldn't be",
+        "wrong color harmony",
+        "clashing colors",
+        "muddy colors",
+        "desaturated subject",
+        "color banding",
+        "unnatural color relationships",
+        "video game color palette",
+        "overstyled grading",
+        "Instagram filter look",
+        "conflicting color temperatures"
+      ],
+      
+      "focus_and_depth_errors": [
+        "everything in focus",
+        "nothing in focus",
+        "wrong focal point",
+        "focus on background not subject",
+        "harsh focus transitions",
+        "incorrect bokeh shape",
+        "hexagonal bokeh when should be circular",
+        "cat's eye bokeh incorrectly",
+        "no depth of field",
+        "infinite depth of field",
+        "unrealistic bokeh size",
+        "foreground too sharp",
+        "background too sharp",
+        "focus breathing errors",
+        "rack focus mistakes",
+        "sudden focus jumps",
+        "hunting focus",
+        "double vision",
+        "ghosting in bokeh"
+      ],
+      
+      "composition_mistakes": [
+        "off-center incorrectly",
+        "awkward cropping",
+        "cut off important elements",
+        "too much headroom",
+        "no headroom",
+        "tangent lines",
+        "merging elements",
+        "background objects growing from head",
+        "distracting elements",
+        "cluttered composition",
+        "unbalanced frame",
+        "tilted horizon when should be level",
+        "dutch angle when inappropriate",
+        "competing focal points",
+        "no clear subject",
+        "too much negative space",
+        "claustrophobic framing",
+        "poor aspect ratio choice",
+        "letterboxing incorrectly",
+        "pillarboxing visible"
+      ]
+    },
+    
+    "behavioral_exclusions": {
+      "unnatural_behavior": [
+        "aggressive bear posture",
+        "bared teeth",
+        "raised hackles",
+        "attack position",
+        "defensive stance",
+        "fear in eyes",
+        "tension in body",
+        "startle response",
+        "fleeing motion",
+        "predatory stare",
+        "hunting behavior",
+        "territorial display",
+        "stress indicators"
+      ],
+      
+      "wrong_interaction": [
+        "hand recoiling in fear",
+        "slapping motion",
+        "grabbing fur roughly",
+        "painful interaction",
+        "bear biting hand",
+        "claws visible extended",
+        "violent contact",
+        "forced interaction",
+        "restraining visible",
+        "captive appearance",
+        "trained trick behavior",
+        "circus performance look",
+        "unnatural pose"
+      ]
+    },
+    
+    "atmospheric_problems": [
+      "indoor appearance",
+      "studio backdrop",
+      "green screen visible",
+      "artificial background",
+      "stock photo background",
+      "mismatched lighting on subject and background",
+      "perspective mismatch",
+      "scale inconsistency",
+      "floating subject",
+      "no ground contact",
+      "missing shadows connecting to ground",
+      "wrong weather for lighting",
+      "rain when sunlit",
+      "wrong season indicators",
+      "mismatched environmental cues"
+    ],
+    
+    "technical_artifacts": [
+      "compression artifacts",
+      "blocking",
+      "macroblocking",
+      "ringing artifacts",
+      "edge halos",
+      "chromatic aberration excessive",
+      "purple fringing excessive",
+      "lens distortion obvious",
+      "vignetting too strong",
+      "vignetting unnatural shape",
+      "sensor dust visible",
+      "dead pixels",
+      "hot pixels",
+      "rolling shutter wobble",
+      "interlacing artifacts",
+      "combing",
+      "field order errors",
+      "pulldown artifacts",
+      "dropped frames visible",
+      "duplicate frames",
+      "stuttering playback",
+      "audio-video desync (if audio present)",
+      "watermarks",
+      "logos",
+      "timestamps",
+      "frame counters",
+      "test patterns",
+      "color bars"
+    ],
+    
+    "stylistic_violations": [
+      "cartoon style",
+      "anime aesthetic",
+      "comic book look",
+      "painted appearance",
+      "sketch style",
+      "watercolor effect",
+      "oil painting look",
+      "illustration not photo",
+      "fantasy art style",
+      "concept art appearance",
+      "matte painting obvious",
+      "digital art aesthetic",
+      "filters obvious",
+      "presets visible",
+      "HDR tonemapping overdone",
+      "clarity slider maxed",
+      "over-processed",
+      "beauty filter applied",
+      "smooth skin filter",
+      "glamour glow excessive",
+      "lens flares added artificially",
+      "light leaks added",
+      "film burns",
+      "transition effects",
+      "wipes",
+      "star wipes",
+      "dissolves mid-shot"
+    ],
+    
+    "content_exclusions": [
+      "violence",
+      "blood",
+      "injury",
+      "distress",
+      "captivity indicators",
+      "chains",
+      "collars",
+      "restraints",
+      "cages visible",
+      "zoo enclosure",
+      "concrete environments",
+      "human crowds",
+      "urban elements",
+      "buildings",
+      "vehicles",
+      "roads",
+      "fences",
+      "garbage",
+      "litter",
+      "pollution",
+      "dead vegetation",
+      "barren landscape",
+      "clear-cut forest",
+      "logged areas",
+      "industrial elements",
+      "powerlines",
+      "signs",
+      "text visible",
+      "multiple bears",
+      "multiple hands",
+      "multiple people",
+      "face of person visible",
+      "identifiable person",
+      "branded clothing",
+      "modern equipment visible",
+      "cell phone visible",
+      "camera visible",
+      "anachronistic elements"
+    ],
+    
+    "quality_dealbreakers": [
+      "low resolution",
+      "standard definition",
+      "480p",
+      "720p when 4K requested",
+      "soft focus everywhere",
+      "out of focus main subject",
+      "camera shake",
+      "handheld instability when static requested",
+      "poorly stabilized",
+      "warping from stabilization",
+      "fish-eye distortion",
+      "wrong aspect ratio",
+      "stretched image",
+      "squashed image",
+      "pillarboxing",
+      "letterboxing with wrong ratio",
+      "double letterboxing",
+      "watermarks",
+      "stock footage watermarks",
+      "preview quality",
+      "draft mode",
+      "quick render",
+      "placeholder graphics",
+      "lorem ipsum text",
+      "missing elements",
+      "incomplete render",
+      "stopped render",
+      "partial completion",
+      "timeout errors visible",
+      "error messages",
+      "debug information visible"
+    ],
+    
+    "realism_killers": [
+      "levitating objects",
+      "defying gravity",
+      "impossible physics",
+      "incorrect weight",
+      "no mass",
+      "floating hair",
+      "hair going through objects",
+      "clipping errors",
+      "intersecting geometry",
+      "z-fighting",
+      "transparency errors",
+      "wrong material properties",
+      "metal that looks like plastic",
+      "fur that looks like fabric",
+      "skin that looks like rubber",
+      "eyes that look like glass",
+      "no subsurface scattering on skin",
+      "no translucency where needed",
+      "incorrect reflections",
+      "missing reflections",
+      "reflections not matching environment",
+      "mirror reflections incorrect",
+      "wrong perspective in reflections",
+      "cubemap reflections obvious",
+      "screen-space reflection artifacts",
+      "shadow acne",
+      "peter panning shadows",
+      "incorrect ambient occlusion",
+      "missing contact shadows",
+      "color bleeding excessive",
+      "GI artifacts",
+      "light leaking through geometry"
+    ],
+    
+    "motion_realism_breakers": [
+      "no motion blur when needed",
+      "too much motion blur",
+      "directional blur wrong direction",
+      "blur in static areas",
+      "no blur in moving areas",
+      "temporal aliasing",
+      "stairstepping in motion",
+      "skating feet",
+      "no foot contact",
+      "sliding instead of walking",
+      "moon walking",
+      "instant velocity changes",
+      "no acceleration",
+      "no momentum",
+      "instant stops",
+      "cartoon physics",
+      "squash and stretch on realistic subjects",
+      "secondary motion missing",
+      "no follow-through",
+      "no overlapping action",
+      "synchronized motion when should be offset",
+      "procedural motion obvious",
+        "looping animation obvious",
+        "cycle repetition visible",
+        "keyframe stepping visible",
+        "no motion variation",
+        "too perfect motion",
+        "mechanical movement",
+        "tween artifacts"
+      ],
+      
+      "environmental_inconsistencies": [
+        "mismatched lighting direction on different elements",
+        "shadows pointing different directions",
+        "color temperature inconsistency",
+        "impossible time of day",
+        "sun and moon both high in sky",
+        "conflicting weather elements",
+        "rain with harsh sun",
+        "snow in summer foliage",
+        "wrong plant species for climate",
+        "tropical and arctic plants together",
+        "seasonal mismatch",
+        "spring and autumn simultaneously",
+        "wrong light quality for time/weather",
+        "harsh light in overcast scene",
+        "soft light in clear sky",
+        "missing atmospheric perspective",
+        "distant objects too saturated",
+        "no aerial perspective",
+        "wrong atmospheric conditions",
+        "no humidity visible when should be present",
+        "no heat shimmer where expected",
+        "wrong cloud types for weather",
+        "clouds moving wrong direction for wind",
+        "still vegetation in visible wind",
+        "moving vegetation in still air",
+        "particle motion contradicting wind",
+        "smoke going wrong direction",
+        "water ripples contradicting wind",
+        "environmental elements not interacting"
+      ],
+      
+      "post_production_errors": [
+        "over-sharpening",
+        "sharpening halos",
+        "edge enhancement visible",
+        "ringing around high contrast edges",
+        "noise reduction smearing",
+        "loss of texture from NR",
+        "temporal noise reduction ghosting",
+        "frozen frames from TNR",
+        "color correction clipping",
+        "out of gamut colors",
+        "illegal broadcast colors",
+        "super-white clipping",
+        "super-black clipping",
+        "luma clipping",
+        "chroma clipping",
+        "wrong color space conversion",
+        "gamma errors",
+        "wrong transfer function",
+        "HDR-SDR conversion mistakes",
+        "tone mapping artifacts",
+        "local tone mapping halos",
+        "vignette too strong",
+        "vignette wrong shape",
+        "added grain too large",
+        "added grain too uniform",
+        "grain not matching film stock",
+        "digital grain over-processed look",
+        "LUT application errors",
+        "conflicting color grades",
+        "grade not matching scene",
+        "commercial grade on documentary footage",
+        "teal and orange cliche overused",
+        "bleach bypass look inappropriate",
+        "cross-processing look wrong era",
+        "Photoshop filters obvious",
+        "Instagram filters visible",
+        "FaceApp smoothing",
+        "beauty filters",
+        "teeth whitening visible",
+        "eye enhancement obvious",
+        "skin smoothing",
+        "frequency separation artifacts"
+      ]
+    },
+    
+    "cinematography_failures": [
+      "amateur framing",
+      "tourist snapshot composition",
+      "no thought to composition",
+      "centered subject inappropriately",
+      "rule of thirds violated badly",
+      "leading lines missing",
+      "no depth layers",
+      "flat two-dimensional look",
+      "no foreground interest",
+      "no background separation",
+      "no visual hierarchy",
+      "competing elements",
+      "unclear focal point",
+      "eye direction ignored",
+      "look room missing",
+      "nose room missing",
+      "head room excessive",
+      "subject too small in frame",
+      "subject too large",
+      "awkward crop lines",
+      "cropping at joints",
+      "tangent lines",
+      "mergers in composition",
+      "background distractions",
+      "bright areas pulling eye away",
+      "color distractions",
+      "movement distractions",
+      "no camera motivation",
+      "unmotivated camera movement",
+      "zooming when should push in",
+      "digital zoom artifacts",
+      "punch-in visible",
+      "wrong lens choice for mood",
+      "fisheye when inappropriate",
+      "telephoto compression wrong",
+      "wrong field of view",
+      "perspective distortion ugly"
+    ],
+    
+    "storytelling_failures": [
+      "no narrative",
+      "unclear what's happening",
+      "random actions",
+      "no beginning middle end",
+      "no emotional arc",
+      "no character establishment",
+      "unclear relationship",
+      "ambiguous emotion",
+      "mixed messages",
+      "tone confusion",
+      "genre confusion",
+      "style inconsistency",
+      "breaking fourth wall inappropriately",
+      "meta references",
+      "too clever",
+      "pretentious",
+      "overly artistic at expense of clarity",
+      "confusing for confusion's sake",
+      "no clear message",
+      "unclear purpose",
+      "pointless scene",
+      "doesn't advance narrative",
+      "no stakes",
+      "no tension",
+      "no release",
+      "no payoff",
+      "no resolution"
+    ],
+    
+    "ethical_content_violations": [
+      "animal cruelty",
+      "animal distress",
+      "forced interaction",
+      "dangerous situation",
+      "encouraging unsafe behavior",
+      "promoting illegal activity",
+      "wildlife harassment",
+      "feeding wild animals shown",
+      "approaching wildlife unsafely",
+      "habitat destruction",
+      "environmental damage",
+      "littering shown positively",
+      "polluting activities",
+      "destructive behavior",
+      "disrespectful to nature",
+      "trophy hunting imagery",
+      "dead animals displayed",
+      "taxidermy pretending to be alive",
+      "captive animal presented as wild",
+      "zoo footage claimed as wilderness",
+      "edited footage misleading about circumstances",
+      "fake rescue scenario",
+      "staged distress",
+      "manufactured drama at animal expense"
+    ],
+    
+    "ai_generation_tells": [
+      "prompt bleeding through",
+      "text in image",
+      "garbled text",
+      "nonsense writing",
+      "wrong language",
+      "symbols instead of letters",
+      "metadata visible",
+      "generation artifacts",
+      "seams visible",
+      "tiling obvious",
+      "symmetry where shouldn't be",
+      "repetitive patterns unnatural",
+      "copy-paste obvious",
+      "mirroring visible",
+      "clone stamp artifacts",
+      "patch tool obvious",
+      "content-aware fill errors",
+      "AI hallucinations",
+      "impossible elements",
+      "merged objects",
+      "object confusion",
+      "category confusion",
+      "style confusion",
+      "training data bleed through",
+      "watermark ghosts",
+      "stock photo artifacts",
+      "dataset bias visible",
+      "uncanny valley",
+      "too perfect",
+      "unnaturally clean",
+      "no entropy",
+      "no randomness",
+      "mathematical precision where organic expected",
+      "grid alignment inappropriate",
+      "quantized values visible",
+      "discrete steps in continuous gradients",
+      "latent space artifacts",
+      "mode collapse evidence",
+      "adversarial artifacts",
+      "GAN artifacts",
+      "diffusion artifacts",
+      "denoising errors incomplete",
+      "high frequency noise pattern",
+      "low frequency banding",
+      "VAE posterization",
+      "attention mechanism artifacts",
+      "transformer artifacts",
+      "generation boundary visible"
+    ],
+    
+    "platform_specific_problems": {
+      "mobile_viewing_issues": [
+        "too much detail invisible on small screen",
+        "text too small",
+        "action too subtle for mobile",
+        "requires landscape when vertical",
+        "aspect ratio wrong for platform",
+        "safe areas violated",
+        "important elements in crop zones",
+        "vertical video syndrome (black bars)",
+        "orientation wrong for content"
+      ],
+      
+      "compression_vulnerability": [
+        "detail too fine for compression",
+        "high frequency content that blocks",
+        "low contrast detail that disappears",
+        "chromatic noise that exaggerates",
+        "movement too fast for bitrate",
+        "complex motion that falls apart",
+        "particle effects that vanish",
+        "thin lines that disappear",
+        "subtle gradients that band"
+      ],
+      
+      "accessibility_failures": [
+        "no contrast for visibility",
+        "color reliance for information",
+        "flashing that could trigger seizures",
+        "motion that could cause nausea",
+        "text burned in without captions option",
+        "no audio description possible",
+        "automatic captions impossible"
+      ]
+    },
+    
+    "final_absolute_exclusions": [
+      "anything photoshopped obviously",
+      "composite that doesn't match",
+      "green screen keying artifacts",
+      "matte lines visible",
+      "rotoscoping artifacts",
+      "motion tracking drift",
+      "match moving errors",
+      "camera tracking fails",
+      "3D integration mismatch",
+      "scale wrong for integration",
+      "lighting mismatch on composited elements",
+      "grain mismatch between layers",
+      "focus mismatch between layers",
+      "color space mismatch",
+      "dynamic range mismatch",
+      "motion blur mismatch",
+      "any indication this isn't a single capture",
+      "any hint of manipulation beyond color grading",
+      "any evidence of fakery",
+      "any reason for viewer to doubt authenticity",
+      "any technical flaw breaking immersion",
+      "any artistic choice that serves ego over story",
+      "any element that doesn't serve the emotional truth",
+      "anything that would make this less than a masterpiece"
+    ]
+  }
+}
