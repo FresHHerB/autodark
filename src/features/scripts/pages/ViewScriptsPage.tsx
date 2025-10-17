@@ -573,7 +573,7 @@ export default function ViewScriptsPage() {
                 )}
 
                 {/* Images Info */}
-                {selectedScript.images_info && selectedScript.images_info.length > 0 && !selectedScript.video_id && (
+                {selectedScript.images_info && selectedScript.images_info.length > 0 && (
                   <div className="bg-black/40 rounded-xl overflow-hidden">
                     {/* Header */}
                     <div className="p-6 border-b border-gray-700">
@@ -599,7 +599,13 @@ export default function ViewScriptsPage() {
                               className="bg-gray-800/50 border border-green-600/30 rounded-lg overflow-hidden flex flex-col"
                             >
                               {/* Image Preview */}
-                              <div className="aspect-video relative group cursor-pointer" onClick={() => setLightboxImage({ url: imageItem.image_url, alt: `Imagem ${imageItem.index} - ${selectedScript.titulo}` })}>
+                              <div
+                                className="aspect-video relative group cursor-pointer"
+                                onClick={() => {
+                                  const imageUrl = reloadKey > 0 ? `${imageItem.image_url}?t=${reloadKey}` : imageItem.image_url;
+                                  setLightboxImage({ url: imageUrl, alt: `Imagem ${imageItem.index} - ${selectedScript.titulo}` });
+                                }}
+                              >
                                 <img
                                   key={reloadKey}
                                   src={reloadKey > 0 ? `${imageItem.image_url}?t=${reloadKey}` : imageItem.image_url}
@@ -652,70 +658,80 @@ export default function ViewScriptsPage() {
                                   </div>
                                 </div>
 
-                                {/* Prompt Editor */}
-                                {isEditing ? (
-                                  <div className="space-y-2">
-                                    <label className="block text-xs font-medium text-gray-300">
-                                      Editar Prompt:
-                                    </label>
-                                    <textarea
-                                      value={editingImagePrompt.prompt}
-                                      onChange={(e) => setEditingImagePrompt({ ...editingImagePrompt, prompt: e.target.value })}
-                                      className="w-full px-3 py-2 bg-black/50 border border-green-600 rounded-lg text-white text-xs resize-none"
-                                      rows={4}
-                                      placeholder="Digite o novo prompt..."
-                                    />
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => {
-                                          handleRegenerateImage(
-                                            selectedScript.id,
-                                            imageItem.index,
-                                            { ...imageItem.image_info, prompt: editingImagePrompt.prompt }
-                                          );
-                                        }}
-                                        disabled={isRegenerating}
-                                        className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                                      >
-                                        {isRegenerating ? (
-                                          <>
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            Gerando...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Download className="w-3 h-3" />
-                                            Gerar Novamente
-                                          </>
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingImagePrompt(null)}
-                                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </div>
+                                {/* Prompt Section */}
+                                {!selectedScript.video_id ? (
+                                  // Roteiro SEM vídeo - permite editar e regenerar
+                                  <>
+                                    {isEditing ? (
+                                      <div className="space-y-2">
+                                        <label className="block text-xs font-medium text-gray-300">
+                                          Editar Prompt:
+                                        </label>
+                                        <textarea
+                                          value={editingImagePrompt.prompt}
+                                          onChange={(e) => setEditingImagePrompt({ ...editingImagePrompt, prompt: e.target.value })}
+                                          className="w-full px-3 py-2 bg-black/50 border border-green-600 rounded-lg text-white text-xs resize-none"
+                                          rows={4}
+                                          placeholder="Digite o novo prompt..."
+                                        />
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => {
+                                              handleRegenerateImage(
+                                                selectedScript.id,
+                                                imageItem.index,
+                                                { ...imageItem.image_info, prompt: editingImagePrompt.prompt }
+                                              );
+                                            }}
+                                            disabled={isRegenerating}
+                                            className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                                          >
+                                            {isRegenerating ? (
+                                              <>
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                Gerando...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Download className="w-3 h-3" />
+                                                Gerar Novamente
+                                              </>
+                                            )}
+                                          </button>
+                                          <button
+                                            onClick={() => setEditingImagePrompt(null)}
+                                            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        <div className="text-xs text-gray-400 line-clamp-2">
+                                          {imageItem.image_info.prompt}
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingImagePrompt({
+                                              id_roteiro: selectedScript.id,
+                                              index: imageItem.index,
+                                              prompt: imageItem.image_info.prompt
+                                            });
+                                          }}
+                                          className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                                        >
+                                          <Edit2 className="w-3 h-3" />
+                                          Editar e Regenerar
+                                        </button>
+                                      </div>
+                                    )}
+                                  </>
                                 ) : (
-                                  <div className="space-y-2">
-                                    <div className="text-xs text-gray-400 line-clamp-2">
-                                      {imageItem.image_info.prompt}
-                                    </div>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingImagePrompt({
-                                          id_roteiro: selectedScript.id,
-                                          index: imageItem.index,
-                                          prompt: imageItem.image_info.prompt
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                                    >
-                                      <Edit2 className="w-3 h-3" />
-                                      Editar e Regenerar
-                                    </button>
+                                  // Roteiro COM vídeo - apenas visualização colapsada
+                                  <div className="text-xs text-gray-500 line-clamp-2 italic">
+                                    {imageItem.image_info.prompt}
                                   </div>
                                 )}
                               </div>
