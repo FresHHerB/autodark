@@ -420,7 +420,7 @@ export default function ViewScriptsPage() {
                         ) : (
                           <Video className="w-5 h-5 text-gray-600" />
                         )}
-                        <p className="text-gray-400 text-sm">
+                        <p className="text-sm text-gray-300 font-medium">
                           {script.canal_nome}
                         </p>
                       </div>
@@ -492,7 +492,7 @@ export default function ViewScriptsPage() {
                     ) : (
                       <Video className="w-8 h-8 text-gray-600" />
                     )}
-                    <span className="text-gray-400 text-base">{selectedScript.canal_nome}</span>
+                    <span className="text-base text-gray-300 font-medium">{selectedScript.canal_nome}</span>
                     {getStatusBadge(selectedScript)}
                   </div>
                 </div>
