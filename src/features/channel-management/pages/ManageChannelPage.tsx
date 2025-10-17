@@ -153,7 +153,7 @@ export default function ManageChannelPage() {
     try {
       console.log('📤 Sending image to webhook...', { id_canal: selectedChannelForModal.id, type: imageData.type });
 
-      // Send webhook with only necessary data: update_type, id_canal, image_data { type, base64 }
+      // Send webhook with only necessary data: update_type: 'imageChannel', id_canal, image_data { type, base64 }
       const response = await apiService.updateChannelImage(selectedChannelForModal.id, imageData);
 
       console.log('📥 Webhook response:', response);

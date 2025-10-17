@@ -29,9 +29,11 @@ export function useVideosWithChannels() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchVideos = useCallback(async () => {
+  const fetchVideos = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
 
       const { data, error: queryError } = await supabase.rpc('get_videos_with_channels');
@@ -63,28 +65,42 @@ export function useVideosWithChannels() {
         if (fallbackError) throw fallbackError;
 
         // Transform the data to match our interface
-        const transformedData: VideoWithChannel[] = (fallbackData || []).map((video: any) => ({
-          id: video.id,
-          title: video.roteiros?.titulo || 'Sem título',
-          thumbnail: video.thumb_path || '',
-          videoUrl: video.video_path || undefined,
-          status: video.status as VideoStatus,
-          createdAt: video.created_at,
-          scheduledDate: video.data_publicar,
-          channelId: video.roteiros?.canais?.id || 0,
-          channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
-          channelProfileImage: video.roteiros?.canais?.profile_image || ''
-        }));
+        const transformedData: VideoWithChannel[] = (fallbackData || []).map((video: any) => {
+          // Add timestamp to thumbnail URL to bypass cache
+          const thumbnailUrl = video.thumb_path
+            ? `${video.thumb_path}?t=${Date.now()}`
+            : '';
+
+          return {
+            id: video.id,
+            title: video.roteiros?.titulo || 'Sem título',
+            thumbnail: thumbnailUrl,
+            videoUrl: video.video_path || undefined,
+            status: video.status as VideoStatus,
+            createdAt: video.created_at,
+            scheduledDate: video.data_publicar,
+            channelId: video.roteiros?.canais?.id || 0,
+            channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
+            channelProfileImage: video.roteiros?.canais?.profile_image || ''
+          };
+        });
 
         setVideos(transformedData);
       } else {
-        setVideos(data || []);
+        // Add timestamp to thumbnails from RPC data
+        const dataWithTimestamp = (data || []).map((video: VideoWithChannel) => ({
+          ...video,
+          thumbnail: video.thumbnail ? `${video.thumbnail}?t=${Date.now()}` : ''
+        }));
+        setVideos(dataWithTimestamp);
       }
     } catch (err) {
       console.error('Error fetching videos:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar vídeos');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 

@@ -171,8 +171,20 @@ class ApiService {
     return this.call(this.getWebhook('update'), {
       method: 'POST',
       body: JSON.stringify({
-        update_type: 'updateThumb',
+        update_type: 'imageChannel',
         id_canal,
+        image_data: imageData,
+      }),
+    });
+  }
+
+  // Update video thumbnail
+  async updateVideoImage(id_video: number, imageData: { base64: string }) {
+    return this.call(this.getWebhook('update'), {
+      method: 'POST',
+      body: JSON.stringify({
+        update_type: 'thumbVideo',
+        id_video,
         image_data: imageData,
       }),
     });

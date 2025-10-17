@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw, Upload } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VideoPlayer } from '@shared/components/modals';
 import { useVideosWithChannels, VideoStatus, VideoWithChannel } from '@features/channel-management/hooks';
 import { apiService } from '@shared/services';
+import { supabase } from '@shared/lib';
 
 
 const statusConfig = {
@@ -42,7 +43,8 @@ const statusConfig = {
 
 export default function ReviewEditPage() {
   const navigate = useNavigate();
-  const { videos, loading, error, refetch } = useVideosWithChannels();
+  const { videos: videosFromHook, loading, error, refetch } = useVideosWithChannels();
+  const [videos, setVideos] = useState<VideoWithChannel[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoWithChannel | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
@@ -53,6 +55,16 @@ export default function ReviewEditPage() {
 
   // Reload state
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Drag & Drop states
+  const [dragOverVideoId, setDragOverVideoId] = useState<number | null>(null);
+  const [uploadingVideoId, setUploadingVideoId] = useState<number | null>(null);
+  const [successVideoId, setSuccessVideoId] = useState<number | null>(null);
+
+  // Sync videos from hook to local state
+  React.useEffect(() => {
+    setVideos(videosFromHook);
+  }, [videosFromHook]);
 
   // Extract unique channels from videos
   const channels = useMemo(() => {
@@ -131,19 +143,110 @@ export default function ReviewEditPage() {
     return filteredVideos.filter(v => v.status === status);
   };
 
+  // Handle image drop on video card
+  const handleDragOver = (e: React.DragEvent, videoId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverVideoId(videoId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverVideoId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, videoId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverVideoId(null);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, arraste apenas arquivos de imagem.');
+      return;
+    }
+
+    try {
+      setUploadingVideoId(videoId);
+
+      // Convert to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Extract base64 data (remove data:image/...;base64, prefix)
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Send to webhook
+      const response = await apiService.updateVideoImage(videoId, { base64 });
+
+      // Check response
+      const isSuccess = response && (
+        response.success === true ||
+        (Array.isArray(response) && response[0]?.success === true)
+      );
+
+      if (isSuccess) {
+        // Reload all videos silently (without loading state)
+        await refetch(true);
+
+        // Show success toast on video card
+        setSuccessVideoId(videoId);
+
+        // Hide toast after 3 seconds
+        setTimeout(() => {
+          setSuccessVideoId(null);
+        }, 3000);
+      } else {
+        throw new Error('Falha ao atualizar thumbnail');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar thumbnail:', error);
+      alert('Erro ao atualizar thumbnail. Tente novamente.');
+    } finally {
+      setUploadingVideoId(null);
+    }
+  };
+
   const renderVideoCard = (video: VideoWithChannel) => {
     const config = statusConfig[video.status];
     const Icon = config.icon;
     const isProcessing = config.isProcessing;
+    const isDragOver = dragOverVideoId === video.id;
+    const isUploading = uploadingVideoId === video.id;
+    const showSuccess = successVideoId === video.id;
 
     return (
       <div
         key={video.id}
+        onDragOver={(e) => handleDragOver(e, video.id)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, video.id)}
         className={`
-          bg-gray-800 border border-gray-700 overflow-hidden group relative
-          ${!isProcessing ? 'hover:border-gray-600 transition-all' : ''}
+          bg-gray-800 border overflow-hidden group relative transition-all
+          ${isDragOver ? 'border-blue-500 border-2 scale-[1.02]' : 'border-gray-700'}
+          ${!isProcessing && !isDragOver ? 'hover:border-gray-600' : ''}
         `}
       >
+        {/* Success Toast */}
+        {showSuccess && (
+          <div className="absolute top-3 left-3 right-3 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Thumbnail atualizada!</span>
+          </div>
+        )}
+
         {/* Delete Button */}
         <button
           onClick={(e) => {
@@ -157,8 +260,8 @@ export default function ReviewEditPage() {
         </button>
 
         <div
-          onClick={() => handleVideoClick(video)}
-          className={`${!isProcessing ? 'cursor-pointer' : ''}`}
+          onClick={() => !isUploading && handleVideoClick(video)}
+          className={`${!isProcessing && !isUploading ? 'cursor-pointer' : ''}`}
         >
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-700">
@@ -174,7 +277,23 @@ export default function ReviewEditPage() {
             </div>
           )}
 
-          {isProcessing && video.progress && (
+          {/* Upload Progress Overlay */}
+          {isUploading && (
+            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20">
+              <Loader2 className="w-8 h-8 text-blue-500 mb-3 animate-spin" />
+              <span className="text-white text-sm">Atualizando thumbnail...</span>
+            </div>
+          )}
+
+          {/* Drag Over Overlay */}
+          {isDragOver && !isUploading && (
+            <div className="absolute inset-0 bg-blue-500/30 flex flex-col items-center justify-center z-20 border-2 border-blue-500 border-dashed">
+              <Upload className="w-12 h-12 text-blue-300 mb-2" />
+              <span className="text-white text-sm font-medium">Solte a imagem aqui</span>
+            </div>
+          )}
+
+          {isProcessing && video.progress && !isUploading && (
             <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
               <Icon className="w-8 h-8 text-white mb-3 animate-spin" />
               <div className="w-3/4 bg-gray-700 h-2 rounded-full overflow-hidden">
@@ -187,7 +306,7 @@ export default function ReviewEditPage() {
             </div>
           )}
 
-          {!isProcessing && (
+          {!isProcessing && !isDragOver && !isUploading && (
             <div className="absolute inset-0 bg-black/20 hover:bg-black/10 transition-colors" />
           )}
         </div>
@@ -201,7 +320,7 @@ export default function ReviewEditPage() {
               alt={video.channelName}
               className="w-6 h-6 rounded-full object-cover"
             />
-            <span className="text-xs text-gray-400">{video.channelName}</span>
+            <span className="text-sm text-gray-300 font-medium">{video.channelName}</span>
           </div>
 
           {/* Title */}
