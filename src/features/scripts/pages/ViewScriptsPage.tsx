@@ -58,6 +58,9 @@ export default function ViewScriptsPage() {
   const [deletingScript, setDeletingScript] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{id: number, title: string} | null>(null);
 
+  // Success notification state
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -161,7 +164,10 @@ export default function ViewScriptsPage() {
       // Recarrega os scripts para atualizar images_info do database
       await loadScripts();
 
-      alert(`Imagem ${index} regenerada com sucesso!`);
+      // Mostra mensagem de sucesso por 3 segundos
+      setSuccessMessage(`Imagem ${index} regenerada com sucesso!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
       setEditingImagePrompt(null);
     } catch (error) {
       console.error('Error regenerating image:', error);
@@ -881,6 +887,16 @@ export default function ViewScriptsPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {successMessage && (
+        <div className="fixed bottom-6 right-6 z-[200] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-green-500">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">{successMessage}</span>
           </div>
         </div>
       )}
