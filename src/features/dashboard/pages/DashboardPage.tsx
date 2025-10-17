@@ -1,12 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@shared/contexts';
 import { DashboardHeader, ActionCard } from '@features/dashboard/components';
 import { Copy, Video, Edit, Calendar, Settings, PlaySquare } from 'lucide-react';
+import { supabase } from '@shared/lib/supabase';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    canais: 0,
+    roteiros: 0,
+    videos: 0
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Buscar quantidade de canais
+        const { count: canaisCount } = await supabase
+          .from('canais')
+          .select('*', { count: 'exact', head: true });
+
+        // Buscar quantidade de roteiros
+        const { count: roteirosCount } = await supabase
+          .from('roteiros')
+          .select('*', { count: 'exact', head: true });
+
+        // Buscar quantidade de vídeos
+        const { count: videosCount } = await supabase
+          .from('videos')
+          .select('*', { count: 'exact', head: true });
+
+        setStats({
+          canais: canaisCount || 0,
+          roteiros: roteirosCount || 0,
+          videos: videosCount || 0
+        });
+      } catch (error) {
+        console.error('Erro ao buscar estatísticas:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const actionCards = [
     {
@@ -120,16 +157,16 @@ export default function DashboardPage() {
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Vídeos Criados</span>
-                <span className="text-white font-medium">47</span>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Canais Clonados</span>
-                <span className="text-white font-medium">12</span>
+                <span className="text-white font-medium">{stats.canais}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Visualizações Totais</span>
-                <span className="text-white font-medium">2.3M</span>
+                <span className="text-gray-400 text-sm">Roteiros Criados</span>
+                <span className="text-white font-medium">{stats.roteiros}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Vídeos Criados</span>
+                <span className="text-white font-medium">{stats.videos}</span>
               </div>
             </div>
           </div>

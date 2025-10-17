@@ -165,6 +165,18 @@ class ApiService {
     });
   }
 
+  // Update channel thumbnail/profile image
+  async updateChannelImage(id_canal: number, imageData: { type: string; base64: string }) {
+    return this.call(this.getWebhook('update'), {
+      method: 'POST',
+      body: JSON.stringify({
+        update_type: 'updateThumb',
+        id_canal,
+        image_data: imageData,
+      }),
+    });
+  }
+
   // Video generation methods
   async generateVideos(payload: {
     videos: Array<{

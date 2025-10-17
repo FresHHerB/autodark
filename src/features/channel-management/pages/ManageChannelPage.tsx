@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VoiceSelector } from '@features/content-generation/components';
-import { CaptionStyleEditor, CaptionStyleConfig } from '../components';
+import { CaptionStyleEditor, CaptionStyleConfig, CompactImageUpload } from '../components';
 import { supabase, Canal } from '@shared/lib';
 import { apiService } from '@shared/services';
 
@@ -22,6 +22,7 @@ export default function ManageChannelPage() {
     style: {},
   });
   const [activeTab, setActiveTab] = useState<'general' | 'captions'>('general');
+  const [imageUpdateSuccess, setImageUpdateSuccess] = useState(false);
 
   // Fetch channels from Supabase
   React.useEffect(() => {
@@ -55,6 +56,7 @@ export default function ManageChannelPage() {
     setSelectedChannelForModal(canal);
     setSelectedVoiceId(canal.voz_prefereida || undefined);
     setSaveSuccess(false);
+    setImageUpdateSuccess(false);
 
     // Load caption style if exists, otherwise use empty config
     // The CaptionStyleEditor will initialize with defaults via useEffect
@@ -134,10 +136,70 @@ export default function ManageChannelPage() {
     setModalOpen(false);
     setSelectedChannelForModal(null);
     setSelectedVoiceId(undefined);
+    setImageUpdateSuccess(false);
   };
 
   const handleOpenUrl = (url: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleImageUpload = async (imageData: { type: string; base64: string }) => {
+    if (!selectedChannelForModal) return;
+
+    try {
+      console.log('📤 Sending image to webhook...', { id_canal: selectedChannelForModal.id, type: imageData.type });
+
+      // Send webhook with only necessary data: update_type, id_canal, image_data { type, base64 }
+      const response = await apiService.updateChannelImage(selectedChannelForModal.id, imageData);
+
+      console.log('📥 Webhook response:', response);
+
+      // Check webhook response: can be {"success": true} or [{"success": true}]
+      const isSuccess = response && (
+        response.success === true ||
+        (Array.isArray(response) && response[0]?.success === true)
+      );
+
+      console.log('✅ Webhook success?', isSuccess);
+
+      if (isSuccess) {
+        console.log('🔄 Refetching channel data from Supabase...');
+
+        // Refetch channel data to get updated profile_image without cache
+        const { data, error } = await supabase
+          .from('canais')
+          .select('*')
+          .eq('id', selectedChannelForModal.id)
+          .single();
+
+        console.log('📊 Supabase data:', data);
+        console.log('❌ Supabase error:', error);
+
+        if (error) {
+          console.error('Supabase error on refetch:', error);
+          throw error;
+        }
+
+        if (data) {
+          console.log('✨ Updating local state with new image:', data.profile_image);
+          // Update local state with new image
+          setSelectedChannelForModal(data);
+          setChannels(prev => prev.map(ch => ch.id === data.id ? data : ch));
+        }
+
+        // Show success message for 5 seconds
+        setImageUpdateSuccess(true);
+        setTimeout(() => {
+          setImageUpdateSuccess(false);
+        }, 5000);
+      } else {
+        console.error('❌ Webhook did not return success');
+        throw new Error('Falha ao atualizar imagem no servidor');
+      }
+    } catch (error) {
+      console.error('💥 Error in handleImageUpload:', error);
+      throw error; // Rethrow to be handled by ImageUpload component
+    }
   };
 
   return (
@@ -194,12 +256,32 @@ export default function ManageChannelPage() {
                   key={canal.id}
                   onClick={() => handleChannelClick(canal)}
                   className={`
-                    group cursor-pointer bg-gray-900 border border-gray-800 hover:border-gray-600 transition-all duration-200 p-6
+                    group cursor-pointer bg-gray-900 border border-gray-800 hover:border-gray-600 transition-all duration-200 p-6 relative
                   `}
                 >
                   {/* Edit Icon */}
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Edit className="w-4 h-4 text-gray-400" />
+                  </div>
+
+                  {/* Channel Image */}
+                  <div className="mb-4">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 border border-gray-700 flex items-center justify-center">
+                      {canal.profile_image ? (
+                        <img
+                          src={`${canal.profile_image}?t=${Date.now()}`}
+                          alt={canal.nome_canal}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = '<VideoIcon className="w-10 h-10 text-gray-600" />';
+                          }}
+                        />
+                      ) : (
+                        <VideoIcon className="w-10 h-10 text-gray-600" />
+                      )}
+                    </div>
                   </div>
 
                   {/* Channel Header */}
@@ -272,13 +354,38 @@ export default function ManageChannelPage() {
           <div className="bg-gray-900 border border-gray-800 w-full max-w-7xl max-h-[95vh] flex flex-col shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-gray-800">
-              <div>
-                <h2 className="text-2xl font-light text-white mb-1">
-                  Configurações do Canal
-                </h2>
-                <p className="text-sm text-gray-400">
-                  {selectedChannelForModal.nome_canal}
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                  {selectedChannelForModal.profile_image ? (
+                    <img
+                      src={`${selectedChannelForModal.profile_image}?t=${Date.now()}`}
+                      alt={selectedChannelForModal.nome_canal}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '';
+                          const icon = document.createElement('div');
+                          icon.className = 'text-gray-600';
+                          icon.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+                          parent.appendChild(icon);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <VideoIcon className="w-8 h-8 text-gray-600" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white mb-1">
+                    Configurações do Canal
+                  </h2>
+                  <p className="text-sm text-gray-400">
+                    {selectedChannelForModal.nome_canal}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={handleCloseModal}
@@ -286,6 +393,25 @@ export default function ManageChannelPage() {
               >
                 <X className="w-6 h-6" />
               </button>
+            </div>
+
+            {/* Image Upload Section - Discreet */}
+            <div className="px-8 py-4 bg-gray-900/30 border-b border-gray-800">
+              <CompactImageUpload
+                currentImage={selectedChannelForModal.profile_image}
+                channelName={selectedChannelForModal.nome_canal}
+                onUpload={handleImageUpload}
+              />
+
+              {/* Success Message */}
+              {imageUpdateSuccess && (
+                <div className="mt-3 flex items-center gap-2 bg-green-900/30 border border-green-700/50 px-4 py-2 rounded text-green-400 text-sm animate-fade-in">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Imagem atualizada com sucesso!</span>
+                </div>
+              )}
             </div>
 
             {/* Tabs Navigation */}

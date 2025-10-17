@@ -23,6 +23,7 @@ interface Script {
   roteiro: string;
   canal_id: number;
   canal_nome: string;
+  canal_profile_image: string | null;
   created_at: string;
   audio_path: string | null;
   text_thumb: string | null;
@@ -94,22 +95,23 @@ export default function ViewScriptsPage() {
 
       if (scriptsError) throw scriptsError;
 
-      // Load channel names
+      // Load channel names and profile images
       const { data: channelsData } = await supabase
         .from('canais')
-        .select('id, nome_canal');
+        .select('id, nome_canal, profile_image');
 
       // Load videos
       const { data: videosData } = await supabase
         .from('videos')
         .select('id, status, video_path, data_publicar, thumb_path');
 
-      const channelsMap = new Map(channelsData?.map(c => [c.id, c.nome_canal]) || []);
+      const channelsMap = new Map(channelsData?.map(c => [c.id, { nome: c.nome_canal, profileImage: c.profile_image }]) || []);
       const videosMap = new Map(videosData?.map(v => [v.id, v]) || []);
 
       const enrichedScripts: Script[] = (scriptsData || []).map(script => ({
         ...script,
-        canal_nome: channelsMap.get(script.canal_id) || 'Desconhecido',
+        canal_nome: channelsMap.get(script.canal_id)?.nome || 'Desconhecido',
+        canal_profile_image: channelsMap.get(script.canal_id)?.profileImage || null,
         video_id: videosMap.has(script.id) ? script.id : null,
         video_status: videosMap.get(script.id)?.status || null,
         video_path: videosMap.get(script.id)?.video_path || null,
@@ -200,8 +202,8 @@ export default function ViewScriptsPage() {
       const Icon = status.icon;
 
       return (
-        <span className={`flex items-center space-x-1 px-2 py-1 bg-${status.color}-500/20 text-${status.color}-200 text-xs rounded-full`}>
-          <Icon className="w-3 h-3" />
+        <span className={`flex items-center space-x-0.5 px-1.5 py-0.5 bg-${status.color}-500/20 text-${status.color}-200 text-[10px] rounded-full`}>
+          <Icon className="w-2.5 h-2.5" />
           <span>{status.text}</span>
         </span>
       );
@@ -209,8 +211,8 @@ export default function ViewScriptsPage() {
 
     if (script.images_path && script.images_path.length > 0) {
       return (
-        <span className="flex items-center space-x-1 px-2 py-1 bg-purple-500/20 text-purple-200 text-xs rounded-full">
-          <ImageIcon className="w-3 h-3" />
+        <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-purple-500/20 text-purple-200 text-[10px] rounded-full">
+          <ImageIcon className="w-2.5 h-2.5" />
           <span>Com Imagens</span>
         </span>
       );
@@ -218,15 +220,15 @@ export default function ViewScriptsPage() {
 
     if (script.audio_path) {
       return (
-        <span className="flex items-center space-x-1 px-2 py-1 bg-indigo-500/20 text-indigo-200 text-xs rounded-full">
-          <Mic className="w-3 h-3" />
+        <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-indigo-500/20 text-indigo-200 text-[10px] rounded-full">
+          <Mic className="w-2.5 h-2.5" />
           <span>Com Áudio</span>
         </span>
       );
     }
 
     return (
-      <span className="px-2 py-1 bg-gray-500/20 text-gray-300 text-xs rounded-full">
+      <span className="px-1.5 py-0.5 bg-gray-500/20 text-gray-300 text-[10px] rounded-full">
         Apenas Roteiro
       </span>
     );
@@ -332,7 +334,7 @@ export default function ViewScriptsPage() {
                 </div>
 
                 {/* Scripts Grid for this Channel */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
                   {scriptsByChannel[channelName].map(script => (
                     <div
                       key={script.id}
@@ -351,54 +353,65 @@ export default function ViewScriptsPage() {
                   </div>
                 ) : (
                   <div className="bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-                    <FileText className="w-16 h-16 text-gray-600" />
+                    <FileText className="w-12 h-12 text-gray-600" />
                   </div>
                 )}
 
                 {/* Content */}
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold mb-1 line-clamp-2">
+                      <h3 className="text-white font-semibold text-sm mb-1 line-clamp-2">
                         {script.titulo || 'Sem título'}
                       </h3>
-                      <p className="text-gray-400 text-sm">
-                        {script.canal_nome}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        {script.canal_profile_image ? (
+                          <img
+                            src={`${script.canal_profile_image}?t=${Date.now()}`}
+                            alt={script.canal_nome}
+                            className="w-5 h-5 rounded-full object-cover"
+                          />
+                        ) : (
+                          <Video className="w-5 h-5 text-gray-600" />
+                        )}
+                        <p className="text-gray-400 text-sm">
+                          {script.canal_nome}
+                        </p>
+                      </div>
                     </div>
                     {getStatusBadge(script)}
                   </div>
 
-                  <p className="text-gray-300 text-sm mb-4 line-clamp-3">
+                  <p className="text-gray-300 text-xs mb-3 line-clamp-3">
                     {script.roteiro}
                   </p>
 
                   {/* Badges */}
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-1.5 mb-3">
                     {script.audio_path && (
-                      <span className="flex items-center space-x-1 px-2 py-1 bg-blue-500/20 text-blue-200 text-xs rounded">
-                        <Mic className="w-3 h-3" />
+                      <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-200 text-[10px] rounded">
+                        <Mic className="w-2.5 h-2.5" />
                         <span>Áudio</span>
                       </span>
                     )}
                     {script.images_path && script.images_path.length > 0 && (
-                      <span className="flex items-center space-x-1 px-2 py-1 bg-purple-500/20 text-purple-200 text-xs rounded">
-                        <ImageIcon className="w-3 h-3" />
+                      <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-200 text-[10px] rounded">
+                        <ImageIcon className="w-2.5 h-2.5" />
                         <span>{script.images_path.length} imgs</span>
                       </span>
                     )}
                     {script.video_id && (
-                      <span className="flex items-center space-x-1 px-2 py-1 bg-green-500/20 text-green-200 text-xs rounded">
-                        <Video className="w-3 h-3" />
+                      <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-500/20 text-green-200 text-[10px] rounded">
+                        <Video className="w-2.5 h-2.5" />
                         <span>Vídeo</span>
                       </span>
                     )}
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-700/50">
+                  <div className="flex items-center justify-between text-[10px] text-gray-500 pt-3 border-t border-gray-700/50">
                     <div className="flex items-center space-x-1">
-                      <Calendar className="w-3 h-3" />
+                      <Calendar className="w-2.5 h-2.5" />
                       <span>{formatDate(script.created_at)}</span>
                     </div>
                     <span className="text-gray-600">ID: {script.id}</span>
@@ -423,7 +436,16 @@ export default function ViewScriptsPage() {
                     {selectedScript.titulo || 'Sem título'}
                   </h2>
                   <div className="flex items-center space-x-3">
-                    <span className="text-gray-400">{selectedScript.canal_nome}</span>
+                    {selectedScript.canal_profile_image ? (
+                      <img
+                        src={`${selectedScript.canal_profile_image}?t=${Date.now()}`}
+                        alt={selectedScript.canal_nome}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Video className="w-8 h-8 text-gray-600" />
+                    )}
+                    <span className="text-gray-400 text-base">{selectedScript.canal_nome}</span>
                     {getStatusBadge(selectedScript)}
                   </div>
                 </div>
