@@ -30,6 +30,7 @@ class ApiService {
       publishVideo: import.meta.env.VITE_WEBHOOK_PUBLISH_VIDEO,
       update: import.meta.env.VITE_WEBHOOK_UPDATE || '/webhook/update',
       generateVideo: import.meta.env.VITE_WEBHOOK_GERAR_VIDEO || '/webhook/gerarVideo',
+      deleteContent: import.meta.env.VITE_WEBHOOK_DELETAR_CONTEUDO || '/webhook/deletar',
     };
 
     return `${this.baseUrl}${webhooks[key as keyof typeof webhooks] || ''}`;
@@ -186,6 +187,17 @@ class ApiService {
     }>;
   }) {
     return this.call(this.getWebhook('generateVideo'), {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Delete content methods
+  async deleteContent(payload: {
+    id: number;
+    deleteType: 'deleteScript' | 'deleteVideo' | 'deleteChannel';
+  }) {
+    return this.call(this.getWebhook('deleteContent'), {
       method: 'POST',
       body: JSON.stringify(payload),
     });

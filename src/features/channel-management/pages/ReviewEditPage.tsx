@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, Calendar, Youtube, AlertCircle, Filter, X, Video } from 'lucide-react';
+import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VideoPlayer } from '@shared/components/modals';
 import { useVideosWithChannels, VideoStatus, VideoWithChannel } from '@features/channel-management/hooks';
+import { apiService } from '@shared/services';
 
 
 const statusConfig = {
@@ -36,27 +37,22 @@ const statusConfig = {
     icon: CheckCircle,
     color: 'green',
     isProcessing: false
-  },
-  video_agendado: {
-    label: 'Vídeo Agendado',
-    icon: Calendar,
-    color: 'yellow',
-    isProcessing: false
-  },
-  video_publicado: {
-    label: 'Vídeo Publicado',
-    icon: Youtube,
-    color: 'red',
-    isProcessing: false
   }
 };
 
 export default function ReviewEditPage() {
   const navigate = useNavigate();
-  const { videos, loading, error } = useVideosWithChannels();
+  const { videos, loading, error, refetch } = useVideosWithChannels();
   const [selectedVideo, setSelectedVideo] = useState<VideoWithChannel | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
+
+  // Delete confirmation state
+  const [deletingVideo, setDeletingVideo] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{id: number, title: string} | null>(null);
+
+  // Reload state
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Extract unique channels from videos
   const channels = useMemo(() => {
@@ -86,6 +82,39 @@ export default function ReviewEditPage() {
     }
   };
 
+  const handleDeleteVideo = async (id: number) => {
+    try {
+      setDeletingVideo(id);
+
+      await apiService.deleteContent({
+        id,
+        deleteType: 'deleteVideo'
+      });
+
+      // Recarrega a lista de vídeos
+      await refetch();
+      setConfirmDelete(null);
+
+    } catch (error) {
+      console.error('Erro ao deletar vídeo:', error);
+      alert('Erro ao deletar vídeo. Tente novamente.');
+    } finally {
+      setDeletingVideo(null);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await refetch();
+    } catch (error) {
+      console.error('Erro ao recarregar vídeos:', error);
+      alert('Erro ao recarregar vídeos. Tente novamente.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -96,8 +125,7 @@ export default function ReviewEditPage() {
     });
   };
 
-  const processingStatuses: VideoStatus[] = ['animando_imagens', 'concatenando_videos', 'adicionando_audio', 'adicionando_legenda'];
-  const readyStatuses: VideoStatus[] = ['video_completo', 'video_agendado', 'video_publicado'];
+  const allStatuses: VideoStatus[] = ['animando_imagens', 'concatenando_videos', 'adicionando_audio', 'adicionando_legenda', 'video_completo'];
 
   const getVideosByStatus = (status: VideoStatus) => {
     return filteredVideos.filter(v => v.status === status);
@@ -111,12 +139,27 @@ export default function ReviewEditPage() {
     return (
       <div
         key={video.id}
-        onClick={() => handleVideoClick(video)}
         className={`
-          bg-gray-800 border border-gray-700 overflow-hidden
-          ${!isProcessing ? 'cursor-pointer hover:border-gray-600 transition-all' : ''}
+          bg-gray-800 border border-gray-700 overflow-hidden group relative
+          ${!isProcessing ? 'hover:border-gray-600 transition-all' : ''}
         `}
       >
+        {/* Delete Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmDelete({ id: video.id, title: video.title });
+          }}
+          className="absolute top-3 right-3 z-10 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          title="Excluir vídeo"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+
+        <div
+          onClick={() => handleVideoClick(video)}
+          className={`${!isProcessing ? 'cursor-pointer' : ''}`}
+        >
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-700">
           {video.thumbnail ? (
@@ -170,6 +213,7 @@ export default function ReviewEditPage() {
           <div className="text-xs text-gray-500">
             {formatDate(video.createdAt)}
           </div>
+        </div>
         </div>
       </div>
     );
@@ -250,6 +294,15 @@ export default function ReviewEditPage() {
               Acompanhe o status de processamento e visualize seus vídeos prontos
             </p>
           </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            title="Atualizar lista de vídeos"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
+          </button>
         </div>
 
         {/* Channel Filter */}
@@ -296,28 +349,14 @@ export default function ReviewEditPage() {
           </div>
         )}
 
-        {/* Processing Section */}
-        <div className="mb-12">
-          <h2 className="text-lg font-light text-white mb-4 flex items-center gap-2">
-            <Loader2 className="w-5 h-5 text-blue-400" />
-            Em Processamento
-          </h2>
-          <div className="overflow-x-auto pb-4">
-            <div className="flex gap-4 min-w-max">
-              {processingStatuses.map(status => renderStatusColumn(status))}
-            </div>
-          </div>
-        </div>
-
-        {/* Ready Section */}
+        {/* Kanban Board - Single Row */}
         <div>
-          <h2 className="text-lg font-light text-white mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            Vídeos Prontos
+          <h2 className="text-lg font-light text-white mb-4">
+            Pipeline de Vídeos
           </h2>
           <div className="overflow-x-auto pb-4">
             <div className="flex gap-4 min-w-max">
-              {readyStatuses.map(status => renderStatusColumn(status))}
+              {allStatuses.map(status => renderStatusColumn(status))}
             </div>
           </div>
         </div>
@@ -336,6 +375,57 @@ export default function ReviewEditPage() {
             setSelectedVideo(null);
           }}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Confirmar Exclusão</h2>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              Tem certeza que deseja excluir o vídeo:
+            </p>
+            <p className="text-white font-semibold mb-6">
+              "{confirmDelete.title}"
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={deletingVideo !== null}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteVideo(confirmDelete.id)}
+                disabled={deletingVideo !== null}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {deletingVideo === confirmDelete.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle, Clock, Play } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle, Clock, Play, AlertTriangle } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { supabase } from '@shared/lib/supabase';
 import { apiService } from '@shared/services';
@@ -10,6 +10,7 @@ interface Channel {
   nome_canal: string;
   url_canal?: string;
   media_chars?: number;
+  caption_style?: any;
 }
 
 interface Roteiro {
@@ -64,7 +65,7 @@ export default function GenerateVideoPage() {
       setIsLoadingChannels(true);
       const { data, error } = await supabase
         .from('canais')
-        .select('id, nome_canal, url_canal, media_chars')
+        .select('id, nome_canal, url_canal, media_chars, caption_style')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -325,17 +326,38 @@ export default function GenerateVideoPage() {
           </div>
 
           {selectedChannel && (
-            <div className="mt-4 p-4 bg-gray-800 border border-gray-700 rounded">
-              <h3 className="text-white font-medium mb-1">{selectedChannel.nome_canal}</h3>
-              {selectedChannel.url_canal && (
-                <p className="text-gray-400 text-sm mb-2">{selectedChannel.url_canal}</p>
+            <div className="mt-4">
+              <div className="p-4 bg-gray-800 border border-gray-700 rounded">
+                <h3 className="text-white font-medium mb-1">{selectedChannel.nome_canal}</h3>
+                {selectedChannel.url_canal && (
+                  <p className="text-gray-400 text-sm mb-2">{selectedChannel.url_canal}</p>
+                )}
+              </div>
+
+              {/* Caption Style Warning */}
+              {!selectedChannel.caption_style && (
+                <div className="mt-4 p-4 bg-red-900/20 border border-red-500/50 rounded flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-red-400 font-medium mb-1">Tipo de legenda não definido</h4>
+                    <p className="text-red-300 text-sm mb-2">
+                      Configure o estilo de legendas na página de gerenciamento de canais antes de gerar vídeos.
+                    </p>
+                    <button
+                      onClick={() => navigate('/manage-channel')}
+                      className="text-sm text-red-400 hover:text-red-300 underline transition-colors"
+                    >
+                      Ir para configurações de canais
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
         </div>
 
         {/* Roteiros Section */}
-        {selectedChannel && (
+        {selectedChannel && selectedChannel.caption_style && (
           <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>

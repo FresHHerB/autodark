@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { supabase } from '@shared/lib';
 import { apiService } from '@shared/services';
-import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw } from 'lucide-react';
+import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import ImageLightbox from '@shared/components/modals/ImageLightbox';
 import VideoPlayer from '@shared/components/modals/VideoPlayer';
 
@@ -53,6 +53,10 @@ export default function ViewScriptsPage() {
   // Lightbox and video player states
   const [lightboxImage, setLightboxImage] = useState<{url: string, alt: string} | null>(null);
   const [videoPlayer, setVideoPlayer] = useState<{url: string, title: string} | null>(null);
+
+  // Delete confirmation state
+  const [deletingScript, setDeletingScript] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{id: number, title: string} | null>(null);
 
   useEffect(() => {
     loadChannels();
@@ -164,6 +168,27 @@ export default function ViewScriptsPage() {
       alert('Erro ao regenerar imagem. Tente novamente.');
     } finally {
       setRegeneratingImage(null);
+    }
+  };
+
+  const handleDeleteScript = async (id: number) => {
+    try {
+      setDeletingScript(id);
+
+      await apiService.deleteContent({
+        id,
+        deleteType: 'deleteScript'
+      });
+
+      // Recarrega os roteiros do banco de dados
+      await loadScripts();
+      setConfirmDelete(null);
+
+    } catch (error) {
+      console.error('Erro ao deletar roteiro:', error);
+      alert('Erro ao deletar roteiro. Tente novamente.');
+    } finally {
+      setDeletingScript(null);
     }
   };
 
@@ -338,9 +363,24 @@ export default function ViewScriptsPage() {
                   {scriptsByChannel[channelName].map(script => (
                     <div
                       key={script.id}
-                      onClick={() => setSelectedScript(script)}
-                      className="bg-black/40 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
+                      className="bg-black/40 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group relative"
                     >
+                      {/* Delete Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete({ id: script.id, title: script.titulo || 'Sem título' });
+                        }}
+                        className="absolute top-3 right-3 z-10 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        title="Excluir roteiro"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      <div
+                        onClick={() => setSelectedScript(script)}
+                        className="cursor-pointer"
+                      >
                 {/* Thumbnail */}
                 {script.thumb_path ? (
                   <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
@@ -418,6 +458,7 @@ export default function ViewScriptsPage() {
                   </div>
                 </div>
               </div>
+            </div>
             ))}
           </div>
         </div>
@@ -706,13 +747,37 @@ export default function ViewScriptsPage() {
                       )}
                     </div>
                     {selectedScript.video_path && (
-                      <div className="mt-4">
+                      <div className="mt-4 flex items-center gap-3">
                         <button
                           onClick={() => setVideoPlayer({ url: selectedScript.video_path!, title: selectedScript.titulo || 'Vídeo' })}
                           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                         >
                           <Play className="w-4 h-4" />
                           <span>Assistir Vídeo</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(selectedScript.video_path!);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              const sanitizedTitle = (selectedScript.titulo || 'video').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                              a.download = `${sanitizedTitle}.mp4`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              window.URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Erro ao baixar vídeo:', error);
+                              alert('Erro ao baixar vídeo. Tente novamente.');
+                            }
+                          }}
+                          className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Baixar Vídeo</span>
                         </button>
                       </div>
                     )}
@@ -752,6 +817,57 @@ export default function ViewScriptsPage() {
         videoTitle={videoPlayer?.title}
         onClose={() => setVideoPlayer(null)}
       />
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Confirmar Exclusão</h2>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              Tem certeza que deseja excluir o roteiro:
+            </p>
+            <p className="text-white font-semibold mb-6">
+              "{confirmDelete.title}"
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={deletingScript !== null}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteScript(confirmDelete.id)}
+                disabled={deletingScript !== null}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {deletingScript === confirmDelete.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Scrollbar Styles */}
       <style>{`

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit } from 'lucide-react';
+import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit, Trash2, Loader2 } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VoiceSelector } from '@features/content-generation/components';
 import { CaptionStyleEditor, CaptionStyleConfig, CompactImageUpload } from '../components';
@@ -23,6 +23,10 @@ export default function ManageChannelPage() {
   });
   const [activeTab, setActiveTab] = useState<'general' | 'captions'>('general');
   const [imageUpdateSuccess, setImageUpdateSuccess] = useState(false);
+
+  // Delete confirmation state
+  const [deletingChannel, setDeletingChannel] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{id: number, name: string} | null>(null);
 
   // Fetch channels from Supabase
   React.useEffect(() => {
@@ -202,6 +206,27 @@ export default function ManageChannelPage() {
     }
   };
 
+  const handleDeleteChannel = async (id: number) => {
+    try {
+      setDeletingChannel(id);
+
+      await apiService.deleteContent({
+        id,
+        deleteType: 'deleteChannel'
+      });
+
+      // Recarrega os canais do banco de dados
+      await fetchChannels();
+      setConfirmDelete(null);
+
+    } catch (error) {
+      console.error('Erro ao deletar canal:', error);
+      alert('Erro ao deletar canal. Tente novamente.');
+    } finally {
+      setDeletingChannel(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black">
       <DashboardHeader />
@@ -254,15 +279,35 @@ export default function ManageChannelPage() {
               {channels.map((canal) => (
                 <div
                   key={canal.id}
-                  onClick={() => handleChannelClick(canal)}
                   className={`
-                    group cursor-pointer bg-gray-900 border border-gray-800 hover:border-gray-600 transition-all duration-200 p-6 relative
+                    group bg-gray-900 border border-gray-800 hover:border-gray-600 transition-all duration-200 p-6 relative
                   `}
                 >
-                  {/* Edit Icon */}
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Edit className="w-4 h-4 text-gray-400" />
+                  {/* Action Icons */}
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDelete({ id: canal.id, name: canal.nome_canal });
+                      }}
+                      className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      title="Excluir canal"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleChannelClick(canal)}
+                      className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                      title="Editar canal"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
                   </div>
+
+                  <div
+                    onClick={() => handleChannelClick(canal)}
+                    className="cursor-pointer"
+                  >
 
                   {/* Channel Image */}
                   <div className="mb-4">
@@ -322,6 +367,7 @@ export default function ManageChannelPage() {
                   {/* Created Date */}
                   <div className="pt-4 border-t border-gray-800 text-xs text-gray-500">
                     Criado em {new Date(canal.created_at).toLocaleDateString('pt-BR')}
+                  </div>
                   </div>
                 </div>
               ))}
@@ -665,6 +711,57 @@ export default function ManageChannelPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Confirmar Exclusão</h2>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              Tem certeza que deseja excluir o canal:
+            </p>
+            <p className="text-white font-semibold mb-6">
+              "{confirmDelete.name}"
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta ação não pode ser desfeita e todos os roteiros e vídeos associados a este canal podem ser afetados.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={deletingChannel !== null}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteChannel(confirmDelete.id)}
+                disabled={deletingChannel !== null}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {deletingChannel === confirmDelete.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

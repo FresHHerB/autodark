@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Maximize2, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { X, Maximize2, Play, Pause, Volume2, VolumeX, Download } from 'lucide-react';
 
 interface VideoPlayerProps {
   isOpen: boolean;
@@ -103,6 +103,36 @@ export default function VideoPlayer({ isOpen, videoUrl, videoTitle = 'Vídeo', o
     onClose();
   };
 
+  const handleDownload = async () => {
+    try {
+      // Fetch the video
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+
+      // Create a temporary URL
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Sanitize the filename (remove special characters)
+      const sanitizedTitle = videoTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      a.download = `${sanitizedTitle}.mp4`;
+
+      // Trigger download
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao baixar vídeo:', error);
+      alert('Erro ao baixar vídeo. Tente novamente.');
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4"
@@ -112,13 +142,23 @@ export default function VideoPlayer({ isOpen, videoUrl, videoTitle = 'Vídeo', o
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white text-xl font-semibold">{videoTitle}</h3>
-          <button
-            onClick={handleClose}
-            className="p-2 bg-gray-800/80 hover:bg-gray-700 text-white rounded-lg transition-colors"
-            title="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              title="Baixar vídeo"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm">Baixar</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="p-2 bg-gray-800/80 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Video */}
