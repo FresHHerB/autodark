@@ -30,7 +30,7 @@ class ApiService {
       publishVideo: import.meta.env.VITE_WEBHOOK_PUBLISH_VIDEO,
       update: import.meta.env.VITE_WEBHOOK_UPDATE || '/webhook/update',
       generateVideo: import.meta.env.VITE_WEBHOOK_GERAR_VIDEO || '/webhook/gerarVideo',
-      deleteContent: import.meta.env.VITE_WEBHOOK_DELETAR_CONTEUDO || '/webhook/deletar',
+      deleteContent: import.meta.env.VITE_WEBHOOK_DELETAR || '/webhook/deletar',
     };
 
     return `${this.baseUrl}${webhooks[key as keyof typeof webhooks] || ''}`;

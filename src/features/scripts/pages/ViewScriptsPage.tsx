@@ -365,7 +365,7 @@ export default function ViewScriptsPage() {
                 </div>
 
                 {/* Scripts Grid for this Channel */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
                   {scriptsByChannel[channelName].map(script => (
                     <div
                       key={script.id}
@@ -404,23 +404,23 @@ export default function ViewScriptsPage() {
                 )}
 
                 {/* Content */}
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
+                <div className="p-3">
+                  <div className="flex items-start justify-between mb-1.5">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold text-sm mb-1 line-clamp-2">
+                      <h3 className="text-white font-semibold text-xs mb-1 line-clamp-2">
                         {script.titulo || 'Sem título'}
                       </h3>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         {script.canal_profile_image ? (
                           <img
                             src={`${script.canal_profile_image}?t=${Date.now()}`}
                             alt={script.canal_nome}
-                            className="w-5 h-5 rounded-full object-cover"
+                            className="w-4 h-4 rounded-full object-cover"
                           />
                         ) : (
-                          <Video className="w-5 h-5 text-gray-600" />
+                          <Video className="w-4 h-4 text-gray-600" />
                         )}
-                        <p className="text-sm text-gray-300 font-medium">
+                        <p className="text-xs text-gray-300 font-medium">
                           {script.canal_nome}
                         </p>
                       </div>
@@ -428,12 +428,12 @@ export default function ViewScriptsPage() {
                     {getStatusBadge(script)}
                   </div>
 
-                  <p className="text-gray-300 text-xs mb-3 line-clamp-3">
+                  <p className="text-gray-300 text-[11px] mb-2 line-clamp-2">
                     {script.roteiro}
                   </p>
 
                   {/* Badges */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <div className="flex flex-wrap gap-1 mb-2">
                     {script.audio_path && (
                       <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-200 text-[10px] rounded">
                         <Mic className="w-2.5 h-2.5" />
@@ -455,7 +455,7 @@ export default function ViewScriptsPage() {
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between text-[10px] text-gray-500 pt-3 border-t border-gray-700/50">
+                  <div className="flex items-center justify-between text-[9px] text-gray-500 pt-2 border-t border-gray-700/50">
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-2.5 h-2.5" />
                       <span>{formatDate(script.created_at)}</span>
