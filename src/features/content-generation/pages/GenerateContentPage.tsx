@@ -326,12 +326,13 @@ export default function GenerateContentPage() {
     try {
       setLoadingScriptsForImages(true);
 
-      // Load scripts without images
+      // Load scripts without images but with audio
       const { data, error } = await supabase
         .from('roteiros')
         .select('id, titulo, roteiro, canal_id')
         .eq('canal_id', parseInt(selectedChannelId))
-        .is('images_path', null);
+        .is('images_path', null)
+        .not('audio_path', 'is', null);
 
 
       if (error) {
