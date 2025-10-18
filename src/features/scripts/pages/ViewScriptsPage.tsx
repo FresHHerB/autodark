@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { supabase } from '@shared/lib';
 import { apiService } from '@shared/services';
-import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2, ChevronDown, Check } from 'lucide-react';
 import ImageLightbox from '@shared/components/modals/ImageLightbox';
 import VideoPlayer from '@shared/components/modals/VideoPlayer';
 
@@ -25,6 +25,8 @@ interface Script {
   canal_nome: string;
   canal_profile_image: string | null;
   created_at: string;
+  updated_at: string | null;
+  status: string | null;
   audio_path: string | null;
   text_thumb: string | null;
   images_path: string[] | null;
@@ -42,8 +44,9 @@ export default function ViewScriptsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [filterChannel, setFilterChannel] = useState<string>('');
-  const [channels, setChannels] = useState<{id: number, nome_canal: string}[]>([]);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'with_audio' | 'with_images' | 'with_video'>('all');
+  const [channels, setChannels] = useState<{id: number, nome_canal: string, profile_image: string | null}[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'with_audio' | 'with_images' | 'with_video' | 'gerando_roteiro' | 'roteiro_gerado' | 'gerando_audio' | 'audio_gerado' | 'gerando_imagens' | 'imagens_geradas'>('all');
+  const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
   // Image regeneration states
   const [editingImagePrompt, setEditingImagePrompt] = useState<{id_roteiro: number, index: number, prompt: string} | null>(null);
@@ -66,11 +69,26 @@ export default function ViewScriptsPage() {
     loadScripts();
   }, []);
 
+  // Close channel dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target && !target.closest('.channel-dropdown-container')) {
+        setShowChannelDropdown(false);
+      }
+    };
+
+    if (showChannelDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showChannelDropdown]);
+
   const loadChannels = async () => {
     try {
       const { data, error } = await supabase
         .from('canais')
-        .select('id, nome_canal')
+        .select('id, nome_canal, profile_image')
         .order('nome_canal', { ascending: true });
 
       if (error) throw error;
@@ -92,13 +110,15 @@ export default function ViewScriptsPage() {
           roteiro,
           canal_id,
           created_at,
+          updated_at,
+          status,
           audio_path,
           text_thumb,
           images_path,
           transcricao_timestamp,
           images_info
         `)
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false, nullsFirst: false });
 
       if (scriptsError) throw scriptsError;
 
@@ -178,8 +198,13 @@ export default function ViewScriptsPage() {
   };
 
   const handleDeleteScript = async (id: number) => {
+    const scriptTitle = confirmDelete?.title || `#${id}`;
+
     try {
       setDeletingScript(id);
+
+      // Mostra mensagem de loading
+      setSuccessMessage('Excluindo roteiro...');
 
       await apiService.deleteContent({
         id,
@@ -190,9 +215,14 @@ export default function ViewScriptsPage() {
       await loadScripts();
       setConfirmDelete(null);
 
+      // Mostra mensagem de sucesso
+      setSuccessMessage(`Roteiro "${scriptTitle}" excluído com sucesso!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
     } catch (error) {
       console.error('Erro ao deletar roteiro:', error);
-      alert('Erro ao deletar roteiro. Tente novamente.');
+      setSuccessMessage('Erro ao excluir roteiro. Tente novamente.');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } finally {
       setDeletingScript(null);
     }
@@ -201,9 +231,15 @@ export default function ViewScriptsPage() {
   const filteredScripts = scripts.filter(script => {
     if (filterChannel && script.canal_id.toString() !== filterChannel) return false;
 
+    // Legacy filters (based on content)
     if (filterStatus === 'with_audio' && !script.audio_path) return false;
     if (filterStatus === 'with_images' && (!script.images_path || script.images_path.length === 0)) return false;
     if (filterStatus === 'with_video' && !script.video_id) return false;
+
+    // Status-based filters
+    if (filterStatus !== 'all' && filterStatus !== 'with_audio' && filterStatus !== 'with_images' && filterStatus !== 'with_video') {
+      if (script.status !== filterStatus) return false;
+    }
 
     return true;
   });
@@ -219,6 +255,44 @@ export default function ViewScriptsPage() {
   }, {} as Record<string, Script[]>);
 
   const channelNames = Object.keys(scriptsByChannel).sort();
+
+  // Calculate relative time (há X minutos, Y horas, N dias...)
+  const getRelativeTime = (dateString: string | null): string => {
+    if (!dateString) return '';
+
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'agora mesmo';
+    if (diffMinutes < 60) return `há ${diffMinutes} ${diffMinutes === 1 ? 'minuto' : 'minutos'}`;
+    if (diffHours < 24) return `há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+    if (diffDays < 30) return `há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `há ${diffMonths} ${diffMonths === 1 ? 'mês' : 'meses'}`;
+
+    const diffYears = Math.floor(diffDays / 365);
+    return `há ${diffYears} ${diffYears === 1 ? 'ano' : 'anos'}`;
+  };
+
+  // Sanitize and format status labels
+  const getStatusLabel = (status: string | null): { text: string; color: string; icon: any } => {
+    const statusMap: {[key: string]: { text: string; color: string; icon: any }} = {
+      'gerando_roteiro': { text: 'Gerando Roteiro', color: 'yellow', icon: Loader2 },
+      'roteiro_gerado': { text: 'Roteiro Gerado', color: 'green', icon: CheckCircle },
+      'gerando_audio': { text: 'Gerando Áudio', color: 'blue', icon: Loader2 },
+      'audio_gerado': { text: 'Áudio Gerado', color: 'blue', icon: Mic },
+      'gerando_imagens': { text: 'Gerando Imagens', color: 'purple', icon: Loader2 },
+      'imagens_geradas': { text: 'Imagens Geradas', color: 'purple', icon: ImageIcon },
+    };
+
+    return statusMap[status || ''] || { text: 'Status Desconhecido', color: 'gray', icon: AlertCircle };
+  };
 
   const getStatusBadge = (script: Script) => {
     if (script.video_id) {
@@ -288,24 +362,90 @@ export default function ViewScriptsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+        <div className="relative z-50 bg-black/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-8 overflow-visible">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
+            <div className="channel-dropdown-container relative z-[100]">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Filtrar por Canal
               </label>
-              <select
-                value={filterChannel}
-                onChange={(e) => setFilterChannel(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <button
+                onClick={() => setShowChannelDropdown(!showChannelDropdown)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:border-gray-600 transition-colors"
               >
-                <option value="">Todos os Canais</option>
-                {channels.map(channel => (
-                  <option key={channel.id} value={channel.id.toString()}>
-                    {channel.nome_canal}
-                  </option>
-                ))}
-              </select>
+                <div className="flex items-center gap-2.5">
+                  {filterChannel ? (
+                    (() => {
+                      const selectedChannel = channels.find(c => c.id.toString() === filterChannel);
+                      return selectedChannel ? (
+                        <>
+                          {selectedChannel.profile_image ? (
+                            <img
+                              src={`${selectedChannel.profile_image}?t=${Date.now()}`}
+                              alt={selectedChannel.nome_canal}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold">
+                              {selectedChannel.nome_canal.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span>{selectedChannel.nome_canal}</span>
+                        </>
+                      ) : (
+                        <span>Todos os Canais</span>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-gray-400">Todos os Canais</span>
+                  )}
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showChannelDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showChannelDropdown && (
+                <div className="absolute z-[100] w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl max-h-64 overflow-y-auto custom-scrollbar">
+                  <button
+                    onClick={() => {
+                      setFilterChannel('');
+                      setShowChannelDropdown(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2.5 text-gray-300"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+                      <span className="text-xs">✕</span>
+                    </div>
+                    <span>Todos os Canais</span>
+                  </button>
+                  {channels.map(channel => (
+                    <button
+                      key={channel.id}
+                      onClick={() => {
+                        setFilterChannel(channel.id.toString());
+                        setShowChannelDropdown(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2.5 ${
+                        filterChannel === channel.id.toString() ? 'bg-gray-700/50 text-white' : 'text-gray-300'
+                      }`}
+                    >
+                      {channel.profile_image ? (
+                        <img
+                          src={`${channel.profile_image}?t=${Date.now()}`}
+                          alt={channel.nome_canal}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold">
+                          {channel.nome_canal.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span>{channel.nome_canal}</span>
+                      {filterChannel === channel.id.toString() && (
+                        <Check className="w-4 h-4 ml-auto text-green-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -318,9 +458,19 @@ export default function ViewScriptsPage() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Todos</option>
-                <option value="with_audio">Com Áudio</option>
-                <option value="with_images">Com Imagens</option>
-                <option value="with_video">Com Vídeo</option>
+                <optgroup label="Status de Processamento">
+                  <option value="gerando_roteiro">🔄 Gerando Roteiro</option>
+                  <option value="roteiro_gerado">✅ Roteiro Gerado</option>
+                  <option value="gerando_audio">🔄 Gerando Áudio</option>
+                  <option value="audio_gerado">🎵 Áudio Gerado</option>
+                  <option value="gerando_imagens">🔄 Gerando Imagens</option>
+                  <option value="imagens_geradas">🖼️ Imagens Geradas</option>
+                </optgroup>
+                <optgroup label="Por Conteúdo">
+                  <option value="with_audio">Com Áudio</option>
+                  <option value="with_images">Com Imagens</option>
+                  <option value="with_video">Com Vídeo</option>
+                </optgroup>
               </select>
             </div>
 
@@ -454,11 +604,27 @@ export default function ViewScriptsPage() {
                     )}
                   </div>
 
+                  {/* Status Tag */}
+                  {script.status && (
+                    <div className="mb-2">
+                      {(() => {
+                        const statusInfo = getStatusLabel(script.status);
+                        const Icon = statusInfo.icon;
+                        return (
+                          <span className={`flex items-center space-x-1 px-2 py-1 bg-${statusInfo.color}-500/20 text-${statusInfo.color}-200 text-[10px] rounded-full font-medium`}>
+                            <Icon className={`w-3 h-3 ${statusInfo.text.includes('Gerando') ? 'animate-spin' : ''}`} />
+                            <span>{statusInfo.text}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   {/* Footer */}
                   <div className="flex items-center justify-between text-[9px] text-gray-500 pt-2 border-t border-gray-700/50">
                     <div className="flex items-center space-x-1">
-                      <Calendar className="w-2.5 h-2.5" />
-                      <span>{formatDate(script.created_at)}</span>
+                      <Clock className="w-2.5 h-2.5" />
+                      <span>{script.updated_at ? getRelativeTime(script.updated_at) : getRelativeTime(script.created_at)}</span>
                     </div>
                     <span className="text-gray-600">ID: {script.id}</span>
                   </div>
@@ -518,7 +684,7 @@ export default function ViewScriptsPage() {
                 )}
 
                 {/* Metadata */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-black/40 rounded-lg p-4">
                     <div className="text-gray-400 text-xs mb-1">ID do Roteiro</div>
                     <div className="text-white font-semibold">#{selectedScript.id}</div>
@@ -531,7 +697,34 @@ export default function ViewScriptsPage() {
                     <div className="text-gray-400 text-xs mb-1">Criado em</div>
                     <div className="text-white font-semibold text-sm">{formatDate(selectedScript.created_at)}</div>
                   </div>
+                  {selectedScript.status && (
+                    <div className="bg-black/40 rounded-lg p-4">
+                      <div className="text-gray-400 text-xs mb-1">Status Atual</div>
+                      {(() => {
+                        const statusInfo = getStatusLabel(selectedScript.status);
+                        const Icon = statusInfo.icon;
+                        return (
+                          <div className={`flex items-center gap-1.5 text-${statusInfo.color}-200`}>
+                            <Icon className={`w-4 h-4 ${statusInfo.text.includes('Gerando') ? 'animate-spin' : ''}`} />
+                            <span className="font-semibold text-sm">{statusInfo.text}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
+
+                {/* Updated At */}
+                {selectedScript.updated_at && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-blue-300">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-sm">
+                        Última atualização: <span className="font-semibold">{getRelativeTime(selectedScript.updated_at)}</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Thumbnail */}
                 {selectedScript.text_thumb && (
