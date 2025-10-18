@@ -70,9 +70,11 @@ export interface Canal {
   voz_prefereida?: number | null;
   media_chars?: number | null;
   url_canal?: string;
+  profile_image?: string | null;
   titulos?: any;
   roteiros?: any;
   caption_style?: any;
+  detailed_style?: any;
   created_at: string;
 }
 
