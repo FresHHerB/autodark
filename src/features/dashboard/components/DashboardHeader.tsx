@@ -23,6 +23,12 @@ const navigationCards = [
     path: '/generate-content'
   },
   {
+    id: 'generate-content-v2',
+    title: 'Conteúdo v2',
+    icon: FileText,
+    path: '/generate-content-v2'
+  },
+  {
     id: 'view-scripts',
     title: 'Visualizar Roteiros',
     icon: List,

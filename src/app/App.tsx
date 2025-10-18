@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@shared/contexts';
 import { LoginPage } from '@features/auth';
 import { DashboardPage } from '@features/dashboard';
 import { CloneChannelPage, ManageChannelPage, ReviewEditPage, PublishSchedulePage } from '@features/channel-management';
-import { GenerateContentPage, GenerateVideoPage } from '@features/content-generation';
+import { GenerateContentPage, GenerateContentV2Page, GenerateVideoPage } from '@features/content-generation';
 import { SettingsPage } from '@features/settings';
 import { ViewScriptsPage } from '@features/scripts';
 
@@ -80,6 +80,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <GenerateContentPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/generate-content-v2"
+              element={
+                <ProtectedRoute>
+                  <GenerateContentV2Page />
                 </ProtectedRoute>
               }
             />
