@@ -106,6 +106,7 @@ export default function GenerateContentV2Page() {
   // STATES - Content Generation Configuration
   // ============================================
   const [generateVideo, setGenerateVideo] = useState<boolean>(false);
+  const [generateCaption, setGenerateCaption] = useState<boolean>(false);
   const [videoGenerationMethod, setVideoGenerationMethod] = useState<'video-to-video' | 'image-to-video'>('image-to-video');
   const [generateAudio, setGenerateAudio] = useState<boolean>(false);
   const [generateImage, setGenerateImage] = useState<boolean>(false);
@@ -962,7 +963,6 @@ export default function GenerateContentV2Page() {
         // Payload para gen_video=false (áudio + imagem obrigatórios)
         // Nova estrutura: cada título tem seu próprio objeto media
         payload = {
-          gen_video: false,
           canal_id: parseInt(selectedChannelId),
           modelo_roteiro: selectedModel,
           idioma: contentIdioma,
@@ -977,7 +977,6 @@ export default function GenerateContentV2Page() {
                 voice_id: voiceIdHash,
                 speed: audioSpeed
               },
-              media_type: "imagem",
               imagem: {
                 model_id: modelAir,
                 style: imageStyle,
@@ -985,6 +984,10 @@ export default function GenerateContentV2Page() {
                 width: imageWidth,
                 height: imageHeight,
                 n_imgs: numImages
+              },
+              video: {
+                type: "imagem",
+                generate: false
               }
             }
           }))
@@ -1017,7 +1020,6 @@ export default function GenerateContentV2Page() {
           // Payload vídeo-para-vídeo
           // Nova estrutura: cada título tem seu próprio objeto media com vídeos
           payload = {
-            gen_video: true,
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
@@ -1028,8 +1030,12 @@ export default function GenerateContentV2Page() {
                   voice_id: voiceIdHash,
                   speed: audioSpeed
                 },
-                media_type: "video",
-                videos_base64: video.videos.map(v => v.base64)
+                video: {
+                  type: "video",
+                  generate: true,
+                  caption: generateCaption,
+                  videos_base64: video.videos.map(v => v.base64)
+                }
               }
             }))
           };
@@ -1055,7 +1061,6 @@ export default function GenerateContentV2Page() {
           // Payload imagem-para-vídeo
           // Nova estrutura: cada título tem seu próprio objeto media com imagem
           payload = {
-            gen_video: true,
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
@@ -1066,7 +1071,6 @@ export default function GenerateContentV2Page() {
                   voice_id: voiceIdHash,
                   speed: audioSpeed
                 },
-                media_type: "imagem",
                 imagem: {
                   model_id: modelAir,
                   style: imageStyle,
@@ -1074,6 +1078,11 @@ export default function GenerateContentV2Page() {
                   width: imageWidth,
                   height: imageHeight,
                   n_imgs: numImages
+                },
+                video: {
+                  type: "imagem",
+                  generate: true,
+                  caption: generateCaption
                 }
               }
             }))
@@ -1404,7 +1413,7 @@ export default function GenerateContentV2Page() {
         {/* ============================================ */}
 
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-light text-white mb-1">Gerar Vídeo</h2>
               <p className="text-sm text-gray-400">
@@ -1427,6 +1436,33 @@ export default function GenerateContentV2Page() {
               `} />
             </button>
           </div>
+
+          {/* Caption Toggle - Only visible when video is ON */}
+          {generateVideo && (
+            <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+              <div>
+                <h3 className="text-lg font-light text-white mb-1">Gerar Legendas</h3>
+                <p className="text-sm text-gray-400">
+                  Ative para adicionar legendas ao vídeo
+                </p>
+              </div>
+              <button
+                onClick={() => setGenerateCaption(!generateCaption)}
+                className={`
+                  relative w-16 h-8 rounded-full transition-all duration-300
+                  ${generateCaption
+                    ? 'bg-purple-600'
+                    : 'bg-gray-700'
+                  }
+                `}
+              >
+                <div className={`
+                  absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300
+                  ${generateCaption ? 'translate-x-8' : 'translate-x-0'}
+                `} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ============================================ */}
