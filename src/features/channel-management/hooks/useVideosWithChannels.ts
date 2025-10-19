@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@shared/lib';
 
 export type VideoStatus =
+  | 'gerando_conteudo'
   | 'animando_imagens'
   | 'concatenando_videos'
   | 'adicionando_audio'

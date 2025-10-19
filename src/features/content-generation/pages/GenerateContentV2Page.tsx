@@ -61,6 +61,19 @@ interface ContentPayload {
   titulos: string[];
 }
 
+interface VideoFile {
+  id: string;
+  name: string;
+  base64: string;
+  thumbnail: string;
+}
+
+interface VideoItem {
+  id: string;
+  titulo: string;
+  videos: VideoFile[];
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -92,6 +105,8 @@ export default function GenerateContentV2Page() {
   // ============================================
   // STATES - Content Generation Configuration
   // ============================================
+  const [generateVideo, setGenerateVideo] = useState<boolean>(false);
+  const [videoGenerationMethod, setVideoGenerationMethod] = useState<'video-to-video' | 'image-to-video'>('image-to-video');
   const [generateAudio, setGenerateAudio] = useState<boolean>(false);
   const [generateImage, setGenerateImage] = useState<boolean>(false);
 
@@ -120,6 +135,10 @@ export default function GenerateContentV2Page() {
   const [styleImage, setStyleImage] = useState<File | null>(null);
   const [styleImagePreview, setStyleImagePreview] = useState<string | null>(null);
   const [collectingStyle, setCollectingStyle] = useState(false);
+
+  // Video Upload State (for video-to-video method)
+  const [uploadedVideos, setUploadedVideos] = useState<VideoItem[]>([]);
+  const [dragOverTitleId, setDragOverTitleId] = useState<string | null>(null);
 
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -201,6 +220,21 @@ export default function GenerateContentV2Page() {
     }
   }, [showVoiceDropdown]);
 
+  // Close channel dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target && !target.closest('.channel-dropdown-container')) {
+        setShowChannelDropdown(false);
+      }
+    };
+
+    if (showChannelDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showChannelDropdown]);
+
   // Reset platform filter when dropdown closes
   useEffect(() => {
     if (!showVoiceDropdown) {
@@ -208,31 +242,6 @@ export default function GenerateContentV2Page() {
       setVoiceSearchTerm('');
     }
   }, [showVoiceDropdown]);
-
-  // ============================================
-  // GENERATION OPTIONS HANDLERS
-  // ============================================
-
-  const handleToggleAudio = () => {
-    const newAudioState = !generateAudio;
-    setGenerateAudio(newAudioState);
-
-    // Se desmarcar audio, desmarcar imagem também (imagem depende de audio)
-    if (!newAudioState && generateImage) {
-      setGenerateImage(false);
-    }
-  };
-
-  const handleToggleImage = () => {
-    const newImageState = !generateImage;
-
-    // Se marcar imagem, garantir que audio também esteja marcado
-    if (newImageState && !generateAudio) {
-      setGenerateAudio(true);
-    }
-
-    setGenerateImage(newImageState);
-  };
 
   // ============================================
   // DATA LOADING FUNCTIONS
@@ -755,6 +764,151 @@ export default function GenerateContentV2Page() {
   };
 
   // ============================================
+  // VIDEO UPLOAD FUNCTIONS
+  // ============================================
+
+  const generateVideoThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1, video.duration / 2); // Captura no meio ou 1s
+      };
+
+      video.onseeked = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        if (context) {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(thumbnailUrl);
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+
+        // Cleanup
+        video.src = '';
+        URL.revokeObjectURL(video.src);
+      };
+
+      video.onerror = () => {
+        reject(new Error('Failed to load video'));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleVideoFilesChange = async (files: FileList | null, titulo: string) => {
+    if (!files || files.length === 0) return;
+
+    const videoFiles: VideoFile[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Generate base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Generate thumbnail
+      let thumbnail = '';
+      try {
+        thumbnail = await generateVideoThumbnail(file);
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+        // Use a placeholder if thumbnail generation fails
+        thumbnail = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23666" width="100" height="100"/%3E%3C/svg%3E';
+      }
+
+      videoFiles.push({
+        id: `video-file-${Date.now()}-${i}`,
+        name: file.name,
+        base64,
+        thumbnail
+      });
+    }
+
+    // Find existing video item for this title or create new one
+    const existingVideoIndex = uploadedVideos.findIndex(v => v.titulo === titulo);
+
+    if (existingVideoIndex !== -1) {
+      // Add to existing videos
+      const updatedVideos = [...uploadedVideos];
+      updatedVideos[existingVideoIndex].videos.push(...videoFiles);
+      setUploadedVideos(updatedVideos);
+    } else {
+      // Create new video item
+      const newVideo: VideoItem = {
+        id: `video-${Date.now()}`,
+        titulo,
+        videos: videoFiles
+      };
+      setUploadedVideos([...uploadedVideos, newVideo]);
+    }
+  };
+
+  const handleRemoveAllVideos = (videoItemId: string) => {
+    setUploadedVideos(uploadedVideos.filter(v => v.id !== videoItemId));
+  };
+
+  const handleRemoveIndividualVideo = (titulo: string, videoFileId: string) => {
+    const updatedVideos = uploadedVideos.map(videoItem => {
+      if (videoItem.titulo === titulo) {
+        const updatedFiles = videoItem.videos.filter(v => v.id !== videoFileId);
+        return { ...videoItem, videos: updatedFiles };
+      }
+      return videoItem;
+    }).filter(videoItem => videoItem.videos.length > 0); // Remove if no videos left
+
+    setUploadedVideos(updatedVideos);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent, titleId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverTitleId(titleId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverTitleId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, titulo: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverTitleId(null);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleVideoFilesChange(files, titulo);
+    }
+  };
+
+  // ============================================
   // CONTENT GENERATION FUNCTION
   // ============================================
 
@@ -772,14 +926,17 @@ export default function GenerateContentV2Page() {
       return;
     }
 
-    if (generateAudio && !selectedVoiceId) {
-      alert('Por favor, selecione uma voz para geração de áudio');
-      return;
-    }
+    // Validações para modo gen_video=false (áudio + imagem obrigatórios)
+    if (!generateVideo) {
+      if (!selectedVoiceId) {
+        alert('Por favor, selecione uma voz para geração de áudio');
+        return;
+      }
 
-    if (generateImage && !imageModelId) {
-      alert('Por favor, selecione um modelo de imagem');
-      return;
+      if (!imageModelId) {
+        alert('Por favor, selecione um modelo de imagem');
+        return;
+      }
     }
 
     const selectedChannel = channels.find(c => c.id.toString() === selectedChannelId);
@@ -791,9 +948,6 @@ export default function GenerateContentV2Page() {
     try {
       setIsGeneratingContent(true);
 
-      // Construir payload robusto seguindo a estrutura:
-      // Parâmetros globais de audio e imagem, lista simples de títulos
-
       // Buscar o voice_id hash da voz selecionada
       const selectedVoice = voices.find(v => v.id === selectedVoiceId);
       const voiceIdHash = selectedVoice?.voice_id;
@@ -802,30 +956,130 @@ export default function GenerateContentV2Page() {
       const selectedImageModel = imageModels.find(m => m.id === imageModelId);
       const modelAir = selectedImageModel?.air;
 
-      const payload: ContentPayload = {
-        canal_id: parseInt(selectedChannelId),
-        modelo_roteiro: selectedModel,
-        idioma: contentIdioma,
-        audio: {
-          generate: generateAudio,
-          ...(generateAudio && voiceIdHash ? {
-            voice_id: voiceIdHash, // Envia o hash ao invés do ID numérico
+      let payload: any;
+
+      if (!generateVideo) {
+        // Payload para gen_video=false (áudio + imagem obrigatórios)
+        // Nova estrutura: cada título tem seu próprio objeto media
+        payload = {
+          gen_video: false,
+          canal_id: parseInt(selectedChannelId),
+          modelo_roteiro: selectedModel,
+          idioma: contentIdioma,
+          audio: {
+            voice_id: voiceIdHash,
             speed: audioSpeed
-          } : {})
-        },
-        imagem: {
-          generate: generateImage,
-          ...(generateImage && modelAir ? {
-            model_id: modelAir, // Envia o AIR ao invés do ID numérico
-            style: imageStyle,
-            style_detail: imageStyleDetail,
-            width: imageWidth,
-            height: imageHeight,
-            n_imgs: numImages
-          } : {})
-        },
-        titulos: addedTitles.map(title => title.text)
-      };
+          },
+          titulos: addedTitles.map(title => ({
+            titulo: title.text,
+            media: {
+              audio: {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              },
+              media_type: "imagem",
+              imagem: {
+                model_id: modelAir,
+                style: imageStyle,
+                style_detail: imageStyleDetail,
+                width: imageWidth,
+                height: imageHeight,
+                n_imgs: numImages
+              }
+            }
+          }))
+        };
+      } else {
+        // Payload para gen_video=true
+
+        // Buscar o voice_id hash da voz selecionada
+        const selectedVoice = voices.find(v => v.id === selectedVoiceId);
+        const voiceIdHash = selectedVoice?.voice_id;
+
+        if (videoGenerationMethod === 'video-to-video') {
+          // Validação: todos os títulos devem ter vídeos
+          const titlesWithoutVideos = addedTitles.filter(
+            title => !uploadedVideos.find(v => v.titulo === title.text)
+          );
+
+          if (titlesWithoutVideos.length > 0) {
+            alert(`Por favor, faça upload de vídeos para todos os títulos. Faltam: ${titlesWithoutVideos.map(t => t.text).join(', ')}`);
+            setIsGeneratingContent(false);
+            return;
+          }
+
+          if (!voiceIdHash) {
+            alert('Por favor, selecione uma voz');
+            setIsGeneratingContent(false);
+            return;
+          }
+
+          // Payload vídeo-para-vídeo
+          // Nova estrutura: cada título tem seu próprio objeto media com vídeos
+          payload = {
+            gen_video: true,
+            canal_id: parseInt(selectedChannelId),
+            modelo_roteiro: selectedModel,
+            idioma: contentIdioma,
+            titulos: uploadedVideos.map(video => ({
+              titulo: video.titulo,
+              media: {
+                audio: {
+                  voice_id: voiceIdHash,
+                  speed: audioSpeed
+                },
+                media_type: "video",
+                videos_base64: video.videos.map(v => v.base64)
+              }
+            }))
+          };
+        } else {
+          // videoGenerationMethod === 'image-to-video'
+
+          if (!voiceIdHash) {
+            alert('Por favor, selecione uma voz');
+            setIsGeneratingContent(false);
+            return;
+          }
+
+          if (!imageModelId) {
+            alert('Por favor, selecione um modelo de imagem');
+            setIsGeneratingContent(false);
+            return;
+          }
+
+          // Buscar o AIR do modelo de imagem selecionado
+          const selectedImageModel = imageModels.find(m => m.id === imageModelId);
+          const modelAir = selectedImageModel?.air;
+
+          // Payload imagem-para-vídeo
+          // Nova estrutura: cada título tem seu próprio objeto media com imagem
+          payload = {
+            gen_video: true,
+            canal_id: parseInt(selectedChannelId),
+            modelo_roteiro: selectedModel,
+            idioma: contentIdioma,
+            titulos: addedTitles.map(title => ({
+              titulo: title.text,
+              media: {
+                audio: {
+                  voice_id: voiceIdHash,
+                  speed: audioSpeed
+                },
+                media_type: "imagem",
+                imagem: {
+                  model_id: modelAir,
+                  style: imageStyle,
+                  style_detail: imageStyleDetail,
+                  width: imageWidth,
+                  height: imageHeight,
+                  n_imgs: numImages
+                }
+              }
+            }))
+          };
+        }
+      }
 
       console.log('📤 Payload completo enviado para webhook:', JSON.stringify(payload, null, 2));
 
@@ -839,9 +1093,9 @@ export default function GenerateContentV2Page() {
       setToastType('success');
       setShowToast(true);
 
-      // Limpar títulos adicionados após sucesso
-      setAddedTitles([]);
-      setGeneratedTitles([]);
+      // NÃO limpar títulos - devem persistir após gerar conteúdo
+      // setAddedTitles([]);
+      // setGeneratedTitles([]);
 
     } catch (error) {
       console.error('Erro ao gerar conteúdo:', error);
@@ -885,7 +1139,7 @@ export default function GenerateContentV2Page() {
               <label className="text-lg font-medium text-white">Selecione o Canal</label>
             </div>
 
-            <div className="max-w-2xl mx-auto relative">
+            <div className="max-w-2xl mx-auto relative channel-dropdown-container">
               {channelsLoading ? (
                 <div className="flex items-center justify-center py-8 bg-gray-800 rounded-xl border-2 border-gray-700">
                   <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
@@ -1146,94 +1400,209 @@ export default function GenerateContentV2Page() {
         )}
 
         {/* ============================================ */}
-        {/* SECTION 2: GENERATION TYPE SELECTOR */}
+        {/* SECTION 2: VIDEO GENERATION TOGGLE */}
         {/* ============================================ */}
 
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-          <div className="mb-3">
-            <h2 className="text-base font-medium text-white mb-1">Opções de Geração</h2>
-            <p className="text-xs text-gray-400">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/20 text-purple-300 rounded-full text-xs font-medium">
-                <FileText className="w-3 h-3" />
-                Roteiro obrigatório
-              </span>
-              <span className="mx-1 text-gray-600">•</span>
-              <span>Áudio independente</span>
-              <span className="mx-1 text-gray-600">•</span>
-              <span className="text-orange-400">Imagem requer áudio</span>
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3 justify-center">
-            {/* Audio Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-light text-white mb-1">Gerar Vídeo</h2>
+              <p className="text-sm text-gray-400">
+                Ative para gerar vídeos completos ou desative para apenas áudio e imagens
+              </p>
+            </div>
             <button
-              onClick={handleToggleAudio}
+              onClick={() => setGenerateVideo(!generateVideo)}
               className={`
-                relative px-4 py-3 rounded-lg border-2 transition-all duration-300
-                ${generateAudio
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 border-blue-700/50 text-blue-200 hover:border-blue-600/70 hover:from-blue-500/30 hover:to-blue-600/30'
+                relative w-16 h-8 rounded-full transition-all duration-300
+                ${generateVideo
+                  ? 'bg-purple-600'
+                  : 'bg-gray-700'
                 }
               `}
             >
-              <div className="flex items-center gap-2.5">
-                <div className={`
-                  w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
-                  ${generateAudio ? 'bg-white/20' : 'bg-blue-400/20'}
-                `}>
-                  <Mic className={`w-4 h-4 ${generateAudio ? 'text-white' : 'text-blue-300'}`} />
-                </div>
-                <div className="text-left">
-                  <div className={`font-semibold text-sm ${generateAudio ? 'text-white' : 'text-blue-200'}`}>
-                    Áudio
-                  </div>
-                  <div className={`text-xs ${generateAudio ? 'text-white/80' : 'text-blue-300/70'}`}>
-                    Narração em áudio
-                  </div>
-                </div>
-              </div>
-              {generateAudio && (
-                <div className="absolute top-2 right-2">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              )}
-            </button>
-
-            {/* Image Toggle */}
-            <button
-              onClick={handleToggleImage}
-              className={`
-                relative px-4 py-3 rounded-lg border-2 transition-all duration-300
-                ${generateImage
-                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-400 text-white shadow-lg shadow-orange-500/30'
-                  : 'bg-gradient-to-r from-orange-500/20 to-orange-600/20 border-orange-700/50 text-orange-200 hover:border-orange-600/70 hover:from-orange-500/30 hover:to-orange-600/30'
-                }
-              `}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`
-                  w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
-                  ${generateImage ? 'bg-white/20' : 'bg-orange-400/20'}
-                `}>
-                  <ImageIcon className={`w-4 h-4 ${generateImage ? 'text-white' : 'text-orange-300'}`} />
-                </div>
-                <div className="text-left">
-                  <div className={`font-semibold text-sm ${generateImage ? 'text-white' : 'text-orange-200'}`}>
-                    Imagem
-                  </div>
-                  <div className={`text-xs ${generateImage ? 'text-white/80' : 'text-orange-300/70'}`}>
-                    Imagens ilustrativas
-                  </div>
-                </div>
-              </div>
-              {generateImage && (
-                <div className="absolute top-2 right-2">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              )}
+              <div className={`
+                absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300
+                ${generateVideo ? 'translate-x-8' : 'translate-x-0'}
+              `} />
             </button>
           </div>
         </div>
+
+        {/* ============================================ */}
+        {/* VIDEO GENERATION METHOD SELECTOR (When generateVideo is ON) */}
+        {/* ============================================ */}
+
+        {generateVideo && (
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-light text-white mb-4">Método de Geração de Vídeo</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Image to Video */}
+              <button
+                onClick={() => setVideoGenerationMethod('image-to-video')}
+                className={`
+                  p-4 rounded-lg border-2 transition-all
+                  ${videoGenerationMethod === 'image-to-video'
+                    ? 'bg-purple-600/20 border-purple-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <ImageIcon className={`w-8 h-8 ${videoGenerationMethod === 'image-to-video' ? 'text-purple-400' : 'text-gray-400'}`} />
+                  <span className={`font-medium ${videoGenerationMethod === 'image-to-video' ? 'text-white' : 'text-gray-300'}`}>
+                    Imagem para Vídeo
+                  </span>
+                  <span className="text-xs text-gray-400 text-center">
+                    Gerar vídeos a partir de imagens
+                  </span>
+                </div>
+              </button>
+
+              {/* Video to Video */}
+              <button
+                onClick={() => setVideoGenerationMethod('video-to-video')}
+                className={`
+                  p-4 rounded-lg border-2 transition-all
+                  ${videoGenerationMethod === 'video-to-video'
+                    ? 'bg-purple-600/20 border-purple-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Play className={`w-8 h-8 ${videoGenerationMethod === 'video-to-video' ? 'text-purple-400' : 'text-gray-400'}`} />
+                  <span className={`font-medium ${videoGenerationMethod === 'video-to-video' ? 'text-white' : 'text-gray-300'}`}>
+                    Vídeo para Vídeo
+                  </span>
+                  <span className="text-xs text-gray-400 text-center">
+                    Fazer upload de vídeos
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* VIDEO UPLOAD SECTION (for video-to-video method) */}
+        {/* ============================================ */}
+
+        {generateVideo && videoGenerationMethod === 'video-to-video' && (
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload de Vídeos
+            </h2>
+
+            <p className="text-sm text-gray-400 mb-4">
+              Para cada título selecionado, faça upload dos vídeos correspondentes
+            </p>
+
+            {addedTitles.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Adicione títulos primeiro para fazer upload de vídeos
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {addedTitles.map((title) => {
+                  const existingVideo = uploadedVideos.find(v => v.titulo === title.text);
+
+                  return (
+                    <div key={title.id} className="bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-white font-medium">{title.text}</h3>
+                        {existingVideo && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">
+                              {existingVideo.videos.length} vídeo(s)
+                            </span>
+                            <button
+                              onClick={() => handleRemoveAllVideos(existingVideo.id)}
+                              className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                              title="Remover todos os vídeos"
+                            >
+                              Limpar todos
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Video Thumbnails Grid */}
+                      {existingVideo && existingVideo.videos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {existingVideo.videos.map((video) => (
+                            <div key={video.id} className="relative group">
+                              <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-700">
+                                <img
+                                  src={video.thumbnail}
+                                  alt={video.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleRemoveIndividualVideo(title.text, video.id)}
+                                className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                title={`Remover ${video.name}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                                {video.name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Upload Area */}
+                      <div
+                        className="w-full"
+                        onDragOver={handleDragOver}
+                        onDragEnter={(e) => handleDragEnter(e, title.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, title.text)}
+                      >
+                        <label className="block cursor-pointer">
+                          <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+                            dragOverTitleId === title.id
+                              ? 'border-purple-400 bg-purple-500/20 scale-105'
+                              : 'border-gray-600 hover:border-purple-500 bg-gray-700/50'
+                          }`}>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              multiple
+                              onChange={(e) => handleVideoFilesChange(e.target.files, title.text)}
+                              className="hidden"
+                            />
+                            <Upload className={`w-5 h-5 mx-auto mb-1 transition-colors ${
+                              dragOverTitleId === title.id
+                                ? 'text-purple-400'
+                                : 'text-gray-400'
+                            }`} />
+                            <p className={`text-xs font-medium ${
+                              dragOverTitleId === title.id
+                                ? 'text-purple-300'
+                                : 'text-gray-300'
+                            }`}>
+                              {dragOverTitleId === title.id
+                                ? 'Solte os vídeos aqui'
+                                : existingVideo
+                                  ? 'Adicionar mais vídeos'
+                                  : 'Selecione ou arraste vídeos'
+                              }
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ============================================ */}
         {/* SECTION 3: MODEL AND LANGUAGE */}
@@ -1313,7 +1682,7 @@ export default function GenerateContentV2Page() {
         {/* SECTION 4: AUDIO CONFIGURATION (Conditional) */}
         {/* ============================================ */}
 
-        {generateAudio && (
+        {(!generateVideo || (generateVideo && videoGenerationMethod === 'image-to-video')) && (
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
             <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
               <Mic className="w-5 h-5" />
@@ -1529,7 +1898,7 @@ export default function GenerateContentV2Page() {
         {/* SECTION 5: IMAGE CONFIGURATION (Conditional) */}
         {/* ============================================ */}
 
-        {generateImage && (
+        {(!generateVideo || (generateVideo && videoGenerationMethod === 'image-to-video')) && (
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
             <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5" />

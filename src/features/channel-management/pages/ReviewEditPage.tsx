@@ -9,6 +9,12 @@ import { supabase } from '@shared/lib';
 
 
 const statusConfig = {
+  gerando_conteudo: {
+    label: 'Gerando Conteúdo',
+    icon: Loader2,
+    color: 'yellow',
+    isProcessing: true
+  },
   animando_imagens: {
     label: 'Animando Imagens',
     icon: Loader2,
@@ -137,7 +143,7 @@ export default function ReviewEditPage() {
     });
   };
 
-  const allStatuses: VideoStatus[] = ['animando_imagens', 'concatenando_videos', 'adicionando_audio', 'adicionando_legenda', 'video_completo'];
+  const allStatuses: VideoStatus[] = ['gerando_conteudo', 'animando_imagens', 'concatenando_videos', 'adicionando_audio', 'adicionando_legenda', 'video_completo'];
 
   const getVideosByStatus = (status: VideoStatus) => {
     return filteredVideos.filter(v => v.status === status);
@@ -338,7 +344,7 @@ export default function ReviewEditPage() {
     );
   };
 
-  const renderStatusColumn = (status: VideoStatus) => {
+  const renderStatusColumn = (status: VideoStatus, showSeparator: boolean = false) => {
     const config = statusConfig[status];
     const Icon = config.icon;
     const videos = getVideosByStatus(status);
@@ -354,19 +360,25 @@ export default function ReviewEditPage() {
     };
 
     return (
-      <div className="flex-shrink-0 w-80">
-        <div className={`bg-gray-900 border ${colorClasses[config.color as keyof typeof colorClasses]} p-4 mb-4`}>
-          <div className="flex items-center gap-2 mb-1">
-            <Icon className="w-4 h-4 text-gray-400" />
-            <h3 className="text-sm font-medium text-white">{config.label}</h3>
+      <>
+        <div className="flex-shrink-0 w-64">
+          <div className={`bg-gray-900 border ${colorClasses[config.color as keyof typeof colorClasses]} p-3 mb-4`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Icon className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-medium text-white">{config.label}</h3>
+            </div>
+            <p className="text-xs text-gray-500">{videos.length} vídeo{videos.length !== 1 ? 's' : ''}</p>
           </div>
-          <p className="text-xs text-gray-500">{videos.length} vídeo{videos.length !== 1 ? 's' : ''}</p>
+
+          <div className="space-y-3">
+            {videos.map(video => renderVideoCard(video))}
+          </div>
         </div>
 
-        <div className="space-y-3">
-          {videos.map(video => renderVideoCard(video))}
-        </div>
-      </div>
+        {showSeparator && (
+          <div className="flex-shrink-0 w-px bg-gray-700/50 mx-2" />
+        )}
+      </>
     );
   };
 
@@ -475,7 +487,7 @@ export default function ReviewEditPage() {
           </h2>
           <div className="overflow-x-auto pb-4">
             <div className="flex gap-4 min-w-max">
-              {allStatuses.map(status => renderStatusColumn(status))}
+              {allStatuses.map(status => renderStatusColumn(status, status === 'adicionando_legenda'))}
             </div>
           </div>
         </div>
