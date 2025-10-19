@@ -4,6 +4,20 @@ import { useAuth } from '@shared/contexts';
 import { DashboardHeader, ActionCard } from '@features/dashboard/components';
 import { Copy, Video, Edit, Calendar, Settings, PlaySquare } from 'lucide-react';
 import { supabase } from '@shared/lib/supabase';
+import { ApiCreditsCard } from '@shared/components/ui';
+import {
+  fetchElevenLabsCredits,
+  fetchFishAudioCredits,
+  fetchRunwareCredits,
+  fetchOpenRouterCredits,
+  APICreditsResult
+} from '@shared/services';
+
+interface ApiCreditsState {
+  platform: string;
+  credits: APICreditsResult | null;
+  isLoading: boolean;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -13,6 +27,7 @@ export default function DashboardPage() {
     roteiros: 0,
     videos: 0
   });
+  const [apiCredits, setApiCredits] = useState<ApiCreditsState[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -43,6 +58,78 @@ export default function DashboardPage() {
     };
 
     fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const loadApiCredits = async () => {
+      try {
+        // Buscar APIs do Supabase
+        const { data: apis, error } = await supabase
+          .from('apis')
+          .select('id, plataforma, api_key')
+          .in('plataforma', ['ElevenLabs', 'Fish-Audio', 'Runware', 'OpenRouter']);
+
+        if (error) throw error;
+        if (!apis || apis.length === 0) {
+          setApiCredits([]);
+          return;
+        }
+
+        // Ordem customizada: OpenRouter, Fish-Audio, Runware, ElevenLabs
+        const platformOrder = ['OpenRouter', 'Fish-Audio', 'Runware', 'ElevenLabs'];
+        apis.sort((a, b) => {
+          const indexA = platformOrder.indexOf(a.plataforma);
+          const indexB = platformOrder.indexOf(b.plataforma);
+          return indexA - indexB;
+        });
+
+        // Inicializar estado com loading
+        const initialState = apis.map(api => ({
+          platform: api.plataforma,
+          credits: null,
+          isLoading: true
+        }));
+        setApiCredits(initialState);
+
+        // Carregar créditos de cada API
+        const creditsPromises = apis.map(async (api) => {
+          let credits: APICreditsResult | null = null;
+
+          try {
+            switch (api.plataforma) {
+              case 'ElevenLabs':
+                credits = await fetchElevenLabsCredits(api.api_key);
+                break;
+              case 'Fish-Audio':
+                credits = await fetchFishAudioCredits(api.api_key);
+                break;
+              case 'Runware':
+                credits = await fetchRunwareCredits(api.api_key);
+                break;
+              case 'OpenRouter':
+                credits = await fetchOpenRouterCredits(api.api_key);
+                break;
+            }
+          } catch (err) {
+            console.error(`Erro ao buscar créditos de ${api.plataforma}:`, err);
+          }
+
+          return {
+            platform: api.plataforma,
+            credits,
+            isLoading: false
+          };
+        });
+
+        const results = await Promise.all(creditsPromises);
+        setApiCredits(results);
+      } catch (error) {
+        console.error('Erro ao carregar créditos:', error);
+        setApiCredits([]);
+      }
+    };
+
+    loadApiCredits();
   }, []);
 
   const actionCards = [
@@ -125,6 +212,24 @@ export default function DashboardPage() {
             />
           ))}
         </div>
+
+        {/* API Credits Section */}
+        {apiCredits.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-2xl font-light text-white mb-4">Créditos das APIs</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {apiCredits.map((api, index) => (
+                <ApiCreditsCard
+                  key={index}
+                  platform={api.platform}
+                  credits={api.credits}
+                  isLoading={api.isLoading}
+                  compact={true}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats and Activity Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

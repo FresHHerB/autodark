@@ -23,6 +23,14 @@ import {
 } from 'lucide-react';
 import { ImageModelCard } from '@features/channel-management/components';
 import { DashboardHeader } from '@features/dashboard/components';
+import { ApiCreditsCard } from '@shared/components/ui';
+import {
+  fetchElevenLabsCredits,
+  fetchFishAudioCredits,
+  fetchRunwareCredits,
+  fetchOpenRouterCredits,
+  APICreditsResult
+} from '@shared/services';
 
 interface API {
   id: number;
@@ -58,12 +66,16 @@ export default function SettingsPage() {
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // API Credits State
+  const [apiCredits, setApiCredits] = useState<Map<number, { credits: APICreditsResult | null; isLoading: boolean }>>(new Map());
+  const [refreshingApiId, setRefreshingApiId] = useState<number | null>(null);
+
   // Image Models State
   const [imageModels, setImageModels] = useState<ImageModel[]>([]);
   const [isLoadingImageModels, setIsLoadingImageModels] = useState(true);
 
   const platforms = ['Fish-Audio', 'ElevenLabs', 'Minimax'];
-  const allowedPlatforms = ['Fish-Audio', 'ElevenLabs', 'Minimax', 'Runware'];
+  const allowedPlatforms = ['Fish-Audio', 'ElevenLabs', 'Minimax', 'Runware', 'OpenRouter'];
   const [showApiModal, setShowApiModal] = useState(false);
   const [editingApi, setEditingApi] = useState<API | null>(null);
   const [apiForm, setApiForm] = useState({ plataforma: '', api_key: '' });
@@ -116,6 +128,13 @@ export default function SettingsPage() {
     loadVoices();
     loadImageModels();
   }, []);
+
+  // Load API credits when APIs change
+  useEffect(() => {
+    if (apis.length > 0) {
+      loadAllApiCredits();
+    }
+  }, [apis]);
 
   useEffect(() => {
     // Filter voices based on active filter
@@ -209,13 +228,23 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase
         .from('apis')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       if (error) {
         setMessage({ type: 'error', text: 'Erro ao carregar APIs.' });
       } else {
-        setApis(data || []);
+        // Ordem customizada: OpenRouter, Fish-Audio, Runware, ElevenLabs, Minimax
+        const platformOrder = ['OpenRouter', 'Fish-Audio', 'Runware', 'ElevenLabs', 'Minimax'];
+        const sortedApis = (data || []).sort((a, b) => {
+          const indexA = platformOrder.indexOf(a.plataforma);
+          const indexB = platformOrder.indexOf(b.plataforma);
+          // Se não estiver na lista, coloca no final
+          if (indexA === -1 && indexB === -1) return 0;
+          if (indexA === -1) return 1;
+          if (indexB === -1) return -1;
+          return indexA - indexB;
+        });
+        setApis(sortedApis);
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Erro de conexão.' });
@@ -285,6 +314,56 @@ export default function SettingsPage() {
     } finally {
       setIsLoadingImageModels(false);
     }
+  };
+
+  // Load credits for a specific API
+  const loadApiCredits = async (api: API) => {
+    // Only load credits for supported platforms
+    if (!['ElevenLabs', 'Fish-Audio', 'Runware', 'OpenRouter'].includes(api.plataforma)) {
+      return;
+    }
+
+    // Set loading state for this API
+    setApiCredits(prev => new Map(prev).set(api.id, { credits: null, isLoading: true }));
+
+    try {
+      let credits: APICreditsResult | null = null;
+
+      switch (api.plataforma) {
+        case 'ElevenLabs':
+          credits = await fetchElevenLabsCredits(api.api_key);
+          break;
+        case 'Fish-Audio':
+          credits = await fetchFishAudioCredits(api.api_key);
+          break;
+        case 'Runware':
+          credits = await fetchRunwareCredits(api.api_key);
+          break;
+        case 'OpenRouter':
+          credits = await fetchOpenRouterCredits(api.api_key);
+          break;
+      }
+
+      setApiCredits(prev => new Map(prev).set(api.id, { credits, isLoading: false }));
+    } catch (error) {
+      console.error(`Erro ao buscar créditos de ${api.plataforma}:`, error);
+      setApiCredits(prev => new Map(prev).set(api.id, { credits: null, isLoading: false }));
+    }
+  };
+
+  // Load all API credits
+  const loadAllApiCredits = async () => {
+    const creditsApis = apis.filter(api => ['ElevenLabs', 'Fish-Audio', 'Runware', 'OpenRouter'].includes(api.plataforma));
+
+    // Load credits for all supported APIs in parallel
+    await Promise.all(creditsApis.map(api => loadApiCredits(api)));
+  };
+
+  // Refresh credits for a specific API
+  const refreshApiCredits = async (api: API) => {
+    setRefreshingApiId(api.id);
+    await loadApiCredits(api);
+    setRefreshingApiId(null);
   };
 
   // Collect voice data automatically using edge functions
@@ -1406,8 +1485,12 @@ export default function SettingsPage() {
                 <ApiCard
                   key={api.id}
                   api={api}
+                  credits={apiCredits.get(api.id)?.credits || null}
+                  isLoadingCredits={apiCredits.get(api.id)?.isLoading || false}
+                  isRefreshing={refreshingApiId === api.id}
                   onEdit={() => openApiModal(api)}
                   onDelete={() => deleteApi(api.id)}
+                  onRefresh={() => refreshApiCredits(api)}
                 />
               ))}
             </div>
@@ -1846,37 +1929,57 @@ export default function SettingsPage() {
 // API Card Component
 const ApiCard: React.FC<{
   api: API;
+  credits: APICreditsResult | null;
+  isLoadingCredits: boolean;
+  isRefreshing: boolean;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ api, onEdit, onDelete }) => {
+  onRefresh: () => void;
+}> = ({ api, credits, isLoadingCredits, isRefreshing, onEdit, onDelete, onRefresh }) => {
   const getPlatformColor = (platform: string) => {
     const colors = {
       'Fish-Audio': 'bg-cyan-500',
-      'ElevenLabs': 'bg-purple-500',
-      'Minimax': 'bg-red-500'
+      'ElevenLabs': 'bg-green-500',
+      'Minimax': 'bg-red-500',
+      'Runware': 'bg-purple-500',
+      'OpenRouter': 'bg-gray-600'
     };
     return colors[platform as keyof typeof colors] || 'bg-gray-500';
   };
 
+  const showCredits = ['ElevenLabs', 'Fish-Audio', 'Runware', 'OpenRouter'].includes(api.plataforma);
+
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-all duration-200">
-      <div className="flex items-center justify-between">
+    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-all duration-200 flex flex-col">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getPlatformColor(api.plataforma)}`}>
             <span className="text-xs font-bold text-white">
               {api.plataforma === 'ElevenLabs' ? '11' :
                api.plataforma === 'Fish-Audio' ? '🐟' :
-               api.plataforma === 'Minimax' ? 'M' : 'API'}
+               api.plataforma === 'Minimax' ? 'M' :
+               api.plataforma === 'Runware' ? 'R' :
+               api.plataforma === 'OpenRouter' ? 'OR' : 'API'}
             </span>
           </div>
           <div>
             <h4 className="text-white font-medium">{api.plataforma}</h4>
             <p className="text-gray-400 text-sm">
-              API Key: {api.api_key.substring(0, 8)}...
+              {api.api_key.substring(0, 8)}...
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          {showCredits && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing || isLoadingCredits}
+              className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-900/30 rounded-lg transition-all duration-200 disabled:opacity-50"
+              title="Atualizar créditos"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all duration-200"
@@ -1891,6 +1994,39 @@ const ApiCard: React.FC<{
           </button>
         </div>
       </div>
+
+      {/* Credits Display */}
+      {showCredits && (
+        <div className="mt-2 pt-3 border-t border-gray-700">
+          {isLoadingCredits ? (
+            <div className="flex items-center space-x-2 text-gray-400 text-xs">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Carregando...</span>
+            </div>
+          ) : credits?.error ? (
+            <div className="text-red-400 text-xs">Erro ao carregar</div>
+          ) : credits ? (
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400 text-xs">
+                {credits.unit === 'dollars' ? 'Créditos' :
+                 credits.unit === 'characters' ? 'Caracteres' :
+                 'Créditos'}:
+              </span>
+              <span className="text-emerald-400 font-bold text-sm">
+                {credits.unit === 'dollars' && typeof credits.credits === 'number'
+                  ? `$${credits.credits.toFixed(2)}`
+                  : credits.unit === 'characters' && typeof credits.credits === 'number'
+                  ? credits.credits.toLocaleString('pt-BR')
+                  : credits.unit === 'credits' && typeof credits.credits === 'number'
+                  ? credits.credits.toFixed(2)
+                  : 'N/A'}
+              </span>
+            </div>
+          ) : (
+            <div className="text-gray-500 text-xs">Créditos indisponíveis</div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

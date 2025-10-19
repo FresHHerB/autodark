@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@shared/contexts';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Settings, Bell, Copy, Video, Edit, Calendar, PlaySquare, FileText, List } from 'lucide-react';
+import { LogOut, Settings, Bell, Copy, Video, Edit, PlaySquare, FileText, List } from 'lucide-react';
 
 const navigationCards = [
   {
@@ -35,22 +35,16 @@ const navigationCards = [
     path: '/view-scripts'
   },
   {
-    id: 'generate',
-    title: 'Gerar Vídeo',
-    icon: Video,
-    path: '/generate-video'
-  },
-  {
     id: 'videos',
     title: 'Visualização de Vídeos',
     icon: PlaySquare,
     path: '/review-edit'
   },
   {
-    id: 'publish',
-    title: 'Publicar/Agendar',
-    icon: Calendar,
-    path: '/publish-schedule'
+    id: 'generate',
+    title: 'Gerar Vídeo',
+    icon: Video,
+    path: '/generate-video'
   }
 ];
 
