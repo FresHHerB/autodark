@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApi } from '@shared/hooks';
 import { apiService } from '@shared/services';
 import { DashboardHeader } from '@features/dashboard/components';
-import { DriveVideoSelector } from '@features/content-generation/components';
+import { DriveVideoSelector, DriveVideo } from '@features/content-generation/components';
 import { Plus, Edit2, Save, X, FileText, Mic, Image as ImageIcon, Loader2, ChevronDown, Play, Square, Search, Check, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase, Canal } from '@shared/lib';
 
@@ -145,6 +145,12 @@ export default function GenerateContentV2Page() {
   // Drive Video Selection State
   // Map para armazenar vídeos do Drive por título
   const [driveVideosByTitle, setDriveVideosByTitle] = useState<Record<string, string[]>>({});
+
+  // Map para armazenar vídeos disponíveis do Drive por título
+  const [availableVideosByTitle, setAvailableVideosByTitle] = useState<Record<string, DriveVideo[]>>({});
+
+  // Map para armazenar número de vídeos aleatórios por título
+  const [randomVideoCountByTitle, setRandomVideoCountByTitle] = useState<Record<string, number>>({});
 
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -915,6 +921,49 @@ export default function GenerateContentV2Page() {
   };
 
   // ============================================
+  // RANDOM VIDEO SELECTION FUNCTION
+  // ============================================
+
+  const handleRandomVideoSelection = (titleId: string) => {
+    const count = randomVideoCountByTitle[titleId];
+    const availableVideos = availableVideosByTitle[titleId];
+
+    if (!count || count < 1 || count > 50) {
+      alert('Por favor, digite um número entre 1 e 50');
+      return;
+    }
+
+    if (!availableVideos || availableVideos.length === 0) {
+      alert('Nenhum vídeo disponível para selecionar');
+      return;
+    }
+
+    // Limitar ao número de vídeos disponíveis
+    const actualCount = Math.min(count, availableVideos.length);
+
+    // Criar uma cópia do array e embaralhar (Fisher-Yates shuffle)
+    const shuffled = [...availableVideos];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Selecionar os primeiros N vídeos embaralhados
+    const selectedVideos = shuffled.slice(0, actualCount);
+
+    // Converter para URLs
+    const selectedUrls = selectedVideos.map(video =>
+      `https://drive.google.com/file/d/${video.id}/view`
+    );
+
+    // Atualizar o state
+    setDriveVideosByTitle({
+      ...driveVideosByTitle,
+      [titleId]: selectedUrls
+    });
+  };
+
+  // ============================================
   // CONTENT GENERATION FUNCTION
   // ============================================
 
@@ -1562,6 +1611,40 @@ export default function GenerateContentV2Page() {
                   </span>
                 </div>
 
+                {/* Seleção Aleatória */}
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-400 mb-2">
+                      Seleção Aleatória (1-50 vídeos)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={randomVideoCountByTitle[title.id] || ''}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setRandomVideoCountByTitle({
+                            ...randomVideoCountByTitle,
+                            [title.id]: value
+                          });
+                        }}
+                        placeholder="Ex: 10"
+                        className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                      />
+                      <button
+                        onClick={() => handleRandomVideoSelection(title.id)}
+                        disabled={!randomVideoCountByTitle[title.id] || !availableVideosByTitle[title.id]?.length}
+                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Play className="w-4 h-4" />
+                        Selecionar Aleatoriamente
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* DriveVideoSelector */}
                 {!selectedChannelId ? (
                   <div className="text-center py-8 text-gray-500">
@@ -1580,6 +1663,12 @@ export default function GenerateContentV2Page() {
                       });
                     }}
                     initialSelectedUrls={driveVideosByTitle[title.id] || []}
+                    onVideosLoaded={(videos) => {
+                      setAvailableVideosByTitle({
+                        ...availableVideosByTitle,
+                        [title.id]: videos
+                      });
+                    }}
                   />
                 )}
               </div>

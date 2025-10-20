@@ -6,7 +6,7 @@ import { supabase } from '@shared/lib';
 // INTERFACES
 // ============================================
 
-interface DriveVideo {
+export interface DriveVideo {
   id: string;
   name: string;
   thumbnailLink?: string;
@@ -20,6 +20,7 @@ interface DriveVideoSelectorProps {
   driveUrl: string;
   onSelectionChange: (selectedVideoUrls: string[]) => void;
   initialSelectedUrls?: string[];
+  onVideosLoaded?: (videos: DriveVideo[]) => void;
 }
 
 // ============================================
@@ -29,7 +30,8 @@ interface DriveVideoSelectorProps {
 export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   driveUrl,
   onSelectionChange,
-  initialSelectedUrls = []
+  initialSelectedUrls = [],
+  onVideosLoaded
 }) => {
   const [videos, setVideos] = useState<DriveVideo[]>([]);
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
@@ -130,6 +132,11 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
         }));
 
         setVideos(videoList);
+
+        // Notify parent component about loaded videos
+        if (onVideosLoaded) {
+          onVideosLoaded(videoList);
+        }
       } else {
         setError('Nenhum vídeo encontrado nesta pasta');
       }
