@@ -2162,6 +2162,11 @@ export default function GenerateContentV2Page() {
                 <Loader2 className="w-6 h-6 animate-spin" />
                 Gerando Conteúdo...
               </>
+            ) : generateVideo ? (
+              <>
+                <Play className="w-6 h-6" />
+                Gerar {addedTitles.length} {addedTitles.length === 1 ? 'Vídeo' : 'Vídeos'}
+              </>
             ) : (
               <>
                 <FileText className="w-6 h-6" />
@@ -2169,25 +2174,6 @@ export default function GenerateContentV2Page() {
               </>
             )}
           </button>
-
-          {/* Summary */}
-          {addedTitles.length > 0 && (
-            <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-              <h3 className="text-sm font-medium text-white mb-2">Resumo da Geração:</h3>
-              <ul className="text-sm text-gray-400 space-y-1">
-                <li>• {addedTitles.length} título(s) selecionado(s)</li>
-                <li>• Roteiro: <span className="text-white">Sim (obrigatório)</span></li>
-                <li>• Áudio: <span className={generateAudio ? "text-green-400" : "text-red-400"}>
-                  {generateAudio ? "Sim" : "Não"}
-                </span></li>
-                <li>• Imagem: <span className={generateImage ? "text-green-400" : "text-red-400"}>
-                  {generateImage ? "Sim" : "Não"}
-                </span></li>
-                <li>• Modelo: <span className="text-white">{selectedModel || "Não selecionado"}</span></li>
-                <li>• Idioma: <span className="text-white">{contentIdioma}</span></li>
-              </ul>
-            </div>
-          )}
         </div>
       </div>
 
