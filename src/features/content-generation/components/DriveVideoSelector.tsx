@@ -77,6 +77,30 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   };
 
   // ============================================
+  // SYNC INITIAL SELECTED URLS WITH SELECTED IDS
+  // ============================================
+
+  useEffect(() => {
+    if (videos.length > 0 && initialSelectedUrls.length > 0) {
+      // Extract video IDs from URLs
+      const selectedIds = new Set<string>();
+
+      initialSelectedUrls.forEach(url => {
+        // Extract ID from URL format: https://drive.google.com/file/d/{ID}/view
+        const match = url.match(/\/file\/d\/([^/]+)/);
+        if (match && match[1]) {
+          selectedIds.add(match[1]);
+        }
+      });
+
+      setSelectedVideoIds(selectedIds);
+    } else if (initialSelectedUrls.length === 0) {
+      // Clear selection if no URLs provided
+      setSelectedVideoIds(new Set());
+    }
+  }, [initialSelectedUrls, videos]);
+
+  // ============================================
   // LOAD VIDEOS WHEN DRIVE URL OR API KEY CHANGES
   // ============================================
 
