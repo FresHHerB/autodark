@@ -124,8 +124,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
         const videoList: DriveVideo[] = data.files.map((file: any) => ({
           id: file.id,
           name: file.name,
-          // Construct thumbnail URL manually as API doesn't always return it
-          thumbnailLink: file.thumbnailLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w320`,
+          thumbnailLink: file.thumbnailLink,
           size: file.size,
           duration: file.videoMediaMetadata?.durationMillis,
           mimeType: file.mimeType,
@@ -314,17 +313,33 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
               {/* Thumbnail */}
               {video.thumbnailLink ? (
                 <img
-                  src={video.thumbnailLink}
+                  src={video.thumbnailLink.replace(/=s\d+$/, '=s220')}
                   alt={video.name}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23374151" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="30" text-anchor="middle" dy=".3em" fill="%239CA3AF"%3E📹%3C/text%3E%3C/svg%3E';
+                    const img = e.target as HTMLImageElement;
+                    const parent = img.parentElement;
+                    if (parent && !parent.querySelector('.placeholder-content')) {
+                      img.style.display = 'none';
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'placeholder-content w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 text-gray-400';
+                      placeholder.innerHTML = `
+                        <svg class="w-8 h-8 mb-1 opacity-50" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <span class="text-[9px] text-center px-1 line-clamp-2 opacity-70">${video.name.replace(/\.[^/.]+$/, '').substring(0, 30)}</span>
+                      `;
+                      parent.appendChild(placeholder);
+                    }
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-3xl">
-                  📹
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 text-gray-400">
+                  <Play className="w-8 h-8 mb-1 opacity-50" />
+                  <span className="text-[9px] text-center px-1 line-clamp-2 opacity-70">
+                    {video.name.replace(/\.[^/.]+$/, '').substring(0, 30)}
+                  </span>
                 </div>
               )}
 
