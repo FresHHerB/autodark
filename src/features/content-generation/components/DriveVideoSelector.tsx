@@ -389,7 +389,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
             {/* Video Player */}
             <div className="aspect-video bg-black">
               <iframe
-                src={`https://drive.google.com/file/d/${playingVideo.id}/preview?autoplay=1`}
+                src={`https://drive.google.com/file/d/${playingVideo.id}/preview?autoplay=1&loop=0`}
                 className="w-full h-full"
                 allow="autoplay; encrypted-media"
                 allowFullScreen
