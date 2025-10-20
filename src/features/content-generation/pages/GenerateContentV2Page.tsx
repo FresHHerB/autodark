@@ -1998,17 +1998,17 @@ export default function GenerateContentV2Page() {
         {/* ============================================ */}
 
         {(!generateVideo || (generateVideo && videoGenerationMethod === 'image-to-video')) && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5" />
+          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-purple-400/20 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-white mb-6 flex items-center">
+              <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
               Configuração de Imagem
             </h2>
 
             {/* Style Image Upload */}
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Imagem de Referência (opcional)</label>
+            <div className="mb-6">
+              <label className="block text-xs font-medium text-purple-300/80 mb-2">Imagem de Referência (opcional)</label>
               <div
-                className="relative border-2 border-dashed border-gray-700 rounded-lg p-4 hover:border-purple-500 transition-colors cursor-pointer bg-gray-800/50"
+                className="relative border-2 border-dashed border-purple-500/40 rounded-lg p-6 hover:border-purple-500/60 transition-colors cursor-pointer bg-gray-800/40"
                 onPaste={handleStyleImagePaste}
               >
                 <input
@@ -2036,7 +2036,7 @@ export default function GenerateContentV2Page() {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-center text-gray-400">
+                  <div className="text-center text-purple-300/60">
                     <Upload className="w-8 h-8 mx-auto mb-2" />
                     <p className="text-sm">Clique ou cole uma imagem de referência</p>
                   </div>
@@ -2046,16 +2046,16 @@ export default function GenerateContentV2Page() {
                 <button
                   onClick={handleCollectStyle}
                   disabled={collectingStyle}
-                  className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  className="w-full mt-3 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-none font-medium"
                 >
                   {collectingStyle ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Coletando Estilo...</span>
                     </>
                   ) : (
                     <>
-                      <Search className="w-4 h-4" />
+                      <Search className="w-5 h-5" />
                       <span>Coletar Estilo</span>
                     </>
                   )}
@@ -2064,12 +2064,12 @@ export default function GenerateContentV2Page() {
             </div>
 
             {/* Image Model */}
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Modelo de Imagem</label>
+            <div className="mb-6">
+              <label className="block text-xs font-medium text-purple-300/80 mb-2">Modelo de IA para Imagens</label>
               <select
                 value={imageModelId || ''}
                 onChange={(e) => setImageModelId(parseInt(e.target.value))}
-                className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 disabled={imageModelsLoading}
               >
                 <option value="">Selecione um modelo</option>
@@ -2082,26 +2082,26 @@ export default function GenerateContentV2Page() {
             </div>
 
             {/* Image Style - Same Line */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Estilo da Imagem</label>
+                <label className="block text-xs font-medium text-purple-300/80 mb-2">Estilo Principal</label>
                 <input
                   type="text"
                   value={imageStyle}
                   onChange={(e) => setImageStyle(e.target.value)}
-                  placeholder="Ex: realista, cartoon, minimalista..."
-                  className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  placeholder="fotorrealista, cartoon, pintura digital, aquarela..."
+                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Detalhes do Estilo</label>
+                <label className="block text-xs font-medium text-purple-300/80 mb-2">Detalhamento</label>
                 <input
                   type="text"
                   value={imageStyleDetail}
                   onChange={(e) => setImageStyleDetail(e.target.value)}
-                  placeholder="Descrição detalhada do estilo desejado..."
-                  className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  placeholder="4K, alta resolução, cores vibrantes, iluminação suave..."
+                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 />
               </div>
             </div>
@@ -2109,32 +2109,32 @@ export default function GenerateContentV2Page() {
             {/* Image Dimensions and Number */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Largura</label>
+                <label className="block text-xs font-medium text-purple-300/80 mb-2">Largura (px)</label>
                 <input
                   type="number"
                   value={imageWidth}
                   onChange={(e) => setImageWidth(parseInt(e.target.value) || 0)}
-                  className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Altura</label>
+                <label className="block text-xs font-medium text-purple-300/80 mb-2">Altura (px)</label>
                 <input
                   type="number"
                   value={imageHeight}
                   onChange={(e) => setImageHeight(parseInt(e.target.value) || 0)}
-                  className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Número de Imagens</label>
+                <label className="block text-xs font-medium text-purple-300/80 mb-2">Número de Imagens</label>
                 <input
                   type="number"
                   min="1"
                   max="20"
                   value={numImages}
                   onChange={(e) => setNumImages(parseInt(e.target.value) || 1)}
-                  className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  className="w-full bg-gray-800/60 border border-purple-500/40 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors"
                 />
               </div>
             </div>
