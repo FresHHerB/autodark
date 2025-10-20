@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, CheckSquare, Square, AlertCircle, Play, X } from 'lucide-react';
 import { supabase } from '@shared/lib';
 
@@ -40,6 +40,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   // Miniplayer state
   const [playingVideo, setPlayingVideo] = useState<DriveVideo | null>(null);
   const [iframeKey, setIframeKey] = useState<number>(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // ============================================
   // LOAD API KEY
@@ -390,14 +391,33 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
 
             {/* Video Player */}
             <div className="aspect-video bg-black">
-              <iframe
+              <video
                 key={iframeKey}
-                src={`https://drive.google.com/file/d/${playingVideo.id}/preview`}
+                ref={iframeRef as any}
                 className="w-full h-full"
-                allow="autoplay; encrypted-media; fullscreen"
-                allowFullScreen
-                loading="eager"
-              />
+                controls
+                autoPlay
+                playsInline
+                preload="auto"
+                src={`https://www.googleapis.com/drive/v3/files/${playingVideo.id}?alt=media&key=${apiKey}`}
+                onError={(e) => {
+                  console.error('Video error, falling back to iframe');
+                  // Fallback to iframe if video fails
+                  const videoEl = e.currentTarget;
+                  const parent = videoEl.parentElement;
+                  if (parent) {
+                    videoEl.style.display = 'none';
+                    const iframe = document.createElement('iframe');
+                    iframe.src = `https://drive.google.com/file/d/${playingVideo.id}/preview`;
+                    iframe.className = 'w-full h-full';
+                    iframe.allow = 'autoplay; encrypted-media; fullscreen';
+                    iframe.allowFullscreen = true;
+                    parent.appendChild(iframe);
+                  }
+                }}
+              >
+                Seu navegador não suporta a reprodução de vídeo.
+              </video>
             </div>
 
             {/* Footer */}
