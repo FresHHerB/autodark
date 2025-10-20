@@ -37,64 +37,53 @@ export function useVideosWithChannels() {
       }
       setError(null);
 
-      const { data, error: queryError } = await supabase.rpc('get_videos_with_channels');
-
-      if (queryError) {
-        // Fallback to regular query if RPC doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('videos')
-          .select(`
+      // Query videos with channel information
+      const { data: videosData, error: videosError } = await supabase
+        .from('videos')
+        .select(`
+          id,
+          status,
+          video_path,
+          thumb_path,
+          created_at,
+          data_publicar,
+          roteiros!inner (
             id,
-            status,
-            video_path,
-            thumb_path,
-            created_at,
-            data_publicar,
-            roteiros!inner (
+            titulo,
+            canal_id,
+            canais!inner (
               id,
-              titulo,
-              canal_id,
-              canais!inner (
-                id,
-                nome_canal,
-                profile_image
-              )
+              nome_canal,
+              profile_image
             )
-          `)
-          .order('created_at', { ascending: false });
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-        if (fallbackError) throw fallbackError;
+      if (videosError) throw videosError;
 
-        // Transform the data to match our interface
-        const transformedData: VideoWithChannel[] = (fallbackData || []).map((video: any) => {
-          // Add timestamp to thumbnail URL to bypass cache
-          const thumbnailUrl = video.thumb_path
-            ? `${video.thumb_path}?t=${Date.now()}`
-            : '';
+      // Transform the data to match our interface
+      const transformedData: VideoWithChannel[] = (videosData || []).map((video: any) => {
+        // Add timestamp to thumbnail URL to bypass cache
+        const thumbnailUrl = video.thumb_path
+          ? `${video.thumb_path}?t=${Date.now()}`
+          : '';
 
-          return {
-            id: video.id,
-            title: video.roteiros?.titulo || 'Sem título',
-            thumbnail: thumbnailUrl,
-            videoUrl: video.video_path || undefined,
-            status: video.status as VideoStatus,
-            createdAt: video.created_at,
-            scheduledDate: video.data_publicar,
-            channelId: video.roteiros?.canais?.id || 0,
-            channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
-            channelProfileImage: video.roteiros?.canais?.profile_image || ''
-          };
-        });
+        return {
+          id: video.id,
+          title: video.roteiros?.titulo || 'Sem título',
+          thumbnail: thumbnailUrl,
+          videoUrl: video.video_path || undefined,
+          status: video.status as VideoStatus,
+          createdAt: video.created_at,
+          scheduledDate: video.data_publicar,
+          channelId: video.roteiros?.canais?.id || 0,
+          channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
+          channelProfileImage: video.roteiros?.canais?.profile_image || ''
+        };
+      });
 
-        setVideos(transformedData);
-      } else {
-        // Add timestamp to thumbnails from RPC data
-        const dataWithTimestamp = (data || []).map((video: VideoWithChannel) => ({
-          ...video,
-          thumbnail: video.thumbnail ? `${video.thumbnail}?t=${Date.now()}` : ''
-        }));
-        setVideos(dataWithTimestamp);
-      }
+      setVideos(transformedData);
     } catch (err) {
       console.error('Error fetching videos:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar vídeos');
