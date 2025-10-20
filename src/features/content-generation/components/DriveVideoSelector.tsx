@@ -39,6 +39,9 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   const [error, setError] = useState<string>('');
   const [apiKey, setApiKey] = useState<string>('');
 
+  // Track if videos were already loaded for this driveUrl
+  const loadedDriveUrlRef = useRef<string>('');
+
   // Miniplayer state
   const [playingVideo, setPlayingVideo] = useState<DriveVideo | null>(null);
   const [iframeKey, setIframeKey] = useState<number>(0);
@@ -78,8 +81,9 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   // ============================================
 
   useEffect(() => {
-    if (driveUrl && apiKey) {
+    if (driveUrl && apiKey && loadedDriveUrlRef.current !== driveUrl) {
       loadDriveVideos();
+      loadedDriveUrlRef.current = driveUrl;
     }
   }, [driveUrl, apiKey]);
 
@@ -313,33 +317,18 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
               {/* Thumbnail */}
               {video.thumbnailLink ? (
                 <img
-                  src={video.thumbnailLink.replace(/=s\d+$/, '=s220')}
+                  src={video.thumbnailLink}
                   alt={video.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    const parent = img.parentElement;
-                    if (parent && !parent.querySelector('.placeholder-content')) {
-                      img.style.display = 'none';
-                      const placeholder = document.createElement('div');
-                      placeholder.className = 'placeholder-content w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 text-gray-400';
-                      placeholder.innerHTML = `
-                        <svg class="w-8 h-8 mb-1 opacity-50" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        <span class="text-[9px] text-center px-1 line-clamp-2 opacity-70">${video.name.replace(/\.[^/.]+$/, '').substring(0, 30)}</span>
-                      `;
-                      parent.appendChild(placeholder);
-                    }
+                    (e.target as HTMLImageElement).src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23374151" width="100" height="100"/%3E%3Ctext x="50" y="50" font-size="30" text-anchor="middle" dy=".3em" fill="%239CA3AF"%3E📹%3C/text%3E%3C/svg%3E';
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 text-gray-400">
-                  <Play className="w-8 h-8 mb-1 opacity-50" />
-                  <span className="text-[9px] text-center px-1 line-clamp-2 opacity-70">
-                    {video.name.replace(/\.[^/.]+$/, '').substring(0, 30)}
-                  </span>
+                <div className="w-full h-full flex items-center justify-center text-3xl">
+                  📹
                 </div>
               )}
 

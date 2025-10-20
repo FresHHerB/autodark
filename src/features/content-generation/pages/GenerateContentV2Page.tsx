@@ -1691,10 +1691,10 @@ export default function GenerateContentV2Page() {
                     }}
                     initialSelectedUrls={driveVideosByTitle[title.id] || []}
                     onVideosLoaded={(videos) => {
-                      setAvailableVideosByTitle({
-                        ...availableVideosByTitle,
+                      setAvailableVideosByTitle(prev => ({
+                        ...prev,
                         [title.id]: videos
-                      });
+                      }));
                     }}
                   />
                 )}
