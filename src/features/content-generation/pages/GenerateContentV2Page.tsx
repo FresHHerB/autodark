@@ -344,7 +344,7 @@ export default function GenerateContentV2Page() {
         id_canal: selectedChannelId,
         nova_ideia: novaIdeia,
         idioma: titleIdioma,
-        tipo_geracao: 'gerar_titulos'
+        tipo_geracao: 'titulos'
       };
 
       const response = await execute(() =>
@@ -966,6 +966,7 @@ export default function GenerateContentV2Page() {
           canal_id: parseInt(selectedChannelId),
           modelo_roteiro: selectedModel,
           idioma: contentIdioma,
+          tipo_geracao: 'conteudo',
           audio: {
             voice_id: voiceIdHash,
             speed: audioSpeed
@@ -1023,6 +1024,7 @@ export default function GenerateContentV2Page() {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
             titulos: uploadedVideos.map(video => ({
               titulo: video.titulo,
               media: {
@@ -1064,6 +1066,7 @@ export default function GenerateContentV2Page() {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
             titulos: addedTitles.map(title => ({
               titulo: title.text,
               media: {
