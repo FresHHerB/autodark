@@ -143,7 +143,11 @@ export default function GenerateContentV2Page() {
   const [dragOverTitleId, setDragOverTitleId] = useState<string | null>(null);
 
   // Drive Video Selection State
-  const [selectedDriveVideoUrls, setSelectedDriveVideoUrls] = useState<string[]>([]);
+  // Map para armazenar vídeos do Drive por título
+  const [driveVideosByTitle, setDriveVideosByTitle] = useState<Record<string, string[]>>({});
+
+  // Estado para controlar qual título está com o seletor aberto
+  const [expandedTitleForVideos, setExpandedTitleForVideos] = useState<string | null>(null);
 
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -1005,9 +1009,13 @@ export default function GenerateContentV2Page() {
         const voiceIdHash = selectedVoice?.voice_id;
 
         if (videoGenerationMethod === 'video-to-video') {
-          // Validação: deve ter vídeos selecionados do Drive
-          if (selectedDriveVideoUrls.length === 0) {
-            alert('Por favor, selecione vídeos do banco do canal');
+          // Validação: todos os títulos devem ter vídeos selecionados
+          const titulosSemVideos = addedTitles.filter(title =>
+            !driveVideosByTitle[title.id] || driveVideosByTitle[title.id].length === 0
+          );
+
+          if (titulosSemVideos.length > 0) {
+            alert(`Por favor, selecione vídeos para todos os títulos. Faltam vídeos em:\n${titulosSemVideos.map(t => `• ${t.text}`).join('\n')}`);
             setIsGeneratingContent(false);
             return;
           }
@@ -1019,7 +1027,7 @@ export default function GenerateContentV2Page() {
           }
 
           // Payload vídeo-para-vídeo usando Drive URLs
-          // Gera um payload para cada título adicionado
+          // Cada título tem sua própria lista de vídeos
           payload = {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
@@ -1036,7 +1044,7 @@ export default function GenerateContentV2Page() {
                   type: "video",
                   generate: true,
                   caption: generateCaption,
-                  videos_url: selectedDriveVideoUrls
+                  videos_url: driveVideosByTitle[title.id] || []
                 }
               }
             }))
@@ -1344,53 +1352,105 @@ export default function GenerateContentV2Page() {
               ) : (
                 <div className="space-y-3">
                   {addedTitles.map((title) => (
-                    <div
-                      key={title.id}
-                      className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg"
-                    >
-                      {editingTitleId === title.id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={editingText}
-                            onChange={(e) => setEditingText(e.target.value)}
-                            className="flex-1 bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded focus:outline-none focus:border-purple-500 text-sm"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleSaveEdit}
-                            className="p-1 text-green-400 hover:text-green-300"
-                            title="Salvar"
-                          >
-                            <Save className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="p-1 text-red-400 hover:text-red-300"
-                            title="Cancelar"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="flex-1 text-white text-sm">{title.text}</span>
-                          <button
-                            onClick={() => handleStartEdit(title.id, title.text)}
-                            className="p-1 text-blue-400 hover:text-blue-300"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleRemoveTitle(title.id)}
-                            className="p-1 text-red-400 hover:text-red-300"
-                            title="Remover"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
+                    <div key={title.id} className="bg-gray-800 rounded-lg">
+                      {/* Título Principal */}
+                      <div className="flex items-center gap-3 p-3">
+                        {editingTitleId === title.id ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className="flex-1 bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded focus:outline-none focus:border-purple-500 text-sm"
+                              autoFocus
+                            />
+                            <button
+                              onClick={handleSaveEdit}
+                              className="p-1 text-green-400 hover:text-green-300"
+                              title="Salvar"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="p-1 text-red-400 hover:text-red-300"
+                              title="Cancelar"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-white text-sm">{title.text}</span>
+
+                            {/* Botão de vídeos (apenas para video-to-video) */}
+                            {generateVideo && videoGenerationMethod === 'video-to-video' && (
+                              <button
+                                onClick={() => setExpandedTitleForVideos(
+                                  expandedTitleForVideos === title.id ? null : title.id
+                                )}
+                                className={`p-1 transition-colors ${
+                                  (driveVideosByTitle[title.id]?.length || 0) > 0
+                                    ? 'text-green-400 hover:text-green-300'
+                                    : 'text-gray-400 hover:text-gray-300'
+                                }`}
+                                title={
+                                  (driveVideosByTitle[title.id]?.length || 0) > 0
+                                    ? `${driveVideosByTitle[title.id].length} vídeo(s) selecionado(s)`
+                                    : 'Selecionar vídeos'
+                                }
+                              >
+                                <Upload className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleStartEdit(title.id, title.text)}
+                              className="p-1 text-blue-400 hover:text-blue-300"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveTitle(title.id)}
+                              className="p-1 text-red-400 hover:text-red-300"
+                              title="Remover"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* DriveVideoSelector Expandível */}
+                      {generateVideo &&
+                        videoGenerationMethod === 'video-to-video' &&
+                        expandedTitleForVideos === title.id && (
+                          <div className="border-t border-gray-700 p-4">
+                            <p className="text-xs text-gray-400 mb-3">
+                              Selecione os vídeos do banco do canal para este título
+                            </p>
+                            {!selectedChannelId ? (
+                              <div className="text-center py-4 text-gray-500 text-sm">
+                                Selecione um canal primeiro
+                              </div>
+                            ) : (
+                              <DriveVideoSelector
+                                driveUrl={
+                                  channels.find((c) => c.id.toString() === selectedChannelId)
+                                    ?.drive_url || ''
+                                }
+                                onSelectionChange={(urls) => {
+                                  setDriveVideosByTitle({
+                                    ...driveVideosByTitle,
+                                    [title.id]: urls,
+                                  });
+                                }}
+                                initialSelectedUrls={driveVideosByTitle[title.id] || []}
+                              />
+                            )}
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -1523,31 +1583,7 @@ export default function GenerateContentV2Page() {
           </div>
         )}
 
-        {/* ============================================ */}
-        {/* DRIVE VIDEO SELECTION SECTION (for video-to-video method) */}
-        {/* ============================================ */}
-
-        {generateVideo && videoGenerationMethod === 'video-to-video' && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-light text-white mb-4">Banco de Vídeos</h2>
-
-            <p className="text-sm text-gray-400 mb-4">
-              Selecione os vídeos do banco do canal para geração de conteúdo
-            </p>
-
-            {!selectedChannelId ? (
-              <div className="text-center py-8 text-gray-500">
-                Selecione um canal primeiro
-              </div>
-            ) : (
-              <DriveVideoSelector
-                driveUrl={channels.find(c => c.id.toString() === selectedChannelId)?.drive_url || ''}
-                onSelectionChange={(urls) => setSelectedDriveVideoUrls(urls)}
-                initialSelectedUrls={selectedDriveVideoUrls}
-              />
-            )}
-          </div>
-        )}
+        {/* DriveVideoSelector removido daqui - agora é por título */}
 
         {/* ============================================ */}
         {/* SECTION 3: MODEL AND LANGUAGE */}
