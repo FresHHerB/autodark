@@ -487,7 +487,11 @@ export default function ReviewEditPage() {
           </h2>
           <div className="overflow-x-auto pb-4">
             <div className="flex gap-4 min-w-max">
-              {allStatuses.map(status => renderStatusColumn(status, status === 'adicionando_legenda'))}
+              {allStatuses.map(status => (
+                <React.Fragment key={status}>
+                  {renderStatusColumn(status, status === 'adicionando_legenda')}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         </div>
