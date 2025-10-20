@@ -159,6 +159,7 @@ class ApiService {
       style: any;
     };
     media_chars: number | null;
+    drive_url?: string | null;
   }) {
     return this.call(this.getWebhook('update'), {
       method: 'POST',

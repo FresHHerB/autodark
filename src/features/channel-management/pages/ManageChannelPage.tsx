@@ -92,6 +92,7 @@ export default function ManageChannelPage() {
         prompt_roteiro: selectedChannelForModal.prompt_roteiro,
         caption_style: captionStyleConfig,
         media_chars: selectedChannelForModal.media_chars || null,
+        drive_url: selectedChannelForModal.drive_url || null,
       });
 
       // Also update in Supabase for local persistence
@@ -103,6 +104,7 @@ export default function ManageChannelPage() {
           voz_prefereida: selectedVoiceId || null,
           caption_style: captionStyleConfig,
           media_chars: selectedChannelForModal.media_chars || null,
+          drive_url: selectedChannelForModal.drive_url || null,
         })
         .eq('id', selectedChannelForModal.id);
 
@@ -501,6 +503,35 @@ export default function ManageChannelPage() {
               {activeTab === 'general' && (
                 <div className="p-8">
                   <div className="max-w-5xl mx-auto space-y-8">
+                    {/* Google Drive Link Card */}
+                    <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+                      <div className="mb-6">
+                        <h3 className="text-lg font-medium text-white mb-2">
+                          Link do Google Drive
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          URL da pasta do Google Drive com o banco de vídeos do canal
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-400 text-sm mb-2">
+                          URL da Pasta
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedChannelForModal.drive_url || ''}
+                          onChange={(e) => setSelectedChannelForModal(prev =>
+                            prev ? { ...prev, drive_url: e.target.value } : null
+                          )}
+                          placeholder="https://drive.google.com/drive/folders/..."
+                          className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 rounded transition-all"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          💡 Certifique-se de que a pasta está configurada como "Anyone with the link can view"
+                        </p>
+                      </div>
+                    </div>
+
                     {/* Voice Configuration Card */}
                     <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                       <div className="mb-6">
