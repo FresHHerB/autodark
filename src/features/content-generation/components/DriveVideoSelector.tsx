@@ -39,6 +39,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
 
   // Miniplayer state
   const [playingVideo, setPlayingVideo] = useState<DriveVideo | null>(null);
+  const [iframeKey, setIframeKey] = useState<number>(0);
 
   // ============================================
   // LOAD API KEY
@@ -169,6 +170,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
 
   const openVideoPreview = (video: DriveVideo) => {
     setPlayingVideo(video);
+    setIframeKey(prev => prev + 1); // Force iframe reload
   };
 
   const closeVideoPreview = () => {
@@ -389,10 +391,12 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
             {/* Video Player */}
             <div className="aspect-video bg-black">
               <iframe
-                src={`https://drive.google.com/file/d/${playingVideo.id}/preview?autoplay=1&loop=0`}
+                key={iframeKey}
+                src={`https://drive.google.com/file/d/${playingVideo.id}/preview`}
                 className="w-full h-full"
-                allow="autoplay; encrypted-media"
+                allow="autoplay; encrypted-media; fullscreen"
                 allowFullScreen
+                loading="eager"
               />
             </div>
 
