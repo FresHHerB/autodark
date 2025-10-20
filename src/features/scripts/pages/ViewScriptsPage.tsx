@@ -64,6 +64,9 @@ export default function ViewScriptsPage() {
   // Success notification state
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -152,6 +155,18 @@ export default function ViewScriptsPage() {
       alert('Erro ao carregar roteiros. Verifique o console.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await loadScripts();
+    } catch (error) {
+      console.error('Erro ao recarregar roteiros:', error);
+      alert('Erro ao recarregar roteiros. Tente novamente.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -356,9 +371,20 @@ export default function ViewScriptsPage() {
 
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Visualizar Roteiros</h1>
-          <p className="text-gray-400">Gerencie e visualize todos os roteiros criados</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Visualizar Roteiros</h1>
+            <p className="text-gray-400">Gerencie e visualize todos os roteiros criados</p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            title="Atualizar lista de roteiros"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
+          </button>
         </div>
 
         {/* Filters */}
