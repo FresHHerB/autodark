@@ -113,7 +113,7 @@ export default function GenerateContentV2Page() {
   const [generateImage, setGenerateImage] = useState<boolean>(false);
 
   // Model and Language
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('GPT-5');
   const [contentIdioma, setContentIdioma] = useState<string>('Português-Brasil');
   const [isEditingIdioma, setIsEditingIdioma] = useState(false);
 
