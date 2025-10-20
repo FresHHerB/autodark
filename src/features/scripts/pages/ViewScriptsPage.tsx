@@ -281,17 +281,17 @@ export default function ViewScriptsPage() {
   };
 
   // Sanitize and format status labels
-  const getStatusLabel = (status: string | null): { text: string; color: string; icon: any } => {
-    const statusMap: {[key: string]: { text: string; color: string; icon: any }} = {
-      'gerando_roteiro': { text: 'Gerando Roteiro', color: 'yellow', icon: Loader2 },
-      'roteiro_gerado': { text: 'Roteiro Gerado', color: 'green', icon: CheckCircle },
-      'gerando_audio': { text: 'Gerando Áudio', color: 'blue', icon: Loader2 },
-      'audio_gerado': { text: 'Áudio Gerado', color: 'blue', icon: Mic },
-      'gerando_imagens': { text: 'Gerando Imagens', color: 'purple', icon: Loader2 },
-      'imagens_geradas': { text: 'Imagens Geradas', color: 'purple', icon: ImageIcon },
+  const getStatusLabel = (status: string | null): { text: string; bgClass: string; textClass: string; icon: any } => {
+    const statusMap: {[key: string]: { text: string; bgClass: string; textClass: string; icon: any }} = {
+      'gerando_roteiro': { text: 'Gerando Roteiro', bgClass: 'bg-yellow-500/20', textClass: 'text-yellow-300', icon: Loader2 },
+      'roteiro_gerado': { text: 'Roteiro Gerado', bgClass: 'bg-green-500/20', textClass: 'text-green-300', icon: CheckCircle },
+      'gerando_audio': { text: 'Gerando Áudio', bgClass: 'bg-blue-500/20', textClass: 'text-blue-300', icon: Loader2 },
+      'audio_gerado': { text: 'Áudio Gerado', bgClass: 'bg-blue-500/20', textClass: 'text-blue-300', icon: Mic },
+      'gerando_imagens': { text: 'Gerando Imagens', bgClass: 'bg-purple-500/20', textClass: 'text-purple-300', icon: Loader2 },
+      'imagens_geradas': { text: 'Imagens Geradas', bgClass: 'bg-purple-500/20', textClass: 'text-purple-300', icon: ImageIcon },
     };
 
-    return statusMap[status || ''] || { text: 'Status Desconhecido', color: 'gray', icon: AlertCircle };
+    return statusMap[status || ''] || { text: 'Status Desconhecido', bgClass: 'bg-gray-500/20', textClass: 'text-gray-300', icon: AlertCircle };
   };
 
   const getStatusBadge = (script: Script) => {
@@ -611,7 +611,7 @@ export default function ViewScriptsPage() {
                         const statusInfo = getStatusLabel(script.status);
                         const Icon = statusInfo.icon;
                         return (
-                          <span className={`flex items-center space-x-1 px-2 py-1 bg-${statusInfo.color}-500/20 text-${statusInfo.color}-200 text-[10px] rounded-full font-medium`}>
+                          <span className={`flex items-center space-x-1 px-2 py-1 ${statusInfo.bgClass} ${statusInfo.textClass} text-[10px] rounded-full font-medium`}>
                             <Icon className={`w-3 h-3 ${statusInfo.text.includes('Gerando') ? 'animate-spin' : ''}`} />
                             <span>{statusInfo.text}</span>
                           </span>
@@ -704,7 +704,7 @@ export default function ViewScriptsPage() {
                         const statusInfo = getStatusLabel(selectedScript.status);
                         const Icon = statusInfo.icon;
                         return (
-                          <div className={`flex items-center gap-1.5 text-${statusInfo.color}-200`}>
+                          <div className={`flex items-center gap-1.5 ${statusInfo.textClass}`}>
                             <Icon className={`w-4 h-4 ${statusInfo.text.includes('Gerando') ? 'animate-spin' : ''}`} />
                             <span className="font-semibold text-sm">{statusInfo.text}</span>
                           </div>
