@@ -40,6 +40,7 @@ export default function TestGDrivePage() {
 
   const loadGDriveApiKey = async () => {
     try {
+      console.log('🔍 Tentando carregar API Key do Google Drive...');
       setLoadingApiKey(true);
       const { data, error } = await supabase
         .from('apis')
@@ -47,19 +48,27 @@ export default function TestGDrivePage() {
         .eq('plataforma', 'GDrive')
         .single();
 
-      if (error) throw error;
+      console.log('📊 Resposta do Supabase:', { data, error });
+
+      if (error) {
+        console.warn('⚠️ Erro ao buscar API Key:', error);
+        setError('API Key do Google Drive não encontrada na tabela apis');
+        return;
+      }
 
       if (data?.api_key) {
         setApiKey(data.api_key);
-        console.log('✅ Google Drive API Key carregada');
+        console.log('✅ Google Drive API Key carregada com sucesso');
       } else {
+        console.warn('⚠️ API Key não encontrada no resultado');
         setError('API Key do Google Drive não encontrada na tabela apis');
       }
     } catch (err) {
-      console.error('Erro ao carregar API Key:', err);
+      console.error('❌ Erro ao carregar API Key:', err);
       setError('Erro ao carregar API Key do Google Drive');
     } finally {
       setLoadingApiKey(false);
+      console.log('✅ Loading API Key finalizado');
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApi } from '@shared/hooks';
 import { apiService } from '@shared/services';
 import { DashboardHeader } from '@features/dashboard/components';
+import { DriveVideoSelector } from '@features/content-generation/components';
 import { Plus, Edit2, Save, X, FileText, Mic, Image as ImageIcon, Loader2, ChevronDown, Play, Square, Search, Check, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase, Canal } from '@shared/lib';
 
@@ -140,6 +141,9 @@ export default function GenerateContentV2Page() {
   // Video Upload State (for video-to-video method)
   const [uploadedVideos, setUploadedVideos] = useState<VideoItem[]>([]);
   const [dragOverTitleId, setDragOverTitleId] = useState<string | null>(null);
+
+  // Drive Video Selection State
+  const [selectedDriveVideoUrls, setSelectedDriveVideoUrls] = useState<string[]>([]);
 
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -1001,13 +1005,9 @@ export default function GenerateContentV2Page() {
         const voiceIdHash = selectedVoice?.voice_id;
 
         if (videoGenerationMethod === 'video-to-video') {
-          // Validação: todos os títulos devem ter vídeos
-          const titlesWithoutVideos = addedTitles.filter(
-            title => !uploadedVideos.find(v => v.titulo === title.text)
-          );
-
-          if (titlesWithoutVideos.length > 0) {
-            alert(`Por favor, faça upload de vídeos para todos os títulos. Faltam: ${titlesWithoutVideos.map(t => t.text).join(', ')}`);
+          // Validação: deve ter vídeos selecionados do Drive
+          if (selectedDriveVideoUrls.length === 0) {
+            alert('Por favor, selecione vídeos do banco do canal');
             setIsGeneratingContent(false);
             return;
           }
@@ -1018,15 +1018,15 @@ export default function GenerateContentV2Page() {
             return;
           }
 
-          // Payload vídeo-para-vídeo
-          // Nova estrutura: cada título tem seu próprio objeto media com vídeos
+          // Payload vídeo-para-vídeo usando Drive URLs
+          // Gera um payload para cada título adicionado
           payload = {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
             tipo_geracao: 'conteudo',
-            titulos: uploadedVideos.map(video => ({
-              titulo: video.titulo,
+            titulos: addedTitles.map(title => ({
+              titulo: title.text,
               media: {
                 audio: {
                   voice_id: voiceIdHash,
@@ -1036,7 +1036,7 @@ export default function GenerateContentV2Page() {
                   type: "video",
                   generate: true,
                   caption: generateCaption,
-                  videos_base64: video.videos.map(v => v.base64)
+                  videos_url: selectedDriveVideoUrls
                 }
               }
             }))
@@ -1524,121 +1524,27 @@ export default function GenerateContentV2Page() {
         )}
 
         {/* ============================================ */}
-        {/* VIDEO UPLOAD SECTION (for video-to-video method) */}
+        {/* DRIVE VIDEO SELECTION SECTION (for video-to-video method) */}
         {/* ============================================ */}
 
         {generateVideo && videoGenerationMethod === 'video-to-video' && (
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Upload de Vídeos
-            </h2>
+            <h2 className="text-xl font-light text-white mb-4">Banco de Vídeos</h2>
 
             <p className="text-sm text-gray-400 mb-4">
-              Para cada título selecionado, faça upload dos vídeos correspondentes
+              Selecione os vídeos do banco do canal para geração de conteúdo
             </p>
 
-            {addedTitles.length === 0 ? (
+            {!selectedChannelId ? (
               <div className="text-center py-8 text-gray-500">
-                Adicione títulos primeiro para fazer upload de vídeos
+                Selecione um canal primeiro
               </div>
             ) : (
-              <div className="space-y-4">
-                {addedTitles.map((title) => {
-                  const existingVideo = uploadedVideos.find(v => v.titulo === title.text);
-
-                  return (
-                    <div key={title.id} className="bg-gray-800 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-white font-medium">{title.text}</h3>
-                        {existingVideo && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">
-                              {existingVideo.videos.length} vídeo(s)
-                            </span>
-                            <button
-                              onClick={() => handleRemoveAllVideos(existingVideo.id)}
-                              className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                              title="Remover todos os vídeos"
-                            >
-                              Limpar todos
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Video Thumbnails Grid */}
-                      {existingVideo && existingVideo.videos.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          {existingVideo.videos.map((video) => (
-                            <div key={video.id} className="relative group">
-                              <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-700">
-                                <img
-                                  src={video.thumbnail}
-                                  alt={video.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <button
-                                onClick={() => handleRemoveIndividualVideo(title.text, video.id)}
-                                className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                title={`Remover ${video.name}`}
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                                {video.name}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Upload Area */}
-                      <div
-                        className="w-full"
-                        onDragOver={handleDragOver}
-                        onDragEnter={(e) => handleDragEnter(e, title.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, title.text)}
-                      >
-                        <label className="block cursor-pointer">
-                          <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
-                            dragOverTitleId === title.id
-                              ? 'border-purple-400 bg-purple-500/20 scale-105'
-                              : 'border-gray-600 hover:border-purple-500 bg-gray-700/50'
-                          }`}>
-                            <input
-                              type="file"
-                              accept="video/*"
-                              multiple
-                              onChange={(e) => handleVideoFilesChange(e.target.files, title.text)}
-                              className="hidden"
-                            />
-                            <Upload className={`w-5 h-5 mx-auto mb-1 transition-colors ${
-                              dragOverTitleId === title.id
-                                ? 'text-purple-400'
-                                : 'text-gray-400'
-                            }`} />
-                            <p className={`text-xs font-medium ${
-                              dragOverTitleId === title.id
-                                ? 'text-purple-300'
-                                : 'text-gray-300'
-                            }`}>
-                              {dragOverTitleId === title.id
-                                ? 'Solte os vídeos aqui'
-                                : existingVideo
-                                  ? 'Adicionar mais vídeos'
-                                  : 'Selecione ou arraste vídeos'
-                              }
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <DriveVideoSelector
+                driveUrl={channels.find(c => c.id.toString() === selectedChannelId)?.drive_url || ''}
+                onSelectionChange={(urls) => setSelectedDriveVideoUrls(urls)}
+                initialSelectedUrls={selectedDriveVideoUrls}
+              />
             )}
           </div>
         )}
