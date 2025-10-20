@@ -23,6 +23,7 @@ export interface VideoWithChannel {
   channelId: number;
   channelName: string;
   channelProfileImage: string;
+  caption?: string;
 }
 
 export function useVideosWithChannels() {
@@ -47,6 +48,7 @@ export function useVideosWithChannels() {
           thumb_path,
           created_at,
           data_publicar,
+          caption,
           roteiros!inner (
             id,
             titulo,
@@ -79,7 +81,8 @@ export function useVideosWithChannels() {
           scheduledDate: video.data_publicar,
           channelId: video.roteiros?.canais?.id || 0,
           channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
-          channelProfileImage: video.roteiros?.canais?.profile_image || ''
+          channelProfileImage: video.roteiros?.canais?.profile_image || '',
+          caption: video.caption || undefined
         };
       });
 

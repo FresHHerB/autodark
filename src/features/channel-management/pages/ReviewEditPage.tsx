@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw, Upload, Subtitles } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VideoPlayer } from '@shared/components/modals';
 import { useVideosWithChannels, VideoStatus, VideoWithChannel } from '@features/channel-management/hooks';
@@ -314,6 +314,16 @@ export default function ReviewEditPage() {
 
           {!isProcessing && !isDragOver && !isUploading && (
             <div className="absolute inset-0 bg-black/20 hover:bg-black/10 transition-colors" />
+          )}
+
+          {/* Caption Indicator */}
+          {video.caption && (
+            <div className="absolute bottom-2 left-2 z-10">
+              <div className="bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
+                <Subtitles className="w-3 h-3 text-white" />
+                <span className="text-white text-[10px] font-medium">CC</span>
+              </div>
+            </div>
           )}
         </div>
 
