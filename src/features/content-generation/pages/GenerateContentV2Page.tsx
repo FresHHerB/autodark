@@ -255,6 +255,33 @@ export default function GenerateContentV2Page() {
     }
   }, [showVoiceDropdown]);
 
+  // Sync title idioma with content idioma (bi-directional)
+  useEffect(() => {
+    const titleToContentMap: Record<string, string> = {
+      'pt-br': 'Português-Brasil',
+      'en': 'English',
+      'es': 'Spanish'
+    };
+
+    const mappedIdioma = titleToContentMap[titleIdioma];
+    if (mappedIdioma && mappedIdioma !== contentIdioma) {
+      setContentIdioma(mappedIdioma);
+    }
+  }, [titleIdioma]);
+
+  useEffect(() => {
+    const contentToTitleMap: Record<string, string> = {
+      'Português-Brasil': 'pt-br',
+      'English': 'en',
+      'Spanish': 'es'
+    };
+
+    const mappedIdioma = contentToTitleMap[contentIdioma];
+    if (mappedIdioma && mappedIdioma !== titleIdioma) {
+      setTitleIdioma(mappedIdioma);
+    }
+  }, [contentIdioma]);
+
   // ============================================
   // DATA LOADING FUNCTIONS
   // ============================================
