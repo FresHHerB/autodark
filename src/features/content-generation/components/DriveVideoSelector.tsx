@@ -124,7 +124,8 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
         const videoList: DriveVideo[] = data.files.map((file: any) => ({
           id: file.id,
           name: file.name,
-          thumbnailLink: file.thumbnailLink,
+          // Construct thumbnail URL manually as API doesn't always return it
+          thumbnailLink: file.thumbnailLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w320`,
           size: file.size,
           duration: file.videoMediaMetadata?.durationMillis,
           mimeType: file.mimeType,
