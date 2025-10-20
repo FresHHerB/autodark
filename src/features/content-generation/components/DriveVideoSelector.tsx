@@ -284,10 +284,10 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
         </div>
       </div>
 
-      {/* Video Grid - 6 per row, 4 rows visible with scroll */}
+      {/* Video Grid - 6 per row, 3 rows visible with scroll */}
       <div
         className="grid grid-cols-6 gap-3 overflow-y-auto pr-2"
-        style={{ maxHeight: '480px' }} // 4 rows approximately
+        style={{ maxHeight: '360px' }} // 3 rows approximately
       >
         {videos.map((video) => {
           const isSelected = selectedVideoIds.has(video.id);
