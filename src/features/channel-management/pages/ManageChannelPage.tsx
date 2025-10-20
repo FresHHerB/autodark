@@ -277,7 +277,7 @@ export default function ManageChannelPage() {
               Meus Canais ({channels.length})
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {channels.map((canal) => (
                 <div
                   key={canal.id}
@@ -502,7 +502,7 @@ export default function ManageChannelPage() {
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {activeTab === 'general' && (
                 <div className="p-8">
-                  <div className="max-w-5xl mx-auto space-y-8">
+                  <div className="max-w-7xl mx-auto space-y-8">
                     {/* Google Drive Link Card */}
                     <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                       <div className="mb-6">
@@ -586,7 +586,7 @@ export default function ManageChannelPage() {
                         </p>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-6">
                         {/* Prompt Título */}
                         <div>
                           <label className="block text-white font-medium mb-3 text-sm">
@@ -601,15 +601,15 @@ export default function ManageChannelPage() {
                               prev ? { ...prev, prompt_titulo: e.target.value } : null
                             )}
                             className="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 resize-none rounded transition-all"
-                            rows={4}
+                            rows={12}
                             placeholder="Ex: Gere um título chamativo e envolvente sobre [tema] que incentive cliques..."
                           />
                           <div className="mt-2 flex items-center justify-between">
                             <p className="text-xs text-gray-500">
-                              Use variáveis como [tema] para personalizar
+                              Use variáveis como [tema]
                             </p>
                             <p className="text-xs text-gray-500">
-                              {selectedChannelForModal.prompt_titulo.length} caracteres
+                              {selectedChannelForModal.prompt_titulo.length} chars
                             </p>
                           </div>
                         </div>
@@ -628,15 +628,15 @@ export default function ManageChannelPage() {
                               prev ? { ...prev, prompt_roteiro: e.target.value } : null
                             )}
                             className="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 resize-none rounded transition-all"
-                            rows={8}
+                            rows={12}
                             placeholder="Ex: Crie um roteiro envolvente sobre [tema] com introdução impactante, desenvolvimento claro e conclusão marcante..."
                           />
                           <div className="mt-2 flex items-center justify-between">
                             <p className="text-xs text-gray-500">
-                              Seja específico sobre tom, estrutura e estilo
+                              Seja específico sobre tom e estilo
                             </p>
                             <p className="text-xs text-gray-500">
-                              {selectedChannelForModal.prompt_roteiro.length} caracteres
+                              {selectedChannelForModal.prompt_roteiro.length} chars
                             </p>
                           </div>
                         </div>
