@@ -378,22 +378,27 @@ export default function GenerateVideoPage() {
           </div>
         )}
 
-        {/* Caption Configuration and Generate Button */}
+        {/* Generate Section */}
         {selectedRoteiros.size > 0 && (
-          <>
-            {/* Caption Toggle Section */}
-            <div className="bg-gray-900 border border-gray-800 p-6 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-light text-white mb-1">Gerar Legendas</h3>
-                  <p className="text-sm text-gray-400">
-                    Ative para adicionar legendas aos vídeos
-                  </p>
-                </div>
+          <div className="bg-gray-900 border border-gray-800 p-6 sticky bottom-0 z-10">
+            <div className="flex items-center justify-between gap-6">
+              {/* Left: Selection Info */}
+              <div className="text-white">
+                <p className="text-sm font-medium text-white mb-0.5">
+                  {selectedRoteiros.size} roteiro{selectedRoteiros.size > 1 ? 's' : ''} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Pronto para gerar vídeos
+                </p>
+              </div>
+
+              {/* Center: Caption Toggle */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-300 font-medium">Legendas</span>
                 <button
                   onClick={() => setGenerateCaption(!generateCaption)}
                   className={`
-                    relative w-16 h-8 rounded-full transition-all duration-300
+                    relative w-14 h-7 rounded-full transition-all duration-300
                     ${generateCaption
                       ? 'bg-purple-600'
                       : 'bg-gray-700'
@@ -401,47 +406,34 @@ export default function GenerateVideoPage() {
                   `}
                 >
                   <div className={`
-                    absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300
-                    ${generateCaption ? 'translate-x-8' : 'translate-x-0'}
+                    absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-300
+                    ${generateCaption ? 'translate-x-7' : 'translate-x-0'}
                   `} />
                 </button>
               </div>
-            </div>
 
-            {/* Generate Button */}
-            <div className="bg-gray-900 border border-gray-800 p-6 sticky bottom-0 z-10">
-              <div className="flex items-center justify-between gap-6">
-                <div className="text-white">
-                  <p className="text-sm text-gray-400 mb-1">
-                    {selectedRoteiros.size} roteiro{selectedRoteiros.size > 1 ? 's' : ''} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Pronto para gerar vídeos
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleGenerateVideos}
-                  disabled={isGenerating}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg font-medium"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Gerando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5" />
-                      <span>
-                        Gerar {selectedRoteiros.size} Vídeo{selectedRoteiros.size > 1 ? 's' : ''}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
+              {/* Right: Generate Button */}
+              <button
+                onClick={handleGenerateVideos}
+                disabled={isGenerating}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg font-medium"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Gerando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    <span>
+                      Gerar {selectedRoteiros.size} Vídeo{selectedRoteiros.size > 1 ? 's' : ''}
+                    </span>
+                  </>
+                )}
+              </button>
             </div>
-          </>
+          </div>
         )}
 
         {!selectedChannel && !isLoadingChannels && (
