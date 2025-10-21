@@ -621,8 +621,8 @@ export default function ViewScriptsPage() {
                         <span>{script.images_path.length} imgs</span>
                       </span>
                     )}
-                    {script.video_id && (
-                      <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-500/20 text-green-200 text-[10px] rounded">
+                    {script.status === 'video_gerado' && (
+                      <span className="flex items-center space-x-1 px-1.5 py-0.5 bg-cyan-500/20 text-cyan-200 text-[10px] rounded">
                         <Video className="w-2.5 h-2.5" />
                         <span>Vídeo</span>
                       </span>
