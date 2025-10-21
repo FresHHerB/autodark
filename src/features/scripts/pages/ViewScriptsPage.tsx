@@ -45,7 +45,7 @@ export default function ViewScriptsPage() {
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [filterChannel, setFilterChannel] = useState<string>('');
   const [channels, setChannels] = useState<{id: number, nome_canal: string, profile_image: string | null}[]>([]);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'with_audio' | 'with_images' | 'with_video' | 'gerando_roteiro' | 'roteiro_gerado' | 'gerando_audio' | 'audio_gerado' | 'gerando_imagens' | 'imagens_geradas'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'with_audio' | 'with_images' | 'with_video' | 'gerando_roteiro' | 'roteiro_gerado' | 'gerando_audio' | 'audio_gerado' | 'gerando_imagens' | 'imagens_geradas' | 'conteudo_gerado'>('all');
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
   // Image regeneration states
@@ -304,6 +304,7 @@ export default function ViewScriptsPage() {
       'audio_gerado': { text: 'Áudio Gerado', bgClass: 'bg-blue-500/20', textClass: 'text-blue-300', icon: Mic },
       'gerando_imagens': { text: 'Gerando Imagens', bgClass: 'bg-purple-500/20', textClass: 'text-purple-300', icon: Loader2 },
       'imagens_geradas': { text: 'Imagens Geradas', bgClass: 'bg-purple-500/20', textClass: 'text-purple-300', icon: ImageIcon },
+      'conteudo_gerado': { text: 'Conteúdo Gerado', bgClass: 'bg-emerald-500/20', textClass: 'text-emerald-300', icon: CheckCircle },
     };
 
     return statusMap[status || ''] || { text: 'Status Desconhecido', bgClass: 'bg-gray-500/20', textClass: 'text-gray-300', icon: AlertCircle };
@@ -491,6 +492,7 @@ export default function ViewScriptsPage() {
                   <option value="audio_gerado">🎵 Áudio Gerado</option>
                   <option value="gerando_imagens">🔄 Gerando Imagens</option>
                   <option value="imagens_geradas">🖼️ Imagens Geradas</option>
+                  <option value="conteudo_gerado">✅ Conteúdo Gerado</option>
                 </optgroup>
                 <optgroup label="Por Conteúdo">
                   <option value="with_audio">Com Áudio</option>
