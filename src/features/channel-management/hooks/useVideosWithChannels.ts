@@ -19,7 +19,6 @@ export interface VideoWithChannel {
   status: VideoStatus;
   progress?: number;
   createdAt: string;
-  scheduledDate?: string;
   channelId: number;
   channelName: string;
   channelProfileImage: string;
@@ -47,7 +46,6 @@ export function useVideosWithChannels() {
           video_path,
           thumb_path,
           created_at,
-          data_publicar,
           caption,
           roteiros!inner (
             id,
@@ -78,7 +76,6 @@ export function useVideosWithChannels() {
           videoUrl: video.video_path || undefined,
           status: video.status as VideoStatus,
           createdAt: video.created_at,
-          scheduledDate: video.data_publicar,
           channelId: video.roteiros?.canais?.id || 0,
           channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
           channelProfileImage: video.roteiros?.canais?.profile_image || '',

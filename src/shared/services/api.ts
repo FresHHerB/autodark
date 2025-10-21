@@ -195,7 +195,6 @@ class ApiService {
   async generateVideos(payload: {
     videos: Array<{
       id: number;
-      data_publicar: string; // timestamptz format: "2025-10-12T14:30:00-03:00"
       zoom_types: string[]; // Array of zoom types: ["zoomin", "zoomout", "zoompanright"]
     }>;
   }) {

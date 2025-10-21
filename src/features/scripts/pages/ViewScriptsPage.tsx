@@ -35,7 +35,6 @@ interface Script {
   video_id: number | null;
   video_status: string | null;
   video_path: string | null;
-  data_publicar: string | null;
   thumb_path: string | null;
 }
 
@@ -133,7 +132,7 @@ export default function ViewScriptsPage() {
       // Load videos
       const { data: videosData } = await supabase
         .from('videos')
-        .select('id, status, video_path, data_publicar, thumb_path');
+        .select('id, status, video_path, thumb_path');
 
       const channelsMap = new Map(channelsData?.map(c => [c.id, { nome: c.nome_canal, profileImage: c.profile_image }]) || []);
       const videosMap = new Map(videosData?.map(v => [v.id, v]) || []);
@@ -145,7 +144,6 @@ export default function ViewScriptsPage() {
         video_id: videosMap.has(script.id) ? script.id : null,
         video_status: videosMap.get(script.id)?.status || null,
         video_path: videosMap.get(script.id)?.video_path || null,
-        data_publicar: videosMap.get(script.id)?.data_publicar || null,
         thumb_path: videosMap.get(script.id)?.thumb_path || null,
       }));
 
@@ -974,17 +972,11 @@ export default function ViewScriptsPage() {
                       <Video className="w-5 h-5 mr-2 text-green-400" />
                       Informações do Vídeo
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
                         <div className="text-gray-400 text-sm mb-1">Status</div>
                         <div className="text-white">{selectedScript.video_status || 'Não definido'}</div>
                       </div>
-                      {selectedScript.data_publicar && (
-                        <div>
-                          <div className="text-gray-400 text-sm mb-1">Data de Publicação</div>
-                          <div className="text-white">{formatDate(selectedScript.data_publicar)}</div>
-                        </div>
-                      )}
                     </div>
                     {selectedScript.video_path && (
                       <div className="mt-4 flex items-center gap-3">
