@@ -166,16 +166,14 @@ export default function GenerateVideoPage() {
     try {
       setIsGenerating(true);
 
-      // Build payload with new structure
+      // Build payload with global video config
       const payload = {
-        roteiros: Array.from(selectedRoteiros).map(id_roteiro => ({
-          id_roteiro,
-          video: {
-            type: "imagem",
-            generate: true,
-            caption: generateCaption
-          }
-        }))
+        id_roteiro: Array.from(selectedRoteiros),
+        video: {
+          type: "imagem",
+          generate: true,
+          caption: generateCaption
+        }
       };
 
       console.log('Enviando payload:', payload);
