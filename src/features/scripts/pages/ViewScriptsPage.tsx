@@ -313,21 +313,12 @@ export default function ViewScriptsPage() {
   };
 
   const getStatusBadge = (script: Script) => {
-    if (script.video_id) {
-      const statusMap: {[key: string]: {color: string, icon: any, text: string}} = {
-        'publicado': { color: 'green', icon: CheckCircle, text: 'Publicado' },
-        'agendado': { color: 'blue', icon: Clock, text: 'Agendado' },
-        'processando': { color: 'yellow', icon: AlertCircle, text: 'Processando' },
-        'erro': { color: 'red', icon: XCircle, text: 'Erro' },
-      };
-
-      const status = statusMap[script.video_status || 'processando'] || statusMap['processando'];
-      const Icon = status.icon;
-
+    // Show video badge if status is video_gerado
+    if (script.status === 'video_gerado' || script.video_id) {
       return (
-        <span className={`flex items-center space-x-0.5 px-1.5 py-0.5 bg-${status.color}-500/20 text-${status.color}-200 text-[10px] rounded-full`}>
-          <Icon className="w-2.5 h-2.5" />
-          <span>{status.text}</span>
+        <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-cyan-500/20 text-cyan-200 text-[10px] rounded-full">
+          <Video className="w-2.5 h-2.5" />
+          <span>Com Vídeo</span>
         </span>
       );
     }
