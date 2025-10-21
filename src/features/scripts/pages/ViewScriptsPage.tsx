@@ -313,8 +313,8 @@ export default function ViewScriptsPage() {
   };
 
   const getStatusBadge = (script: Script) => {
-    // Show video badge if status is video_gerado
-    if (script.status === 'video_gerado' || script.video_id) {
+    // Show video badge ONLY when video is completed (status = video_gerado)
+    if (script.status === 'video_gerado') {
       return (
         <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-cyan-500/20 text-cyan-200 text-[10px] rounded-full">
           <Video className="w-2.5 h-2.5" />
@@ -323,6 +323,7 @@ export default function ViewScriptsPage() {
       );
     }
 
+    // Show images badge when images are available (but video is not completed yet)
     if (script.images_path && script.images_path.length > 0) {
       return (
         <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-purple-500/20 text-purple-200 text-[10px] rounded-full">
@@ -332,6 +333,7 @@ export default function ViewScriptsPage() {
       );
     }
 
+    // Show audio badge when audio is available (but no images)
     if (script.audio_path) {
       return (
         <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-indigo-500/20 text-indigo-200 text-[10px] rounded-full">
