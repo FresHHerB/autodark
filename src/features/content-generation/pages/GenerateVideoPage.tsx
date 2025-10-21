@@ -49,8 +49,7 @@ export default function GenerateVideoPage() {
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [isLoadingRoteiros, setIsLoadingRoteiros] = useState(false);
   const [selectedRoteiros, setSelectedRoteiros] = useState<Set<number>>(new Set());
-  const [schedules, setSchedules] = useState<Map<number, VideoSchedule>>(new Map());
-  const [zoomTypes, setZoomTypes] = useState<Map<number, string[]>>(new Map());
+  const [generateCaption, setGenerateCaption] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const selectedChannel = channels.find(c => c.id === selectedChannelId);
@@ -140,8 +139,6 @@ export default function GenerateVideoPage() {
     setSelectedChannelId(id || null);
     setRoteiros([]);
     setSelectedRoteiros(new Set());
-    setSchedules(new Map());
-    setZoomTypes(new Map());
 
     if (id) {
       fetchRoteiros(id);
@@ -153,80 +150,11 @@ export default function GenerateVideoPage() {
       const newSet = new Set(prev);
       if (newSet.has(roteiroId)) {
         newSet.delete(roteiroId);
-        // Remove schedule and zoom types when deselecting
-        setSchedules(prevSchedules => {
-          const newSchedules = new Map(prevSchedules);
-          newSchedules.delete(roteiroId);
-          return newSchedules;
-        });
-        setZoomTypes(prevZoomTypes => {
-          const newZoomTypes = new Map(prevZoomTypes);
-          newZoomTypes.delete(roteiroId);
-          return newZoomTypes;
-        });
       } else {
         newSet.add(roteiroId);
-        // Initialize schedule with current date/time
-        const now = new Date();
-        const timezoneOffset = 3 * 60; // GMT-3 in minutes
-        const localTime = new Date(now.getTime() - timezoneOffset * 60000);
-
-        setSchedules(prevSchedules => {
-          const newSchedules = new Map(prevSchedules);
-          newSchedules.set(roteiroId, {
-            id: roteiroId,
-            data: localTime.toISOString().split('T')[0],
-            hora: localTime.toTimeString().slice(0, 5)
-          });
-          return newSchedules;
-        });
-
-        // Initialize with all zoom types selected by default
-        setZoomTypes(prevZoomTypes => {
-          const newZoomTypes = new Map(prevZoomTypes);
-          newZoomTypes.set(roteiroId, ['zoomin', 'zoomout', 'zoompanright']);
-          return newZoomTypes;
-        });
       }
       return newSet;
     });
-  };
-
-  const updateSchedule = (roteiroId: number, field: 'data' | 'hora', value: string) => {
-    setSchedules(prevSchedules => {
-      const newSchedules = new Map(prevSchedules);
-      const current = newSchedules.get(roteiroId);
-      if (current) {
-        newSchedules.set(roteiroId, {
-          ...current,
-          [field]: value
-        });
-      }
-      return newSchedules;
-    });
-  };
-
-  const toggleZoomType = (roteiroId: number, zoomType: string) => {
-    setZoomTypes(prevZoomTypes => {
-      const newZoomTypes = new Map(prevZoomTypes);
-      const current = newZoomTypes.get(roteiroId) || [];
-
-      if (current.includes(zoomType)) {
-        // Remove if already selected
-        newZoomTypes.set(roteiroId, current.filter(t => t !== zoomType));
-      } else {
-        // Add if not selected
-        newZoomTypes.set(roteiroId, [...current, zoomType]);
-      }
-
-      return newZoomTypes;
-    });
-  };
-
-  // Convert date and time to timestamptz format (ISO 8601 with GMT-3)
-  const getTimestamptz = (data: string, hora: string): string => {
-    // Combine date and time: "2025-10-12" + "14:30" = "2025-10-12T14:30:00-03:00"
-    return `${data}T${hora}:00-03:00`;
   };
 
   const handleGenerateVideos = async () => {
@@ -235,45 +163,33 @@ export default function GenerateVideoPage() {
       return;
     }
 
-    // Validate schedules
-    for (const roteiroId of selectedRoteiros) {
-      const schedule = schedules.get(roteiroId);
-      if (!schedule || !schedule.data || !schedule.hora) {
-        alert('Preencha data e hora de agendamento para todos os roteiros selecionados');
-        return;
-      }
-    }
-
     try {
       setIsGenerating(true);
 
-      // Build payload with timestamptz format and zoom types
-      const videos = Array.from(selectedRoteiros).map(roteiroId => {
-        const schedule = schedules.get(roteiroId)!;
-        const zoom = zoomTypes.get(roteiroId) || [];
-        return {
-          id: roteiroId,
-          data_publicar: getTimestamptz(schedule.data, schedule.hora),
-          zoom_types: zoom
-        };
-      });
-
-      const payload = { videos };
+      // Build payload with new structure
+      const payload = {
+        roteiros: Array.from(selectedRoteiros).map(id_roteiro => ({
+          id_roteiro,
+          video: {
+            type: "imagem",
+            generate: true,
+            caption: generateCaption
+          }
+        }))
+      };
 
       console.log('Enviando payload:', payload);
 
       // Call webhook
       await apiService.generateVideos(payload);
 
-      alert(`${selectedRoteiros.size} vídeo(s) agendado(s) com sucesso!`);
+      alert(`${selectedRoteiros.size} vídeo(s) enviado(s) para geração com sucesso!`);
 
       // Reset selections
       setSelectedRoteiros(new Set());
-      setSchedules(new Map());
-      setZoomTypes(new Map());
     } catch (error) {
       console.error('Erro ao gerar vídeos:', error);
-      alert('Erro ao agendar vídeos. Verifique o console para mais detalhes.');
+      alert('Erro ao gerar vídeos. Verifique o console para mais detalhes.');
     } finally {
       setIsGenerating(false);
     }
@@ -397,8 +313,6 @@ export default function GenerateVideoPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {roteiros.map((roteiro) => {
                   const isSelected = selectedRoteiros.has(roteiro.id);
-                  const schedule = schedules.get(roteiro.id);
-                  const selectedZoomTypes = zoomTypes.get(roteiro.id) || [];
 
                   return (
                     <div
@@ -455,67 +369,6 @@ export default function GenerateVideoPage() {
                           </div>
                         </div>
 
-                        {/* Schedule Box - Only visible when selected */}
-                        {isSelected && schedule && (
-                          <div
-                            className="mt-auto p-3 bg-gray-900 border border-gray-700 rounded"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <Clock className="w-3.5 h-3.5 text-blue-400" />
-                              <h4 className="text-white text-xs font-medium">
-                                Agendamento (GMT-3)
-                              </h4>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              <div>
-                                <label className="block text-gray-400 text-xs mb-1">
-                                  Data
-                                </label>
-                                <input
-                                  type="date"
-                                  value={schedule.data}
-                                  onChange={(e) => updateSchedule(roteiro.id, 'data', e.target.value)}
-                                  className="w-full bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-xs rounded focus:outline-none focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-gray-400 text-xs mb-1">
-                                  Hora
-                                </label>
-                                <input
-                                  type="time"
-                                  value={schedule.hora}
-                                  onChange={(e) => updateSchedule(roteiro.id, 'hora', e.target.value)}
-                                  className="w-full bg-gray-800 border border-gray-700 text-white px-2 py-1.5 text-xs rounded focus:outline-none focus:border-blue-500"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Zoom Types */}
-                            <div className="border-t border-gray-700 pt-3">
-                              <label className="block text-gray-400 text-xs mb-2">
-                                Tipo de Zoom:
-                              </label>
-                              <div className="flex flex-wrap gap-3">
-                                {ZOOM_OPTIONS.map((option) => (
-                                  <label
-                                    key={option.value}
-                                    className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedZoomTypes.includes(option.value)}
-                                      onChange={() => toggleZoomType(roteiro.id, option.value)}
-                                      className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                                    />
-                                    <span className="text-gray-300 text-xs">{option.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -528,15 +381,29 @@ export default function GenerateVideoPage() {
         {/* Generate Button */}
         {selectedRoteiros.size > 0 && (
           <div className="bg-gray-900 border border-gray-800 p-6 sticky bottom-0 z-10">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-6">
               <div className="text-white">
                 <p className="text-sm text-gray-400 mb-1">
                   {selectedRoteiros.size} roteiro{selectedRoteiros.size > 1 ? 's' : ''} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Verifique os agendamentos antes de confirmar
+                  Pronto para gerar vídeos
                 </p>
               </div>
+
+              {/* Caption Toggle */}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={generateCaption}
+                    onChange={(e) => setGenerateCaption(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                  />
+                  <span className="text-sm text-gray-300">Gerar Legendas</span>
+                </label>
+              </div>
+
               <button
                 onClick={handleGenerateVideos}
                 disabled={isGenerating}
@@ -545,7 +412,7 @@ export default function GenerateVideoPage() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Agendando...</span>
+                    <span>Gerando...</span>
                   </>
                 ) : (
                   <>
