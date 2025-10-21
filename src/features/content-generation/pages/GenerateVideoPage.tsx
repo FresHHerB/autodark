@@ -378,60 +378,76 @@ export default function GenerateVideoPage() {
           </div>
         )}
 
-        {/* Generate Section */}
+        {/* Generate Section - Modern Design */}
         {selectedRoteiros.size > 0 && (
-          <div className="bg-gray-900 border border-gray-800 p-6 sticky bottom-0 z-10">
-            <div className="flex items-center justify-between gap-6">
-              {/* Left: Selection Info */}
-              <div className="text-white">
-                <p className="text-sm font-medium text-white mb-0.5">
-                  {selectedRoteiros.size} roteiro{selectedRoteiros.size > 1 ? 's' : ''} selecionado{selectedRoteiros.size > 1 ? 's' : ''}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Pronto para gerar vídeos
-                </p>
-              </div>
+          <div className="sticky bottom-4 z-10">
+            <div className="bg-gradient-to-r from-gray-900 via-gray-900 to-gray-900 border border-gray-800 rounded-xl shadow-2xl backdrop-blur-sm">
+              <div className="p-6">
+                <div className="flex items-center gap-6">
+                  {/* Left: Selection Summary Card */}
+                  <div className="flex items-center gap-4 px-5 py-3 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-lg flex-1">
+                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {selectedRoteiros.size} {selectedRoteiros.size === 1 ? 'Roteiro' : 'Roteiros'}
+                      </p>
+                      <p className="text-xs text-blue-300">
+                        Pronto{selectedRoteiros.size > 1 ? 's' : ''} para geração
+                      </p>
+                    </div>
+                  </div>
 
-              {/* Center: Caption Toggle */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-300 font-medium">Legendas</span>
-                <button
-                  onClick={() => setGenerateCaption(!generateCaption)}
-                  className={`
-                    relative w-14 h-7 rounded-full transition-all duration-300
-                    ${generateCaption
-                      ? 'bg-purple-600'
-                      : 'bg-gray-700'
-                    }
-                  `}
-                >
-                  <div className={`
-                    absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-300
-                    ${generateCaption ? 'translate-x-7' : 'translate-x-0'}
-                  `} />
-                </button>
-              </div>
+                  {/* Center: Caption Toggle Card */}
+                  <div className="px-6 py-3 bg-gray-800/60 border border-gray-700 rounded-lg hover:border-purple-500/50 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-white">Legendas</span>
+                        <span className="text-xs text-gray-400">
+                          {generateCaption ? 'Ativado' : 'Desativado'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setGenerateCaption(!generateCaption)}
+                        className={`
+                          relative w-14 h-7 rounded-full transition-all duration-300 shadow-inner
+                          ${generateCaption
+                            ? 'bg-purple-600 shadow-purple-600/50'
+                            : 'bg-gray-600'
+                          }
+                        `}
+                      >
+                        <div className={`
+                          absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300
+                          ${generateCaption ? 'translate-x-7' : 'translate-x-0'}
+                        `} />
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Right: Generate Button */}
-              <button
-                onClick={handleGenerateVideos}
-                disabled={isGenerating}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg font-medium"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Gerando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5" />
-                    <span>
-                      Gerar {selectedRoteiros.size} Vídeo{selectedRoteiros.size > 1 ? 's' : ''}
-                    </span>
-                  </>
-                )}
-              </button>
+                  {/* Right: Generate Button */}
+                  <button
+                    onClick={handleGenerateVideos}
+                    disabled={isGenerating}
+                    className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 group"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Gerando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <span>
+                          Gerar {selectedRoteiros.size === 1 ? 'Vídeo' : `${selectedRoteiros.size} Vídeos`}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
