@@ -87,11 +87,12 @@ export default function GenerateVideoPage() {
     try {
       setIsLoadingRoteiros(true);
 
-      // Buscar roteiros com audio_path e images_path
+      // Buscar roteiros com status 'conteudo_gerado'
       const { data: roteirosData, error: roteirosError } = await supabase
         .from('roteiros')
         .select('*')
         .eq('canal_id', canalId)
+        .eq('status', 'conteudo_gerado')
         .not('audio_path', 'is', null)
         .not('images_path', 'is', null)
         .not('transcricao_timestamp', 'is', null)
