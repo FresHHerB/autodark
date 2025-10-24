@@ -1870,15 +1870,14 @@ export default function GenerateContentV2Page() {
         </div>
 
         {/* ============================================ */}
-        {/* SECTION 4: AUDIO CONFIGURATION (Conditional) */}
+        {/* SECTION 4: AUDIO CONFIGURATION (Always shown) */}
         {/* ============================================ */}
 
-        {(!generateVideo || (generateVideo && videoGenerationMethod === 'image-to-video')) && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
-              <Mic className="w-5 h-5" />
-              Configuração de Áudio
-            </h2>
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
+            <Mic className="w-5 h-5" />
+            Configuração de Áudio
+          </h2>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Voice Selection */}
@@ -2082,8 +2081,7 @@ export default function GenerateContentV2Page() {
                 })()}
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
         {/* ============================================ */}
         {/* SECTION 5: IMAGE CONFIGURATION (Conditional) */}
