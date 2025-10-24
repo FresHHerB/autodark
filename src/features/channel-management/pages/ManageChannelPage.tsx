@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Video as VideoIcon, ExternalLink, X, Edit, Trash2, Loader2, Film, Music2 } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VoiceSelector } from '@features/content-generation/components';
 import { CaptionStyleEditor, CaptionStyleConfig, CompactImageUpload } from '../components';
@@ -93,6 +93,7 @@ export default function ManageChannelPage() {
         caption_style: captionStyleConfig,
         media_chars: selectedChannelForModal.media_chars || null,
         drive_url: selectedChannelForModal.drive_url || null,
+        trilha_url: selectedChannelForModal.trilha_url || null,
       });
 
       // Also update in Supabase for local persistence
@@ -105,6 +106,7 @@ export default function ManageChannelPage() {
           caption_style: captionStyleConfig,
           media_chars: selectedChannelForModal.media_chars || null,
           drive_url: selectedChannelForModal.drive_url || null,
+          trilha_url: selectedChannelForModal.trilha_url || null,
         })
         .eq('id', selectedChannelForModal.id);
 
@@ -503,33 +505,66 @@ export default function ManageChannelPage() {
               {activeTab === 'general' && (
                 <div className="p-8">
                   <div className="max-w-7xl mx-auto space-y-8">
-                    {/* Google Drive Link Card */}
+                    {/* Google Drive Links Card */}
                     <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                       <div className="mb-6">
                         <h3 className="text-lg font-medium text-white mb-2">
-                          Link do Google Drive
+                          Links do Google Drive
                         </h3>
                         <p className="text-sm text-gray-400">
-                          URL da pasta do Google Drive com o banco de vídeos do canal
+                          URLs das pastas do Google Drive com os bancos de mídia do canal
                         </p>
                       </div>
-                      <div>
-                        <label className="block text-gray-400 text-sm mb-2">
-                          URL da Pasta
-                        </label>
-                        <input
-                          type="text"
-                          value={selectedChannelForModal.drive_url || ''}
-                          onChange={(e) => setSelectedChannelForModal(prev =>
-                            prev ? { ...prev, drive_url: e.target.value } : null
-                          )}
-                          placeholder="https://drive.google.com/drive/folders/..."
-                          className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 rounded transition-all"
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          💡 Certifique-se de que a pasta está configurada como "Anyone with the link can view"
-                        </p>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Base de Vídeos */}
+                        <div>
+                          <label className="flex items-center gap-2 text-gray-400 text-sm font-medium mb-2">
+                            <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                              <Film className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <span>Base de Vídeos</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedChannelForModal.drive_url || ''}
+                            onChange={(e) => setSelectedChannelForModal(prev =>
+                              prev ? { ...prev, drive_url: e.target.value } : null
+                            )}
+                            placeholder="https://drive.google.com/drive/folders/..."
+                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 rounded transition-all"
+                          />
+                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+                            <span>📹</span>
+                            <span>Pasta contendo os vídeos para compilação</span>
+                          </p>
+                        </div>
+
+                        {/* Base de Trilha Sonora */}
+                        <div>
+                          <label className="flex items-center gap-2 text-gray-400 text-sm font-medium mb-2">
+                            <div className="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                              <Music2 className="w-4 h-4 text-purple-400" />
+                            </div>
+                            <span>Base de Trilha Sonora</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedChannelForModal.trilha_url || ''}
+                            onChange={(e) => setSelectedChannelForModal(prev =>
+                              prev ? { ...prev, trilha_url: e.target.value } : null
+                            )}
+                            placeholder="https://drive.google.com/drive/folders/..."
+                            className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 rounded transition-all"
+                          />
+                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+                            <span>🎵</span>
+                            <span>Pasta contendo as trilhas sonoras</span>
+                          </p>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-500 mt-4 bg-blue-900/20 border border-blue-800/30 rounded px-3 py-2">
+                        💡 Certifique-se de que ambas as pastas estão configuradas como "Anyone with the link can view"
+                      </p>
                     </div>
 
                     {/* Voice Configuration Card */}

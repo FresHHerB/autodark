@@ -72,6 +72,7 @@ export interface Canal {
   url_canal?: string;
   profile_image?: string | null;
   drive_url?: string | null;
+  trilha_url?: string | null;
   titulos?: any;
   roteiros?: any;
   caption_style?: any;
