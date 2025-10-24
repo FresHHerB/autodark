@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw, Upload, Subtitles } from 'lucide-react';
+import { ArrowLeft, Loader2, Film, Music, MessageSquare, CheckCircle, AlertCircle, Filter, X, Video, Trash2, RefreshCw, Upload, Subtitles, Image as ImageIcon, Mic } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { VideoPlayer } from '@shared/components/modals';
 import { useVideosWithChannels, VideoStatus, VideoWithChannel } from '@features/channel-management/hooks';
@@ -45,6 +45,25 @@ const statusConfig = {
     color: 'green',
     isProcessing: false
   }
+};
+
+// Script status labels for "gerando_conteudo" phase
+const getScriptStatusLabel = (scriptStatus: string | null | undefined): { text: string; icon: any } | null => {
+  if (!scriptStatus) return null;
+
+  const scriptStatusMap: {[key: string]: { text: string; icon: any }} = {
+    'gerando_roteiro': { text: 'Gerando Roteiro', icon: Loader2 },
+    'roteiro_gerado': { text: 'Roteiro Gerado', icon: CheckCircle },
+    'gerando_audio': { text: 'Gerando Áudio', icon: Loader2 },
+    'audio_gerado': { text: 'Áudio Gerado', icon: Mic },
+    'gerando_imagens': { text: 'Gerando Imagens', icon: Loader2 },
+    'imagens_geradas': { text: 'Imagens Geradas', icon: ImageIcon },
+    'conteudo_gerado': { text: 'Conteúdo Gerado', icon: CheckCircle },
+    'gerando_video': { text: 'Gerando Vídeo', icon: Loader2 },
+    'video_gerado': { text: 'Vídeo Gerado', icon: Video },
+  };
+
+  return scriptStatusMap[scriptStatus] || null;
 };
 
 export default function ReviewEditPage() {
@@ -343,6 +362,35 @@ export default function ReviewEditPage() {
           <h4 className="text-white text-sm font-medium leading-tight mb-2 line-clamp-2">
             {video.title}
           </h4>
+
+          {/* Script Status Label (only for specific statuses) */}
+          {video.status === 'gerando_conteudo' &&
+           video.scriptStatus &&
+           ['gerando_roteiro', 'gerando_imagens', 'gerando_audio'].includes(video.scriptStatus) &&
+           (() => {
+            const scriptStatusInfo = getScriptStatusLabel(video.scriptStatus);
+            if (!scriptStatusInfo) return null;
+
+            const StatusIcon = scriptStatusInfo.icon;
+
+            // Map status to colors (matching ViewScriptsPage)
+            const colorMap: {[key: string]: { bgClass: string; textClass: string }} = {
+              'gerando_roteiro': { bgClass: 'bg-yellow-500/20', textClass: 'text-yellow-300' },
+              'gerando_audio': { bgClass: 'bg-blue-500/20', textClass: 'text-blue-300' },
+              'gerando_imagens': { bgClass: 'bg-purple-500/20', textClass: 'text-purple-300' },
+            };
+
+            const colors = colorMap[video.scriptStatus] || { bgClass: 'bg-gray-500/20', textClass: 'text-gray-300' };
+
+            return (
+              <div className="mb-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-1 ${colors.bgClass} ${colors.textClass} text-[10px] rounded-full font-medium`}>
+                  <StatusIcon className="w-3 h-3 animate-spin" />
+                  <span>{scriptStatusInfo.text}</span>
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Date */}
           <div className="text-xs text-gray-500">

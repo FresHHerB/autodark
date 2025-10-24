@@ -23,6 +23,7 @@ export interface VideoWithChannel {
   channelName: string;
   channelProfileImage: string;
   caption?: string;
+  scriptStatus?: string | null;
 }
 
 export function useVideosWithChannels() {
@@ -50,6 +51,7 @@ export function useVideosWithChannels() {
           roteiros!inner (
             id,
             titulo,
+            status,
             canal_id,
             canais!inner (
               id,
@@ -79,7 +81,8 @@ export function useVideosWithChannels() {
           channelId: video.roteiros?.canais?.id || 0,
           channelName: video.roteiros?.canais?.nome_canal || 'Canal desconhecido',
           channelProfileImage: video.roteiros?.canais?.profile_image || '',
-          caption: video.caption || undefined
+          caption: video.caption || undefined,
+          scriptStatus: video.roteiros?.status || null
         };
       });
 
