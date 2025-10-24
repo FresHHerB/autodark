@@ -20,7 +20,9 @@
       "Bash(npm run lint)",
       "Bash(npm run dev:*)",
       "Bash(git restore:*)",
-      "WebSearch"
+      "WebSearch",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__list_network_requests"
     ],
     "deny": [],
     "ask": []

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApi } from '@shared/hooks';
 import { apiService } from '@shared/services';
 import { DashboardHeader } from '@features/dashboard/components';
-import { DriveVideoSelector, DriveVideo } from '@features/content-generation/components';
+import { DriveVideoSelector, DriveVideo, DriveAudioSelector, DriveAudio } from '@features/content-generation/components';
 import { Plus, Edit2, Save, X, FileText, Mic, Image as ImageIcon, Loader2, ChevronDown, Play, Square, Search, Check, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase, Canal } from '@shared/lib';
 
@@ -113,7 +113,7 @@ export default function GenerateContentV2Page() {
   const [generateImage, setGenerateImage] = useState<boolean>(false);
 
   // Model and Language
-  const [selectedModel, setSelectedModel] = useState<string>('GPT-5');
+  const [selectedModel, setSelectedModel] = useState<string>('Sonnet-4.5');
   const [contentIdioma, setContentIdioma] = useState<string>('Português-Brasil');
   const [isEditingIdioma, setIsEditingIdioma] = useState(false);
 
@@ -151,6 +151,16 @@ export default function GenerateContentV2Page() {
 
   // Map para armazenar número de vídeos aleatórios por título
   const [randomVideoCountByTitle, setRandomVideoCountByTitle] = useState<Record<string, number>>({});
+
+  // Drive Audio Selection State
+  // Map para armazenar trilha sonora selecionada por título
+  const [selectedAudioByTitle, setSelectedAudioByTitle] = useState<Record<string, string | null>>({});
+
+  // Map para armazenar áudios disponíveis por título
+  const [availableAudiosByTitle, setAvailableAudiosByTitle] = useState<Record<string, DriveAudio[]>>({});
+
+  // Map para armazenar db_offset por título (diferença de volume da trilha)
+  const [audioDbOffsetByTitle, setAudioDbOffsetByTitle] = useState<Record<string, number>>({});
 
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -1106,21 +1116,32 @@ export default function GenerateContentV2Page() {
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
             tipo_geracao: 'conteudo',
-            titulos: addedTitles.map(title => ({
-              titulo: title.text,
-              media: {
-                audio: {
-                  voice_id: voiceIdHash,
-                  speed: audioSpeed
-                },
-                video: {
-                  type: "video",
-                  generate: true,
-                  caption: generateCaption,
-                  videos_url: driveVideosByTitle[title.id] || []
-                }
+            titulos: addedTitles.map(title => {
+              // Construir objeto audio
+              const audioConfig: any = {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              };
+
+              // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
+              if (selectedAudioByTitle[title.id]) {
+                audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
               }
-            }))
+
+              return {
+                titulo: title.text,
+                media: {
+                  audio: audioConfig,
+                  video: {
+                    type: "video",
+                    generate: true,
+                    caption: generateCaption,
+                    videos_url: driveVideosByTitle[title.id] || []
+                  }
+                }
+              };
+            })
           };
         } else {
           // videoGenerationMethod === 'image-to-video'
@@ -1148,28 +1169,39 @@ export default function GenerateContentV2Page() {
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
             tipo_geracao: 'conteudo',
-            titulos: addedTitles.map(title => ({
-              titulo: title.text,
-              media: {
-                audio: {
-                  voice_id: voiceIdHash,
-                  speed: audioSpeed
-                },
-                imagem: {
-                  model_id: modelAir,
-                  style: imageStyle,
-                  style_detail: imageStyleDetail,
-                  width: imageWidth,
-                  height: imageHeight,
-                  n_imgs: numImages
-                },
-                video: {
-                  type: "imagem",
-                  generate: true,
-                  caption: generateCaption
-                }
+            titulos: addedTitles.map(title => {
+              // Construir objeto audio
+              const audioConfig: any = {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              };
+
+              // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
+              if (selectedAudioByTitle[title.id]) {
+                audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
               }
-            }))
+
+              return {
+                titulo: title.text,
+                media: {
+                  audio: audioConfig,
+                  imagem: {
+                    model_id: modelAir,
+                    style: imageStyle,
+                    style_detail: imageStyleDetail,
+                    width: imageWidth,
+                    height: imageHeight,
+                    n_imgs: numImages
+                  },
+                  video: {
+                    type: "imagem",
+                    generate: true,
+                    caption: generateCaption
+                  }
+                }
+              };
+            })
           };
         }
       }
@@ -1695,6 +1727,66 @@ export default function GenerateContentV2Page() {
                         ...prev,
                         [title.id]: videos
                       }));
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* DRIVE AUDIO SELECTION BY TITLE */}
+        {/* ============================================ */}
+
+        {generateVideo && addedTitles.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xl font-light text-white mb-4">Selecionar Trilha Sonora por Título</h2>
+
+            {addedTitles.map((title) => (
+              <div key={`audio-${title.id}`} className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-4">
+                {/* Título da Box */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-white">{title.text}</h3>
+                  <span className={`text-sm px-3 py-1 rounded ${
+                    selectedAudioByTitle[title.id]
+                      ? 'bg-green-600/20 text-green-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    {selectedAudioByTitle[title.id] ? '1 trilha selecionada' : 'Nenhuma trilha selecionada'}
+                  </span>
+                </div>
+
+                {/* DriveAudioSelector */}
+                {!selectedChannelId ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Selecione um canal primeiro
+                  </div>
+                ) : (
+                  <DriveAudioSelector
+                    driveUrl={
+                      channels.find((c) => c.id.toString() === selectedChannelId)
+                        ?.trilha_url || ''
+                    }
+                    onSelectionChange={(url) => {
+                      setSelectedAudioByTitle({
+                        ...selectedAudioByTitle,
+                        [title.id]: url,
+                      });
+                    }}
+                    initialSelectedUrl={selectedAudioByTitle[title.id] || null}
+                    onAudiosLoaded={(audios) => {
+                      setAvailableAudiosByTitle(prev => ({
+                        ...prev,
+                        [title.id]: audios
+                      }));
+                    }}
+                    dbOffset={audioDbOffsetByTitle[title.id] || 30}
+                    onDbOffsetChange={(dbOffset) => {
+                      setAudioDbOffsetByTitle({
+                        ...audioDbOffsetByTitle,
+                        [title.id]: dbOffset,
+                      });
                     }}
                   />
                 )}
