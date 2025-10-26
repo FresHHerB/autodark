@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { supabase } from '@shared/lib';
 import { apiService } from '@shared/services';
-import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2, ChevronDown, Check } from 'lucide-react';
+import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2, ChevronDown, Check, Copy } from 'lucide-react';
 import ImageLightbox from '@shared/components/modals/ImageLightbox';
 import VideoPlayer from '@shared/components/modals/VideoPlayer';
 
@@ -359,6 +359,38 @@ export default function ViewScriptsPage() {
     }).format(date);
   };
 
+  // Copy functions
+  const handleCopyTitle = (title: string) => {
+    navigator.clipboard.writeText(title).then(() => {
+      setSuccessMessage('Título copiado!');
+      setTimeout(() => setSuccessMessage(null), 2000);
+    }).catch(err => {
+      console.error('Erro ao copiar título:', err);
+      alert('Erro ao copiar título');
+    });
+  };
+
+  const handleCopyScript = (script: string) => {
+    navigator.clipboard.writeText(script).then(() => {
+      setSuccessMessage('Roteiro copiado!');
+      setTimeout(() => setSuccessMessage(null), 2000);
+    }).catch(err => {
+      console.error('Erro ao copiar roteiro:', err);
+      alert('Erro ao copiar roteiro');
+    });
+  };
+
+  const handleCopyAll = (title: string, script: string) => {
+    const formattedText = `#TITULO:\n${title}\n\n\n----------\n\n#ROTEIRO\n${script}`;
+    navigator.clipboard.writeText(formattedText).then(() => {
+      setSuccessMessage('Título e roteiro copiados!');
+      setTimeout(() => setSuccessMessage(null), 2000);
+    }).catch(err => {
+      console.error('Erro ao copiar:', err);
+      alert('Erro ao copiar');
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <DashboardHeader />
@@ -666,31 +698,58 @@ export default function ViewScriptsPage() {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedScript(null)}>
             <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               {/* Modal Header */}
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 flex items-start justify-between z-10">
-                <div className="flex-1 min-w-0 mr-4">
-                  <h2 className="text-2xl font-bold text-white mb-2 line-clamp-2">
-                    {selectedScript.titulo || 'Sem título'}
-                  </h2>
-                  <div className="flex items-center space-x-3">
-                    {selectedScript.canal_profile_image ? (
-                      <img
-                        src={`${selectedScript.canal_profile_image}?t=${Date.now()}`}
-                        alt={selectedScript.canal_nome}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <Video className="w-8 h-8 text-gray-600" />
-                    )}
-                    <span className="text-base text-gray-300 font-medium">{selectedScript.canal_nome}</span>
-                    {getStatusBadge(selectedScript)}
+              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <h2 className="text-2xl font-bold text-white mb-2 line-clamp-2">
+                      {selectedScript.titulo || 'Sem título'}
+                    </h2>
+                    <div className="flex items-center space-x-3">
+                      {selectedScript.canal_profile_image ? (
+                        <img
+                          src={`${selectedScript.canal_profile_image}?t=${Date.now()}`}
+                          alt={selectedScript.canal_nome}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <Video className="w-8 h-8 text-gray-600" />
+                      )}
+                      <span className="text-base text-gray-300 font-medium">{selectedScript.canal_nome}</span>
+                      {getStatusBadge(selectedScript)}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setSelectedScript(null)}
+                    className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedScript(null)}
-                  className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+
+                {/* Copy Buttons */}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleCopyTitle(selectedScript.titulo || 'Sem título')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar Título</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopyScript(selectedScript.roteiro)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar Roteiro</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopyAll(selectedScript.titulo || 'Sem título', selectedScript.roteiro)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar Tudo</span>
+                  </button>
+                </div>
               </div>
 
               {/* Modal Content */}
