@@ -1062,27 +1062,38 @@ export default function GenerateContentV2Page() {
             voice_id: voiceIdHash,
             speed: audioSpeed
           },
-          titulos: addedTitles.map(title => ({
-            titulo: title.text,
-            media: {
-              audio: {
-                voice_id: voiceIdHash,
-                speed: audioSpeed
-              },
-              imagem: {
-                model_id: modelAir,
-                style: imageStyle,
-                style_detail: imageStyleDetail,
-                width: imageWidth,
-                height: imageHeight,
-                n_imgs: numImages
-              },
-              video: {
-                type: "imagem",
-                generate: false
-              }
+          titulos: addedTitles.map(title => {
+            // Construir objeto audio
+            const audioConfig: any = {
+              voice_id: voiceIdHash,
+              speed: audioSpeed
+            };
+
+            // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
+            if (selectedAudioByTitle[title.id]) {
+              audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
+              audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
             }
-          }))
+
+            return {
+              titulo: title.text,
+              media: {
+                audio: audioConfig,
+                imagem: {
+                  model_id: modelAir,
+                  style: imageStyle,
+                  style_detail: imageStyleDetail,
+                  width: imageWidth,
+                  height: imageHeight,
+                  n_imgs: numImages
+                },
+                video: {
+                  type: "imagem",
+                  generate: false
+                }
+              }
+            };
+          })
         };
       } else {
         // Payload para gen_video=true
