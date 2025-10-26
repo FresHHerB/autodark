@@ -1739,7 +1739,7 @@ export default function GenerateContentV2Page() {
         {/* DRIVE AUDIO SELECTION BY TITLE */}
         {/* ============================================ */}
 
-        {generateVideo && addedTitles.length > 0 && (
+        {addedTitles.length > 0 && (
           <div className="mb-6">
             <h2 className="text-xl font-light text-white mb-4">Selecionar Trilha Sonora por Título</h2>
 
