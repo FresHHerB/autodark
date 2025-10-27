@@ -97,7 +97,8 @@ export default function GenerateContentV2Page() {
   // ============================================
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [novaIdeia, setNovaIdeia] = useState<string>('');
-  const [titleIdioma, setTitleIdioma] = useState<string>('pt-br');
+  const [titleIdioma, setTitleIdioma] = useState<string>('Português-Brasil');
+  const [isEditingTitleIdioma, setIsEditingTitleIdioma] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<GeneratedTitle[]>([]);
   const [addedTitles, setAddedTitles] = useState<AddedTitle[]>([]);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -265,32 +266,12 @@ export default function GenerateContentV2Page() {
     }
   }, [showVoiceDropdown]);
 
-  // Sync title idioma with content idioma (bi-directional)
+  // Sync title idioma with content idioma (title drives content)
   useEffect(() => {
-    const titleToContentMap: Record<string, string> = {
-      'pt-br': 'Português-Brasil',
-      'en': 'English',
-      'es': 'Spanish'
-    };
-
-    const mappedIdioma = titleToContentMap[titleIdioma];
-    if (mappedIdioma && mappedIdioma !== contentIdioma) {
-      setContentIdioma(mappedIdioma);
+    if (titleIdioma !== contentIdioma) {
+      setContentIdioma(titleIdioma);
     }
   }, [titleIdioma]);
-
-  useEffect(() => {
-    const contentToTitleMap: Record<string, string> = {
-      'Português-Brasil': 'pt-br',
-      'English': 'en',
-      'Spanish': 'es'
-    };
-
-    const mappedIdioma = contentToTitleMap[contentIdioma];
-    if (mappedIdioma && mappedIdioma !== titleIdioma) {
-      setTitleIdioma(mappedIdioma);
-    }
-  }, [contentIdioma]);
 
   // ============================================
   // DATA LOADING FUNCTIONS
@@ -1386,18 +1367,51 @@ export default function GenerateContentV2Page() {
             />
           </div>
 
-          {/* Language Selection */}
+          {/* Language Selection - Editable */}
           <div className="mb-4">
             <label className="block text-sm text-gray-400 mb-2">Idioma dos Títulos</label>
-            <select
-              value={titleIdioma}
-              onChange={(e) => setTitleIdioma(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
-            >
-              <option value="pt-br">Português-Brasil</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-            </select>
+            {isEditingTitleIdioma ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={titleIdioma}
+                  onChange={(e) => setTitleIdioma(e.target.value)}
+                  className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => setIsEditingTitleIdioma(false)}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <select
+                  value={titleIdioma}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') {
+                      setIsEditingTitleIdioma(true);
+                    } else {
+                      setTitleIdioma(e.target.value);
+                    }
+                  }}
+                  className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                >
+                  <option value="Português-Brasil">Português-Brasil</option>
+                  <option value="English">English</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="custom">Personalizado...</option>
+                </select>
+                <button
+                  onClick={() => setIsEditingTitleIdioma(true)}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg transition-colors"
+                >
+                  <Edit2 className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Generate Button */}
