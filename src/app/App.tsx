@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@shared/contexts';
 import { LoginPage } from '@features/auth';
 import { DashboardPage } from '@features/dashboard';
 import { CloneChannelPage, ManageChannelPage, ReviewEditPage, PublishSchedulePage } from '@features/channel-management';
-import { GenerateContentPage, GenerateContentV2Page, GenerateVideoPage } from '@features/content-generation';
+import { GenerateContentV2Page, GenerateVideoPage } from '@features/content-generation';
 import { SettingsPage } from '@features/settings';
 import { ViewScriptsPage } from '@features/scripts';
 import { TestGDrivePage } from '@features/test';
@@ -73,14 +73,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ManageChannelPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/generate-content"
-              element={
-                <ProtectedRoute>
-                  <GenerateContentPage />
                 </ProtectedRoute>
               }
             />

@@ -17,12 +17,6 @@ const navigationCards = [
     path: '/manage-channel'
   },
   {
-    id: 'generate-content',
-    title: 'Gerar Conteúdo',
-    icon: FileText,
-    path: '/generate-content'
-  },
-  {
     id: 'generate-content-v2',
     title: 'Conteúdo v2',
     icon: FileText,
