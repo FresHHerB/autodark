@@ -380,10 +380,27 @@ export default function ViewScriptsPage() {
     });
   };
 
-  const handleCopyAll = (title: string, script: string) => {
-    const formattedText = `#TITULO:\n${title}\n\n\n----------\n\n#ROTEIRO\n${script}`;
+  const handleCopyTextThumb = (textThumb: string) => {
+    navigator.clipboard.writeText(textThumb).then(() => {
+      setSuccessMessage('Text Thumb copiado!');
+      setTimeout(() => setSuccessMessage(null), 2000);
+    }).catch(err => {
+      console.error('Erro ao copiar text thumb:', err);
+      alert('Erro ao copiar text thumb');
+    });
+  };
+
+  const handleCopyAll = (title: string, script: string, textThumb?: string | null) => {
+    let formattedText = `#TITULO:\n${title}\n\n`;
+
+    if (textThumb) {
+      formattedText += `\n------\n\n#TEXT_THUMB:\n${textThumb}\n\n`;
+    }
+
+    formattedText += `\n----------\n\n#ROTEIRO\n${script}`;
+
     navigator.clipboard.writeText(formattedText).then(() => {
-      setSuccessMessage('Título e roteiro copiados!');
+      setSuccessMessage('Título, text thumb e roteiro copiados!');
       setTimeout(() => setSuccessMessage(null), 2000);
     }).catch(err => {
       console.error('Erro ao copiar:', err);
@@ -735,6 +752,15 @@ export default function ViewScriptsPage() {
                     <Copy className="w-4 h-4" />
                     <span>Copiar Título</span>
                   </button>
+                  {selectedScript.text_thumb && (
+                    <button
+                      onClick={() => handleCopyTextThumb(selectedScript.text_thumb!)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors text-sm"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>Copiar Text Thumb</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => handleCopyScript(selectedScript.roteiro)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
@@ -743,7 +769,7 @@ export default function ViewScriptsPage() {
                     <span>Copiar Roteiro</span>
                   </button>
                   <button
-                    onClick={() => handleCopyAll(selectedScript.titulo || 'Sem título', selectedScript.roteiro)}
+                    onClick={() => handleCopyAll(selectedScript.titulo || 'Sem título', selectedScript.roteiro, selectedScript.text_thumb)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
                   >
                     <Copy className="w-4 h-4" />
