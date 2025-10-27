@@ -34,6 +34,7 @@ export default function CloneChannelPage() {
     { title: '', thumbText: '', text: '' }
   ]);
   const [isTraining, setIsTraining] = useState(false);
+  const [draggedOver, setDraggedOver] = useState<number | null>(null);
 
   // Canal management states
   const [canais, setCanais] = useState<Canal[]>([]);
@@ -333,6 +334,44 @@ export default function CloneChannelPage() {
     setScripts(prev => prev.map((script, i) =>
       i === index ? { ...script, ...data } : script
     ));
+  };
+
+  const handleFileUpload = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+      updateScript(index, {
+        text: content,
+        title: fileName // Auto-fill title with filename
+      });
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDraggedOver(index);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDraggedOver(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDraggedOver(null);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        handleFileUpload(index, file);
+      } else {
+        alert('Apenas arquivos .txt e .md são suportados.');
+      }
+    }
   };
 
   const handleManualTraining = async () => {
@@ -934,15 +973,62 @@ export default function CloneChannelPage() {
                         <label className="block text-gray-400 text-sm mb-2">
                           Conteúdo do Roteiro:
                         </label>
-                        <textarea
-                          value={script.text}
-                          onChange={(e) => updateScript(index, { text: e.target.value })}
-                          rows={8}
-                          placeholder="Digite ou cole o conteúdo do roteiro aqui..."
-                          className="w-full bg-gray-700 border border-gray-600 text-white px-4 py-3 focus:outline-none focus:border-gray-500 resize-none"
-                        />
-                        <div className="text-xs text-gray-400 mt-1">
-                          {script.text.length.toLocaleString()} caracteres
+                        <div
+                          className={`relative ${
+                            draggedOver === index
+                              ? 'ring-2 ring-blue-500 ring-opacity-50'
+                              : ''
+                          }`}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, index)}
+                        >
+                          <textarea
+                            value={script.text}
+                            onChange={(e) => updateScript(index, { text: e.target.value })}
+                            rows={8}
+                            placeholder="Digite, cole ou arraste um arquivo .txt/.md aqui..."
+                            className={`w-full bg-gray-700 border border-gray-600 text-white px-4 py-3 focus:outline-none focus:border-gray-500 resize-none ${
+                              draggedOver === index
+                                ? 'border-blue-500 bg-blue-900/10'
+                                : ''
+                            }`}
+                          />
+                          {draggedOver === index && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded pointer-events-none">
+                              <div className="text-blue-400 text-center">
+                                <Plus className="w-8 h-8 mx-auto mb-2" />
+                                <p className="font-medium">Solte o arquivo aqui</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs mt-1">
+                          <span className="text-gray-400">
+                            {script.text.length.toLocaleString()} caracteres
+                          </span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-gray-500">
+                              Arraste arquivos .txt/.md aqui
+                            </span>
+                            <input
+                              type="file"
+                              accept=".txt,.md"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(index, file);
+                              }}
+                              className="hidden"
+                              id={`file-upload-${index}`}
+                            />
+                            <label
+                              htmlFor={`file-upload-${index}`}
+                              className="cursor-pointer text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>ou clique aqui</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </div>
