@@ -33,7 +33,6 @@ export default function CloneChannelPage() {
   const [scripts, setScripts] = useState<ScriptData[]>([
     { title: '', thumbText: '', text: '' }
   ]);
-  const [selectedModel, setSelectedModel] = useState<'GPT-5' | 'GPT-4.1-mini' | 'Sonnet-4' | 'Gemini-2.5-Pro' | 'Gemini-2.5-Flash'>('GPT-4.1-mini');
   const [isTraining, setIsTraining] = useState(false);
 
   // Canal management states
@@ -360,7 +359,6 @@ export default function CloneChannelPage() {
 
       const payload = {
         nome_canal: selectedCanal.nome_canal,
-        modelo: selectedModel,
         roteiros: scripts
           .filter(script => script.text.trim())
           .map((script, index) => ({
@@ -391,7 +389,6 @@ export default function CloneChannelPage() {
 
       // Reset form
       setScripts([{ title: '', thumbText: '', text: '' }]);
-      setSelectedModel('GPT-4.1-mini');
     } catch (error) {
       console.error('Erro no treinamento:', error);
       alert(`Erro ao treinar canal: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -876,29 +873,11 @@ export default function CloneChannelPage() {
               </div>
             </div>
 
-            {/* Model Selection */}
-            <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
-              <h2 className="text-lg font-light text-white mb-4">
-                2. Selecionar Modelo de IA
-              </h2>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value as typeof selectedModel)}
-                className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600"
-              >
-                <option value="GPT-4.1-mini">GPT-4.1-mini</option>
-                <option value="GPT-5">GPT-5</option>
-                <option value="Sonnet-4">Sonnet-4</option>
-                <option value="Gemini-2.5-Pro">Gemini-2.5-Pro</option>
-                <option value="Gemini-2.5-Flash">Gemini-2.5-Flash</option>
-              </select>
-            </div>
-
             {/* Scripts Section */}
             <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-light text-white">
-                  3. Roteiros de Exemplo
+                  2. Roteiros de Exemplo
                 </h2>
                 <button
                   onClick={addScript}
