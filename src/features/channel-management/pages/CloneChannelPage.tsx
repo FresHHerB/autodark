@@ -43,6 +43,8 @@ export default function CloneChannelPage() {
   const [newCanalName, setNewCanalName] = useState('');
   const [isCreatingCanal, setIsCreatingCanal] = useState(false);
   const [loadingCanais, setLoadingCanais] = useState(true);
+  const [showYoutubeChannelDropdown, setShowYoutubeChannelDropdown] = useState(false);
+  const [showManualChannelDropdown, setShowManualChannelDropdown] = useState(false);
 
   // YouTube API hooks
   const { 
@@ -702,20 +704,82 @@ export default function CloneChannelPage() {
                       Canal Existente:
                     </label>
                     <div className="relative">
-                      <select
-                        value={selectedCanalId}
-                        onChange={(e) => setSelectedCanalId(e.target.value)}
+                      <button
+                        onClick={() => setShowYoutubeChannelDropdown(!showYoutubeChannelDropdown)}
                         disabled={loadingCanais}
-                        className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none"
+                        className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 flex items-center justify-between hover:border-gray-600 transition-colors disabled:opacity-50"
                       >
-                        <option value="">Selecione um canal...</option>
-                        {canais.map((canal) => (
-                          <option key={canal.id} value={canal.id.toString()}>
-                            {canal.nome_canal}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                        <div className="flex items-center gap-2">
+                          {selectedCanalId ? (
+                            (() => {
+                              const selectedCanal = canais.find(c => c.id.toString() === selectedCanalId);
+                              return selectedCanal ? (
+                                <>
+                                  {selectedCanal.profile_image ? (
+                                    <img
+                                      src={selectedCanal.profile_image}
+                                      alt={selectedCanal.nome_canal}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">
+                                      {selectedCanal.nome_canal.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <span>{selectedCanal.nome_canal}</span>
+                                </>
+                              ) : (
+                                <span>Selecione um canal...</span>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-gray-400">Selecione um canal...</span>
+                          )}
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showYoutubeChannelDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {showYoutubeChannelDropdown && (
+                        <div className="absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl max-h-64 overflow-y-auto">
+                          <button
+                            onClick={() => {
+                              setSelectedCanalId('');
+                              setShowYoutubeChannelDropdown(false);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2 text-gray-300"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+                              <span className="text-xs">✕</span>
+                            </div>
+                            <span>Nenhum canal</span>
+                          </button>
+                          {canais.map((canal) => (
+                            <button
+                              key={canal.id}
+                              onClick={() => {
+                                setSelectedCanalId(canal.id.toString());
+                                setShowYoutubeChannelDropdown(false);
+                              }}
+                              className={`w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2 ${
+                                selectedCanalId === canal.id.toString() ? 'bg-gray-700/50 text-white' : 'text-gray-300'
+                              }`}
+                            >
+                              {canal.profile_image ? (
+                                <img
+                                  src={canal.profile_image}
+                                  alt={canal.nome_canal}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">
+                                  {canal.nome_canal.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span>{canal.nome_canal}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -877,20 +941,82 @@ export default function CloneChannelPage() {
                     Canal Existente:
                   </label>
                   <div className="relative">
-                    <select
-                      value={selectedCanalId}
-                      onChange={(e) => setSelectedCanalId(e.target.value)}
+                    <button
+                      onClick={() => setShowManualChannelDropdown(!showManualChannelDropdown)}
                       disabled={loadingCanais}
-                      className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 pr-10 focus:outline-none focus:border-gray-600 appearance-none"
+                      className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-gray-600 flex items-center justify-between hover:border-gray-600 transition-colors disabled:opacity-50"
                     >
-                      <option value="">Selecione um canal...</option>
-                      {canais.map((canal) => (
-                        <option key={canal.id} value={canal.id.toString()}>
-                          {canal.nome_canal}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                      <div className="flex items-center gap-2">
+                        {selectedCanalId ? (
+                          (() => {
+                            const selectedCanal = canais.find(c => c.id.toString() === selectedCanalId);
+                            return selectedCanal ? (
+                              <>
+                                {selectedCanal.profile_image ? (
+                                  <img
+                                    src={selectedCanal.profile_image}
+                                    alt={selectedCanal.nome_canal}
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">
+                                    {selectedCanal.nome_canal.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span>{selectedCanal.nome_canal}</span>
+                              </>
+                            ) : (
+                              <span>Selecione um canal...</span>
+                            );
+                          })()
+                        ) : (
+                          <span className="text-gray-400">Selecione um canal...</span>
+                        )}
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showManualChannelDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showManualChannelDropdown && (
+                      <div className="absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl max-h-64 overflow-y-auto">
+                        <button
+                          onClick={() => {
+                            setSelectedCanalId('');
+                            setShowManualChannelDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2 text-gray-300"
+                        >
+                          <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+                            <span className="text-xs">✕</span>
+                          </div>
+                          <span>Nenhum canal</span>
+                        </button>
+                        {canais.map((canal) => (
+                          <button
+                            key={canal.id}
+                            onClick={() => {
+                              setSelectedCanalId(canal.id.toString());
+                              setShowManualChannelDropdown(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2 ${
+                              selectedCanalId === canal.id.toString() ? 'bg-gray-700/50 text-white' : 'text-gray-300'
+                            }`}
+                          >
+                            {canal.profile_image ? (
+                              <img
+                                src={canal.profile_image}
+                                alt={canal.nome_canal}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">
+                                {canal.nome_canal.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span>{canal.nome_canal}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
