@@ -96,6 +96,7 @@ export default function GenerateContentV2Page() {
   // STATES - Title Generation Section
   // ============================================
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [selectedChannel, setSelectedChannel] = useState<Canal | null>(null);
   const [novaIdeia, setNovaIdeia] = useState<string>('');
   const [titleIdioma, setTitleIdioma] = useState<string>('Português-Brasil');
   const [isEditingTitleIdioma, setIsEditingTitleIdioma] = useState(false);
@@ -103,6 +104,7 @@ export default function GenerateContentV2Page() {
   const [addedTitles, setAddedTitles] = useState<AddedTitle[]>([]);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
+  const [captionWarning, setCaptionWarning] = useState<string>('');
 
   // ============================================
   // STATES - Content Generation Configuration
@@ -1309,7 +1311,9 @@ export default function GenerateContentV2Page() {
                           key={channel.id}
                           onClick={() => {
                             setSelectedChannelId(channel.id.toString());
+                            setSelectedChannel(channel);
                             setShowChannelDropdown(false);
+                            setCaptionWarning('');
                           }}
                           className={`w-full flex items-center gap-3 px-6 py-4 hover:bg-gray-700 transition-colors ${
                             selectedChannelId === channel.id.toString() ? 'bg-purple-600/20' : ''
@@ -1592,29 +1596,52 @@ export default function GenerateContentV2Page() {
 
           {/* Caption Toggle - Only visible when video is ON */}
           {generateVideo && (
-            <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-              <div>
-                <h3 className="text-lg font-light text-white mb-1">Gerar Legendas</h3>
-                <p className="text-sm text-gray-400">
-                  Ative para adicionar legendas ao vídeo
-                </p>
+            <>
+              <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+                <div>
+                  <h3 className="text-lg font-light text-white mb-1">Gerar Legendas</h3>
+                  <p className="text-sm text-gray-400">
+                    Ative para adicionar legendas ao vídeo
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (!generateCaption && (!selectedChannel?.caption_style)) {
+                      setCaptionWarning('Configure o estilo de legendas na página de Gerenciamento de Canais antes de ativar esta opção.');
+                      setTimeout(() => setCaptionWarning(''), 5000);
+                      return;
+                    }
+                    setCaptionWarning('');
+                    setGenerateCaption(!generateCaption);
+                  }}
+                  className={`
+                    relative w-16 h-8 rounded-full transition-all duration-300
+                    ${generateCaption
+                      ? 'bg-purple-600'
+                      : 'bg-gray-700'
+                    }
+                  `}
+                >
+                  <div className={`
+                    absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300
+                    ${generateCaption ? 'translate-x-8' : 'translate-x-0'}
+                  `} />
+                </button>
               </div>
-              <button
-                onClick={() => setGenerateCaption(!generateCaption)}
-                className={`
-                  relative w-16 h-8 rounded-full transition-all duration-300
-                  ${generateCaption
-                    ? 'bg-purple-600'
-                    : 'bg-gray-700'
-                  }
-                `}
-              >
-                <div className={`
-                  absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300
-                  ${generateCaption ? 'translate-x-8' : 'translate-x-0'}
-                `} />
-              </button>
-            </div>
+
+              {/* Caption Warning Message */}
+              {captionWarning && (
+                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-yellow-300 text-sm font-medium mb-1">Configuração Necessária</p>
+                      <p className="text-yellow-200 text-sm">{captionWarning}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
