@@ -398,6 +398,7 @@ export default function CloneChannelPage() {
 
       const payload = {
         nome_canal: selectedCanal.nome_canal,
+        tipo_treino: 'clonar_manual',
         roteiros: scripts
           .filter(script => script.text.trim())
           .map((script, index) => ({
