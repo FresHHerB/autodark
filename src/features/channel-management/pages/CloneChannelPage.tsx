@@ -35,6 +35,7 @@ export default function CloneChannelPage() {
   ]);
   const [isTraining, setIsTraining] = useState(false);
   const [draggedOver, setDraggedOver] = useState<number | null>(null);
+  const [trainingSuccessMessage, setTrainingSuccessMessage] = useState<string>('');
 
   // Canal management states
   const [canais, setCanais] = useState<Canal[]>([]);
@@ -425,7 +426,11 @@ export default function CloneChannelPage() {
       const result = await response.json();
       console.log('Treinamento concluído:', result);
 
-      alert('Canal treinado com sucesso!');
+      // Show success toast
+      setTrainingSuccessMessage(`Canal "${selectedCanal.nome_canal}" Treinado com sucesso!`);
+      setTimeout(() => {
+        setTrainingSuccessMessage('');
+      }, 5000);
 
       // Reset form
       setScripts([{ title: '', thumbText: '', text: '' }]);
@@ -455,6 +460,16 @@ export default function CloneChannelPage() {
   return (
     <div className="min-h-screen bg-black">
       <DashboardHeader />
+
+      {/* Toast Success Message */}
+      {trainingSuccessMessage && (
+        <div className="fixed top-20 right-6 z-50 animate-fade-in">
+          <div className="bg-green-900/90 border border-green-500 p-4 rounded-lg shadow-lg flex items-center gap-3">
+            <Check className="w-5 h-5 text-green-400" />
+            <p className="text-green-300 font-medium">{trainingSuccessMessage}</p>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center gap-4 mb-8">
