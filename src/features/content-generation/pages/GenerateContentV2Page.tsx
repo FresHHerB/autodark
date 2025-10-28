@@ -1153,7 +1153,9 @@ export default function GenerateContentV2Page() {
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
             tipo_geracao: 'conteudo',
-            titulos: addedTitles.map(title => title.text)  // Array de strings simples
+            titulos: addedTitles.map(title => ({
+              titulo: title.text
+            }))
           };
         } else if (contentMode === 'script-audio') {
           // Modo 2: Roteiro + Áudio
