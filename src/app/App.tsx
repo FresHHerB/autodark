@@ -7,7 +7,6 @@ import { CloneChannelPage, ManageChannelPage, ReviewEditPage, PublishSchedulePag
 import { GenerateContentV2Page, GenerateVideoPage } from '@features/content-generation';
 import { SettingsPage } from '@features/settings';
 import { ViewScriptsPage } from '@features/scripts';
-import { TestGDrivePage } from '@features/test';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -121,14 +120,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ViewScriptsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/test-gdrive"
-              element={
-                <ProtectedRoute>
-                  <TestGDrivePage />
                 </ProtectedRoute>
               }
             />

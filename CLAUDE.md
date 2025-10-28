@@ -21,7 +21,24 @@
 | **YES** useCallback/useMemo | Optimize re-renders |
 
 ---
-###DONT CREATE MD/DOCUMENTATION FILES WITHOUT REQUEST
+
+### DONT CREATE MD/DOCUMENTATION FILES WITHOUT REQUEST
+
+---
+
+## 📚 DOCUMENTATION FILES
+
+**Core documentation files:**
+1. **CLAUDE.md** (this file) - Development guide, patterns, conventions, best practices
+2. **docs/API-REFERENCE.md** - Complete API and webhook reference (N8N, Edge Functions, external APIs)
+3. **README.md** - Quick start guide and project overview
+4. **config/deployment/README.md** - Deployment instructions (Easypanel, Docker)
+
+**When to use each:**
+- Need endpoint details, payloads, or API integration? → **docs/API-REFERENCE.md**
+- Need coding patterns, conventions, or architecture? → **CLAUDE.md**
+- Need quick setup or overview? → **README.md**
+- Need deployment instructions? → **config/deployment/README.md**
 
 ---
 
@@ -783,40 +800,208 @@ interface TraditionalStyle {
 
 ## 📊 DATABASE SCHEMA
 
-**Core Tables**:
+**Complete schema available at**: `database/schema.sql`
 
-**canais** (Channels)
-- `id`, `nome_canal`, `prompt_titulo`, `prompt_roteiro`, `voz_prefereida` → vozes(id)
-- `url_canal`, `profile_image`, `drive_url`, `trilha_url`
-- `caption_style` (JSONB), `detailed_style` (JSONB), `media_chars`, `created_at`
-- **RLS enabled**
+### Table Structure Overview
 
-**roteiros** (Scripts)
-- `id`, `id_canal` → canais(id) CASCADE, `titulo`, `roteiro` (TEXT)
-- `audio_path`, `images_path` (JSONB), `status` (gerando/pronto/processando/erro)
-- `created_at`, `updated_at`
-- **Status flow**: gerando → pronto → processando → erro
-
-**videos** (Videos)
-- `id`, `id_roteiro` → roteiros(id) CASCADE, `id_canal` → canais(id) CASCADE
-- `status` (gerando/pronto/publicado/erro), `video_path`, `thumbnail_path`, `created_at`
-
-**vozes** (Voices)
-- `id`, `nome_voz`, `voice_id`, `id_plataforma` → apis(id)
-- `idioma` (pt-br/en/es), `genero`, `preview_url`, `created_at`
-- UNIQUE(voice_id, id_plataforma)
-
-**apis** (API Credentials)
-- `id`, `plataforma` UNIQUE, `api_key` (NEVER exposed to frontend), `group_ID`, `created_at`
-- **RLS: Service role only**
-
-**modelos_imagem** (Image Models)
-- `id`, `air` UNIQUE (e.g., 'runway:gen3@1'), `name`, `created_at`
-
-**Relationships**:
 ```
-canais 1:N roteiros 1:N videos
-canais N:1 vozes N:1 apis
+┌─────────────────┐
+│      apis       │ ← Base table (no dependencies)
+│  (Credentials)  │
+└────────┬────────┘
+         │
+         │ FK: vozes.id_plataforma → apis.id
+         │
+┌────────▼────────┐     ┌──────────────────┐
+│     vozes       │     │ modelos_imagem   │ ← Independent table
+│    (Voices)     │     │  (Image Models)  │
+└────────┬────────┘     └──────────────────┘
+         │
+         │ FK: canais.voz_prefereida → vozes.id
+         │
+┌────────▼────────┐
+│     canais      │
+│   (Channels)    │
+└────────┬────────┘
+         │
+         │ FK: roteiros.canal_id → canais.id (CASCADE DELETE)
+         │
+┌────────▼────────┐
+│    roteiros     │
+│    (Scripts)    │
+└────────┬────────┘
+         │
+         │ FK: videos.id → roteiros.id (CASCADE DELETE, 1:1)
+         │
+┌────────▼────────┐
+│     videos      │
+│  (Final Videos) │
+└─────────────────┘
+```
+
+### Core Tables
+
+#### 1. **apis** (API Credentials)
+```sql
+- id (SMALLINT, PK, IDENTITY)
+- plataforma (TEXT) - Platform name
+- api_key (TEXT) - Encrypted API key
+- group_id (TEXT) - Optional grouping
+- created_at (TIMESTAMPTZ)
+```
+**Purpose**: Store API credentials for ElevenLabs, Fish-Audio, Minimax, Runware, etc.
+**RLS**: Service role only (never exposed to frontend)
+**Dependencies**: None
+
+#### 2. **modelos_imagem** (Image Models)
+```sql
+- id (BIGINT, PK, IDENTITY)
+- name (TEXT) - Model display name
+- air (TEXT) - AIR identifier (e.g., 'runway:gen3@1')
+- created_at (TIMESTAMPTZ)
+```
+**Purpose**: Catalog of Runware image generation models
+**Dependencies**: None
+
+#### 3. **vozes** (Voices)
+```sql
+- id (SMALLINT, PK, IDENTITY)
+- nome_voz (TEXT) - Display name
+- voice_id (TEXT) - Platform-specific ID
+- idioma (TEXT) - Language code (pt-br, en, es)
+- genero (TEXT) - Voice gender
+- id_plataforma (SMALLINT) - FK → apis.id
+- created_at (TIMESTAMPTZ)
+```
+**Purpose**: Voice catalog from multiple TTS platforms
+**Foreign Keys**:
+- `id_plataforma → apis.id` (NO ACTION)
+**Dependencies**: apis
+
+#### 4. **canais** (Channels)
+```sql
+- id (SMALLINT, PK, IDENTITY)
+- nome_canal (TEXT) - Channel name
+- url_canal (TEXT) - YouTube URL
+- profile_image (TEXT) - Channel thumbnail
+- prompt_titulo (TEXT) - AI prompt for titles
+- prompt_roteiro (TEXT) - AI prompt for scripts
+- prompt_thumb (TEXT) - AI prompt for thumbnails
+- voz_prefereida (SMALLINT) - FK → vozes.id
+- media_chars (NUMERIC) - Average char count
+- caption_style (JSONB) - Caption configuration
+- detailed_style (JSONB) - Visual settings
+- titulos (JSONB) - Training data (titles)
+- roteiros (JSONB) - Training data (scripts)
+- drive_url (TEXT) - Google Drive folder
+- trilha_url (TEXT) - Background music URL
+- created_at (TIMESTAMPTZ)
+```
+**Purpose**: YouTube channel configurations
+**Foreign Keys**:
+- `voz_prefereida → vozes.id` (NO ACTION)
+**Dependencies**: vozes
+
+#### 5. **roteiros** (Scripts)
+```sql
+- id (INTEGER, PK, IDENTITY)
+- canal_id (SMALLINT) - FK → canais.id (CASCADE)
+- titulo (TEXT) - Video title
+- roteiro (TEXT) - Full script text
+- text_thumb (TEXT) - Thumbnail description
+- audio_path (TEXT) - Audio file URL
+- images_path (JSONB) - Array of image URLs
+- images_info (JSONB) - Image metadata
+- transcricao_timestamp (TEXT) - Timestamped captions
+- status (TEXT) - Status: gerando_roteiro, pronto, processando, erro
+- created_at (TIMESTAMPTZ)
+- updated_at (TIMESTAMPTZ)
+```
+**Purpose**: Generated video scripts with media
+**Foreign Keys**:
+- `canal_id → canais.id` (CASCADE DELETE)
+**Dependencies**: canais
+**Note**: Deleting a canal deletes all its roteiros
+
+#### 6. **videos** (Final Videos)
+```sql
+- id (INTEGER, PK, IDENTITY, UNIQUE)
+- status (TEXT) - Status: gerando, pronto, publicado, erro
+- video_path (TEXT) - Rendered video URL
+- thumb_path (TEXT) - Video thumbnail URL
+- caption (BOOLEAN) - Captions enabled
+- created_at (TIMESTAMPTZ)
+- updated_at (TIMESTAMPTZ)
+```
+**Purpose**: Final rendered videos (1:1 with roteiros)
+**Foreign Keys**:
+- `id → roteiros.id` (CASCADE DELETE, 1:1)
+**Dependencies**: roteiros
+**Note**: Uses roteiros.id as its own PK (1:1 relationship)
+
+### Cascade Delete Behavior
+
+```
+DELETE canal
+  ↓
+  ├─ DELETE all roteiros (CASCADE)
+  │    ↓
+  │    └─ DELETE all videos (CASCADE)
+  │
+  └─ voz_prefereida → NO ACTION (must manually update or set NULL)
+
+DELETE api
+  ↓
+  └─ vozes.id_plataforma → NO ACTION (must manually handle)
+```
+
+### JSONB Column Structures
+
+#### canais.caption_style
+```typescript
+{
+  type: 'highlight' | 'segments',  // Karaoke vs Traditional
+  uppercase: boolean,
+  style: {
+    // Karaoke mode
+    fonte: string,
+    tamanho_fonte: number,
+    texto_cor: string,
+    fundo_cor: string,
+    fundo_opacidade: number,
+    highlight_cor: string,
+    highlight_borda: number,
+    padding_horizontal: number,
+    padding_vertical: number,
+    position: 'top_center' | 'middle_center' | 'bottom_center',
+    words_per_line: number,
+    max_lines: number,
+
+    // Traditional mode
+    font: { name: string, size: number, bold: boolean },
+    colors: { primary: string, outline: string },
+    border: { style: 1 | 3, width: number },
+    position: { alignment: string, marginVertical: number }
+  }
+}
+```
+
+#### roteiros.images_path
+```typescript
+[
+  "https://storage.url/image1.png",
+  "https://storage.url/image2.png"
+]
+```
+
+#### roteiros.images_info
+```typescript
+{
+  model: "runway:gen3@1",
+  count: 2,
+  dimensions: { width: 1344, height: 768 },
+  style: "fotorrealista, 4K"
+}
 ```
 
 ---
@@ -824,11 +1009,11 @@ canais N:1 vozes N:1 apis
 ## 🔍 KEY FILES
 
 **Critical** (frequent modification):
-- `src/features/content-generation/pages/GenerateContentPage.tsx` (2915 LOC) - ⚠️ **NEEDS REFACTOR**
+- `src/features/content-generation/pages/GenerateContentV2Page.tsx` (2346 LOC) - ⚠️ **NEEDS REFACTOR & RENAME**
 - `src/shared/services/api.ts` - ApiService, all N8N webhooks
 - `src/shared/services/database.ts` - ChannelService, VideoService, VoiceService
 - `src/shared/lib/supabase.ts` - Supabase client + types
-- `src/features/channel-management/components/CaptionStyleEditor.tsx` (800 LOC)
+- `src/features/channel-management/components/CaptionStyleEditor.tsx` (914 LOC)
 
 **Services**:
 - `src/shared/services/api.ts` - Webhook orchestration
@@ -843,10 +1028,18 @@ canais N:1 vozes N:1 apis
 
 ## 🐛 TECHNICAL DEBT
 
+**P0** (urgent):
+- **Rename GenerateContentV2Page.tsx** → `GenerateContentPage.tsx` (V2 suffix is misleading, V1 deleted)
+  - Update route `/generate-content-v2` → `/generate-content`
+  - Update exports in `src/features/content-generation/index.ts`
+- **PublishSchedulePage.tsx** uses MOCK DATA - Either implement properly or remove
+
 **P1** (high priority):
-- GenerateContentPage.tsx (2915 LOC) - Split into TitleGenSection, ScriptGenSection, AudioGenSection, ImageGenSection
+- GenerateContentV2Page.tsx (2346 LOC) - Split into TitleGenSection, ScriptGenSection, AudioGenSection, ImageGenSection
+- SettingsPage.tsx (2099 LOC) - Split into ApiManagement, VoiceManagement, ModelManagement sections
+- ViewScriptsPage.tsx (1219 LOC) - Extract ScriptCard, ScriptFilters, ScriptActions components
 - No Error Boundaries - Add to App.tsx + feature routes
-- Console.log statements (337 occurrences) - Replace with console.error or remove in production
+- Console.log statements - Replace with console.error or remove in production
 
 **P2** (medium):
 - Zero test coverage - Add Jest + React Testing Library
@@ -915,5 +1108,38 @@ console.log('Full URL:', apiService.getWebhook('GERAR_CONTEUDO'));
 
 ---
 
+## 🧹 RECENT CLEANUP (2025-01-28)
+
+**Files Removed:**
+- ✅ `src/features/test/` - Entire test feature directory (TestGDrivePage)
+- ✅ `src/features/channel-management/components/VideoReviewModal.tsx` - Unused component
+- ✅ `ESTRUTURA-REFACTOR.md` - Historical documentation (refactor already complete)
+- ✅ `TESTE-SERVIDOR.md` - Temporary test documentation
+
+**Routes Removed:**
+- ✅ `/test-gdrive` - Test route removed from App.tsx
+
+**Documentation Restructured:**
+- ✅ README.md - Simplified from 573 to 229 lines (essential only)
+- ✅ docs/API-REFERENCE.md - Comprehensive API reference (all endpoints mapped)
+- ✅ CLAUDE.md - Updated with documentation structure and technical debt
+- ✅ config/deployment/README.md - Deployment guide organized
+
+**Database Schema:**
+- ✅ database/schema.sql - Complete DDL for recreating database structure
+- ✅ All tables documented with relationships and CASCADE behavior
+- ✅ JSONB column structures documented
+- ✅ Foreign key constraints and indexes mapped
+
+**Status**: Project structure cleaned, documentation organized, database schema documented, ready for development
+
+---
+
 > **Single source of truth** for AutoDark project context. Keep updated, concise, accurate.
-> Last updated: 2025-01-25 - Added patterns for URL encoding, hooks, Edge Functions, performance, logging
+> Last updated: 2025-01-28 - Cleaned unused files, organized documentation structure
+>
+> **Documentation Structure:**
+> - CLAUDE.md (root) - You are here - Development guide
+> - docs/API-REFERENCE.md - Complete endpoint reference
+> - README.md (root) - Quick start guide
+> - config/deployment/README.md - Deployment instructions
