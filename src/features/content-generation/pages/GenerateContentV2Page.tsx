@@ -1139,24 +1139,28 @@ export default function GenerateContentV2Page() {
       if (!generateVideo) {
         // ============================================
         // PAYLOADS PARA MODOS DE CONTEÚDO (SEM VÍDEO)
+        // Backend diferencia pelo que está presente:
+        // - 'titulos' (strings ou objetos) → gera roteiros novos
+        // - 'roteiros' (ids com media) → usa roteiros existentes
+        // - O que está em 'media' define o que será gerado: audio, imagem, video
         // ============================================
 
         if (contentMode === 'script') {
           // Modo 1: Apenas Roteiro
+          // Sem campo 'media' - apenas gera roteiros
           payload = {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
-            tipo_geracao: 'gerar_roteiro',
-            titulos: addedTitles.map(title => title.text)
+            titulos: addedTitles.map(title => title.text)  // Array de strings simples
           };
         } else if (contentMode === 'script-audio') {
           // Modo 2: Roteiro + Áudio
+          // 'media' contém apenas 'audio'
           payload = {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
-            tipo_geracao: 'gerar_roteiro_audio',
             titulos: addedTitles.map(title => {
               const audioConfig: any = {
                 voice_id: voiceIdHash,
@@ -1178,12 +1182,12 @@ export default function GenerateContentV2Page() {
             })
           };
         } else if (contentMode === 'script-audio-image') {
-          // Modo 3: Roteiro + Áudio + Imagem (comportamento antigo)
+          // Modo 3: Roteiro + Áudio + Imagem
+          // 'media' contém 'audio', 'imagem' e 'video' (generate: false)
           payload = {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
-            tipo_geracao: 'conteudo',
             titulos: addedTitles.map(title => {
               const audioConfig: any = {
                 voice_id: voiceIdHash,
@@ -1217,31 +1221,36 @@ export default function GenerateContentV2Page() {
           };
         } else if (contentMode === 'audio-only') {
           // Modo 4: Apenas Áudio (para roteiros existentes sem áudio)
+          // Usa 'roteiros' com ids ao invés de 'titulos'
+          // Não precisa de modelo_roteiro/idioma (roteiros já existem)
           payload = {
             canal_id: parseInt(selectedChannelId),
-            tipo_geracao: 'gerar_audio',
             roteiros: Array.from(selectedScriptIds).map(id => ({
-              id_roteiro: id,
-              audio: {
-                voice_id: voiceIdHash,
-                speed: audioSpeed
+              id: id,
+              media: {
+                audio: {
+                  voice_id: voiceIdHash,
+                  speed: audioSpeed
+                }
               }
             }))
           };
         } else if (contentMode === 'image-only') {
           // Modo 5: Apenas Imagem (para roteiros existentes com áudio)
+          // Usa 'roteiros' com ids ao invés de 'titulos'
           payload = {
             canal_id: parseInt(selectedChannelId),
-            tipo_geracao: 'gerar_imagens',
             roteiros: Array.from(selectedScriptIds).map(id => ({
-              id_roteiro: id,
-              imagem: {
-                model_id: modelAir,
-                style: imageStyle,
-                style_detail: imageStyleDetail,
-                width: imageWidth,
-                height: imageHeight,
-                n_imgs: numImages
+              id: id,
+              media: {
+                imagem: {
+                  model_id: modelAir,
+                  style: imageStyle,
+                  style_detail: imageStyleDetail,
+                  width: imageWidth,
+                  height: imageHeight,
+                  n_imgs: numImages
+                }
               }
             }))
           };
