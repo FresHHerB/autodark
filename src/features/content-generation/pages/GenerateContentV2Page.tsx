@@ -109,11 +109,30 @@ export default function GenerateContentV2Page() {
   // ============================================
   // STATES - Content Generation Configuration
   // ============================================
-  const [generateVideo, setGenerateVideo] = useState<boolean>(false);
+  const [generateVideo, setGenerateVideo] = useState<boolean>(true);
   const [generateCaption, setGenerateCaption] = useState<boolean>(false);
   const [videoGenerationMethod, setVideoGenerationMethod] = useState<'video-to-video' | 'image-to-video'>('image-to-video');
   const [generateAudio, setGenerateAudio] = useState<boolean>(false);
   const [generateImage, setGenerateImage] = useState<boolean>(false);
+
+  // Content Generation Mode (when generateVideo = false)
+  type ContentMode = 'script' | 'script-audio' | 'script-audio-image' | 'audio-only' | 'image-only';
+  const [contentMode, setContentMode] = useState<ContentMode>('script-audio-image');
+
+  // Existing Scripts State (for audio-only and image-only modes)
+  interface ExistingScript {
+    id: number;
+    titulo: string;
+    roteiro: string;
+    canal_id: number;
+    audio_path: string | null;
+    images_path: string[] | null;
+    status: string | null;
+    created_at: string;
+  }
+  const [existingScripts, setExistingScripts] = useState<ExistingScript[]>([]);
+  const [existingScriptsLoading, setExistingScriptsLoading] = useState(false);
+  const [selectedScriptIds, setSelectedScriptIds] = useState<Set<number>>(new Set());
 
   // Model and Language
   const [selectedModel, setSelectedModel] = useState<string>('Sonnet-4.5');
@@ -275,6 +294,17 @@ export default function GenerateContentV2Page() {
     }
   }, [titleIdioma]);
 
+  // Load existing scripts when channel or content mode changes (only for audio-only and image-only modes)
+  useEffect(() => {
+    if (!generateVideo && selectedChannelId && (contentMode === 'audio-only' || contentMode === 'image-only')) {
+      loadExistingScripts(selectedChannelId, contentMode);
+    } else {
+      // Clear existing scripts when not in audio-only or image-only mode
+      setExistingScripts([]);
+      setSelectedScriptIds(new Set());
+    }
+  }, [generateVideo, selectedChannelId, contentMode]);
+
   // ============================================
   // DATA LOADING FUNCTIONS
   // ============================================
@@ -354,6 +384,48 @@ export default function GenerateContentV2Page() {
       console.error('Erro ao carregar modelos de imagem:', error);
     } finally {
       setImageModelsLoading(false);
+    }
+  };
+
+  const loadExistingScripts = async (canalId: string, mode: ContentMode) => {
+    try {
+      setExistingScriptsLoading(true);
+      setSelectedScriptIds(new Set()); // Reset selection
+
+      let query = supabase
+        .from('roteiros')
+        .select('id, titulo, roteiro, canal_id, audio_path, images_path, status, created_at')
+        .eq('canal_id', parseInt(canalId))
+        .order('created_at', { ascending: false });
+
+      // Filter based on mode
+      if (mode === 'audio-only') {
+        // Scripts sem áudio (audio_path is null)
+        query = query.is('audio_path', null);
+      } else if (mode === 'image-only') {
+        // Scripts com áudio mas sem imagens
+        query = query.not('audio_path', 'is', null);
+        // Verificar se images_path é null ou array vazio será feito no frontend
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Filtrar no frontend para image-only (scripts sem imagens ou com array vazio)
+      let filteredData = data || [];
+      if (mode === 'image-only') {
+        filteredData = filteredData.filter(script =>
+          !script.images_path ||
+          (Array.isArray(script.images_path) && script.images_path.length === 0)
+        );
+      }
+
+      setExistingScripts(filteredData);
+    } catch (error) {
+      console.error('Erro ao carregar roteiros existentes:', error);
+    } finally {
+      setExistingScriptsLoading(false);
     }
   };
 
@@ -991,93 +1063,189 @@ export default function GenerateContentV2Page() {
     // Fechar toast de geração anterior se existir
     setShowToast(false);
 
-    if (addedTitles.length === 0) {
-      alert('Por favor, adicione pelo menos um título');
-      return;
-    }
-
-    if (!selectedModel) {
-      alert('Por favor, selecione um modelo de roteiro');
-      return;
-    }
-
-    // Validações para modo gen_video=false (áudio + imagem obrigatórios)
-    if (!generateVideo) {
-      if (!selectedVoiceId) {
-        alert('Por favor, selecione uma voz para geração de áudio');
-        return;
-      }
-
-      if (!imageModelId) {
-        alert('Por favor, selecione um modelo de imagem');
-        return;
-      }
-    }
-
+    // Validação: Canal selecionado
     const selectedChannel = channels.find(c => c.id.toString() === selectedChannelId);
     if (!selectedChannel) {
       alert('Por favor, selecione um canal');
       return;
     }
 
+    // Validações baseadas no modo de geração
+    if (!generateVideo) {
+      // Modos de conteúdo (sem vídeo)
+
+      // Modos que usam títulos (script, script-audio, script-audio-image)
+      if (['script', 'script-audio', 'script-audio-image'].includes(contentMode)) {
+        if (addedTitles.length === 0) {
+          alert('Por favor, adicione pelo menos um título');
+          return;
+        }
+
+        if (!selectedModel) {
+          alert('Por favor, selecione um modelo de roteiro');
+          return;
+        }
+      }
+
+      // Modos que usam roteiros existentes (audio-only, image-only)
+      if (contentMode === 'audio-only' || contentMode === 'image-only') {
+        if (selectedScriptIds.size === 0) {
+          alert('Por favor, selecione pelo menos um roteiro');
+          return;
+        }
+      }
+
+      // Validação de voz (para script-audio, script-audio-image, audio-only)
+      if (['script-audio', 'script-audio-image', 'audio-only'].includes(contentMode)) {
+        if (!selectedVoiceId) {
+          alert('Por favor, selecione uma voz para geração de áudio');
+          return;
+        }
+      }
+
+      // Validação de imagem (para script-audio-image, image-only)
+      if (['script-audio-image', 'image-only'].includes(contentMode)) {
+        if (!imageModelId) {
+          alert('Por favor, selecione um modelo de imagem');
+          return;
+        }
+      }
+    } else {
+      // Modo de vídeo
+      if (addedTitles.length === 0) {
+        alert('Por favor, adicione pelo menos um título');
+        return;
+      }
+
+      if (!selectedModel) {
+        alert('Por favor, selecione um modelo de roteiro');
+        return;
+      }
+    }
+
     try {
       setIsGeneratingContent(true);
 
-      // Buscar o voice_id hash da voz selecionada
+      // Buscar o voice_id hash da voz selecionada (quando necessário)
       const selectedVoice = voices.find(v => v.id === selectedVoiceId);
       const voiceIdHash = selectedVoice?.voice_id;
 
-      // Buscar o AIR do modelo de imagem selecionado
+      // Buscar o AIR do modelo de imagem selecionado (quando necessário)
       const selectedImageModel = imageModels.find(m => m.id === imageModelId);
       const modelAir = selectedImageModel?.air;
 
       let payload: any;
 
       if (!generateVideo) {
-        // Payload para gen_video=false (áudio + imagem obrigatórios)
-        // Nova estrutura: cada título tem seu próprio objeto media
-        payload = {
-          canal_id: parseInt(selectedChannelId),
-          modelo_roteiro: selectedModel,
-          idioma: contentIdioma,
-          tipo_geracao: 'conteudo',
-          audio: {
-            voice_id: voiceIdHash,
-            speed: audioSpeed
-          },
-          titulos: addedTitles.map(title => {
-            // Construir objeto audio
-            const audioConfig: any = {
-              voice_id: voiceIdHash,
-              speed: audioSpeed
-            };
+        // ============================================
+        // PAYLOADS PARA MODOS DE CONTEÚDO (SEM VÍDEO)
+        // ============================================
 
-            // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
-            if (selectedAudioByTitle[title.id]) {
-              audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
-              audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
-            }
+        if (contentMode === 'script') {
+          // Modo 1: Apenas Roteiro
+          payload = {
+            canal_id: parseInt(selectedChannelId),
+            modelo_roteiro: selectedModel,
+            idioma: contentIdioma,
+            tipo_geracao: 'gerar_roteiro',
+            titulos: addedTitles.map(title => title.text)
+          };
+        } else if (contentMode === 'script-audio') {
+          // Modo 2: Roteiro + Áudio
+          payload = {
+            canal_id: parseInt(selectedChannelId),
+            modelo_roteiro: selectedModel,
+            idioma: contentIdioma,
+            tipo_geracao: 'gerar_roteiro_audio',
+            titulos: addedTitles.map(title => {
+              const audioConfig: any = {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              };
 
-            return {
-              titulo: title.text,
-              media: {
-                audio: audioConfig,
-                imagem: {
-                  model_id: modelAir,
-                  style: imageStyle,
-                  style_detail: imageStyleDetail,
-                  width: imageWidth,
-                  height: imageHeight,
-                  n_imgs: numImages
-                },
-                video: {
-                  type: "imagem",
-                  generate: false
-                }
+              // Adicionar trilha_sonora se selecionada
+              if (selectedAudioByTitle[title.id]) {
+                audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
               }
-            };
-          })
-        };
+
+              return {
+                titulo: title.text,
+                media: {
+                  audio: audioConfig
+                }
+              };
+            })
+          };
+        } else if (contentMode === 'script-audio-image') {
+          // Modo 3: Roteiro + Áudio + Imagem (comportamento antigo)
+          payload = {
+            canal_id: parseInt(selectedChannelId),
+            modelo_roteiro: selectedModel,
+            idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
+            titulos: addedTitles.map(title => {
+              const audioConfig: any = {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              };
+
+              if (selectedAudioByTitle[title.id]) {
+                audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
+              }
+
+              return {
+                titulo: title.text,
+                media: {
+                  audio: audioConfig,
+                  imagem: {
+                    model_id: modelAir,
+                    style: imageStyle,
+                    style_detail: imageStyleDetail,
+                    width: imageWidth,
+                    height: imageHeight,
+                    n_imgs: numImages
+                  },
+                  video: {
+                    type: "imagem",
+                    generate: false
+                  }
+                }
+              };
+            })
+          };
+        } else if (contentMode === 'audio-only') {
+          // Modo 4: Apenas Áudio (para roteiros existentes sem áudio)
+          payload = {
+            canal_id: parseInt(selectedChannelId),
+            tipo_geracao: 'gerar_audio',
+            roteiros: Array.from(selectedScriptIds).map(id => ({
+              id_roteiro: id,
+              audio: {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              }
+            }))
+          };
+        } else if (contentMode === 'image-only') {
+          // Modo 5: Apenas Imagem (para roteiros existentes com áudio)
+          payload = {
+            canal_id: parseInt(selectedChannelId),
+            tipo_geracao: 'gerar_imagens',
+            roteiros: Array.from(selectedScriptIds).map(id => ({
+              id_roteiro: id,
+              imagem: {
+                model_id: modelAir,
+                style: imageStyle,
+                style_detail: imageStyleDetail,
+                width: imageWidth,
+                height: imageHeight,
+                n_imgs: numImages
+              }
+            }))
+          };
+        }
       } else {
         // Payload para gen_video=true
 
@@ -1646,6 +1814,245 @@ export default function GenerateContentV2Page() {
         </div>
 
         {/* ============================================ */}
+        {/* CONTENT GENERATION MODE SELECTOR (When generateVideo is OFF) */}
+        {/* ============================================ */}
+
+        {!generateVideo && (
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-light text-white mb-4">Modo de Geração de Conteúdo</h2>
+            <p className="text-sm text-gray-400 mb-6">Selecione o que deseja gerar</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Modo 1: Roteiro */}
+              <button
+                onClick={() => setContentMode('script')}
+                className={`
+                  p-5 rounded-lg border-2 transition-all text-left
+                  ${contentMode === 'script'
+                    ? 'bg-blue-600/20 border-blue-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <FileText className={`w-6 h-6 flex-shrink-0 ${contentMode === 'script' ? 'text-blue-400' : 'text-gray-400'}`} />
+                  <div>
+                    <h3 className={`font-semibold mb-1 ${contentMode === 'script' ? 'text-blue-300' : 'text-white'}`}>
+                      Apenas Roteiro
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Gera apenas o roteiro para os títulos selecionados
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Modo 2: Roteiro + Áudio */}
+              <button
+                onClick={() => setContentMode('script-audio')}
+                className={`
+                  p-5 rounded-lg border-2 transition-all text-left
+                  ${contentMode === 'script-audio'
+                    ? 'bg-green-600/20 border-green-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex gap-1 flex-shrink-0">
+                    <FileText className={`w-5 h-5 ${contentMode === 'script-audio' ? 'text-green-400' : 'text-gray-400'}`} />
+                    <Mic className={`w-5 h-5 ${contentMode === 'script-audio' ? 'text-green-400' : 'text-gray-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className={`font-semibold mb-1 ${contentMode === 'script-audio' ? 'text-green-300' : 'text-white'}`}>
+                      Roteiro + Áudio
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Gera roteiro e áudio para os títulos selecionados
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Modo 3: Roteiro + Áudio + Imagem */}
+              <button
+                onClick={() => setContentMode('script-audio-image')}
+                className={`
+                  p-5 rounded-lg border-2 transition-all text-left
+                  ${contentMode === 'script-audio-image'
+                    ? 'bg-purple-600/20 border-purple-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex gap-1 flex-shrink-0">
+                    <FileText className={`w-4 h-4 ${contentMode === 'script-audio-image' ? 'text-purple-400' : 'text-gray-400'}`} />
+                    <Mic className={`w-4 h-4 ${contentMode === 'script-audio-image' ? 'text-purple-400' : 'text-gray-400'}`} />
+                    <ImageIcon className={`w-4 h-4 ${contentMode === 'script-audio-image' ? 'text-purple-400' : 'text-gray-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className={`font-semibold mb-1 ${contentMode === 'script-audio-image' ? 'text-purple-300' : 'text-white'}`}>
+                      Roteiro + Áudio + Imagem
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Gera roteiro, áudio e imagens para os títulos
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Modo 4: Apenas Áudio */}
+              <button
+                onClick={() => setContentMode('audio-only')}
+                className={`
+                  p-5 rounded-lg border-2 transition-all text-left
+                  ${contentMode === 'audio-only'
+                    ? 'bg-cyan-600/20 border-cyan-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <Mic className={`w-6 h-6 flex-shrink-0 ${contentMode === 'audio-only' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                  <div>
+                    <h3 className={`font-semibold mb-1 ${contentMode === 'audio-only' ? 'text-cyan-300' : 'text-white'}`}>
+                      Apenas Áudio
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Gera áudio para roteiros existentes sem áudio
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Modo 5: Apenas Imagem */}
+              <button
+                onClick={() => setContentMode('image-only')}
+                className={`
+                  p-5 rounded-lg border-2 transition-all text-left
+                  ${contentMode === 'image-only'
+                    ? 'bg-amber-600/20 border-amber-500'
+                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <ImageIcon className={`w-6 h-6 flex-shrink-0 ${contentMode === 'image-only' ? 'text-amber-400' : 'text-gray-400'}`} />
+                  <div>
+                    <h3 className={`font-semibold mb-1 ${contentMode === 'image-only' ? 'text-amber-300' : 'text-white'}`}>
+                      Apenas Imagens
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Gera imagens para roteiros com áudio mas sem imagens
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* EXISTING SCRIPTS SELECTION (For audio-only and image-only modes) */}
+        {/* ============================================ */}
+
+        {!generateVideo && (contentMode === 'audio-only' || contentMode === 'image-only') && (
+          <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-1">Roteiros Existentes</h2>
+                <p className="text-sm text-gray-400">
+                  {contentMode === 'audio-only'
+                    ? 'Selecione roteiros sem áudio para gerar'
+                    : 'Selecione roteiros com áudio para gerar imagens'}
+                </p>
+              </div>
+              {selectedScriptIds.size > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-blue-400" />
+                  <span className="text-blue-300 text-sm font-medium">
+                    {selectedScriptIds.size} selecionado{selectedScriptIds.size > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {existingScriptsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+              </div>
+            ) : existingScripts.length === 0 ? (
+              <div className="bg-gray-800 border border-gray-700 p-12 text-center rounded-lg">
+                <FileText className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 mb-2">Nenhum roteiro encontrado</p>
+                <p className="text-gray-500 text-sm">
+                  {contentMode === 'audio-only'
+                    ? 'Não há roteiros sem áudio neste canal'
+                    : 'Não há roteiros com áudio e sem imagens neste canal'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {existingScripts.map((script) => {
+                  const isSelected = selectedScriptIds.has(script.id);
+
+                  return (
+                    <div
+                      key={script.id}
+                      onClick={() => {
+                        const newSet = new Set(selectedScriptIds);
+                        if (isSelected) {
+                          newSet.delete(script.id);
+                        } else {
+                          newSet.add(script.id);
+                        }
+                        setSelectedScriptIds(newSet);
+                      }}
+                      className={`
+                        bg-gray-800 border p-4 rounded-lg transition-all cursor-pointer
+                        ${isSelected
+                          ? 'border-blue-500 ring-2 ring-blue-500/30'
+                          : 'border-gray-700 hover:border-gray-600'
+                        }
+                      `}
+                    >
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="flex-shrink-0 pt-0.5">
+                          <div className={`
+                            w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+                            ${isSelected
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-600'
+                            }
+                          `}>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-medium text-sm mb-1 line-clamp-2">
+                            {script.titulo || 'Sem título'}
+                          </h3>
+                          <p className="text-gray-400 text-xs line-clamp-2 mb-2">
+                            {script.roteiro.substring(0, 80)}...
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>#{script.id}</span>
+                            <span>•</span>
+                            <span>{new Date(script.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================ */}
         {/* VIDEO GENERATION METHOD SELECTOR (When generateVideo is ON) */}
         {/* ============================================ */}
 
@@ -1922,9 +2329,11 @@ export default function GenerateContentV2Page() {
         </div>
 
         {/* ============================================ */}
-        {/* SECTION 4: AUDIO CONFIGURATION (Always shown) */}
+        {/* SECTION 4: AUDIO CONFIGURATION (Conditional) */}
+        {/* Show when: generateVideo=true OR contentMode includes audio */}
         {/* ============================================ */}
 
+        {(generateVideo || (!generateVideo && ['script-audio', 'script-audio-image', 'audio-only'].includes(contentMode))) && (
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
           <h2 className="text-xl font-light text-white mb-4 flex items-center gap-2">
             <Mic className="w-5 h-5" />
@@ -2134,12 +2543,14 @@ export default function GenerateContentV2Page() {
               </div>
             </div>
         </div>
+        )}
 
         {/* ============================================ */}
         {/* SECTION 5: IMAGE CONFIGURATION (Conditional) */}
+        {/* Show when: generateVideo=true with image-to-video OR contentMode includes image */}
         {/* ============================================ */}
 
-        {(!generateVideo || (generateVideo && videoGenerationMethod === 'image-to-video')) && (
+        {((generateVideo && videoGenerationMethod === 'image-to-video') || (!generateVideo && ['script-audio-image', 'image-only'].includes(contentMode))) && (
           <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-purple-400/20 p-6 mb-6">
             <h2 className="text-lg font-semibold text-white mb-6 flex items-center">
               <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
