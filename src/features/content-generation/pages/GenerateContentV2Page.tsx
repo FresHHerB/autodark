@@ -1215,10 +1215,6 @@ export default function GenerateContentV2Page() {
                     width: imageWidth,
                     height: imageHeight,
                     n_imgs: numImages
-                  },
-                  video: {
-                    type: "imagem",
-                    generate: false
                   }
                 }
               };
