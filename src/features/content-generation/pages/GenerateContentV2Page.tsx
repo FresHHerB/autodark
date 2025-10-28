@@ -1152,6 +1152,7 @@ export default function GenerateContentV2Page() {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
             titulos: addedTitles.map(title => title.text)  // Array de strings simples
           };
         } else if (contentMode === 'script-audio') {
@@ -1161,6 +1162,7 @@ export default function GenerateContentV2Page() {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
             titulos: addedTitles.map(title => {
               const audioConfig: any = {
                 voice_id: voiceIdHash,
@@ -1188,6 +1190,7 @@ export default function GenerateContentV2Page() {
             canal_id: parseInt(selectedChannelId),
             modelo_roteiro: selectedModel,
             idioma: contentIdioma,
+            tipo_geracao: 'conteudo',
             titulos: addedTitles.map(title => {
               const audioConfig: any = {
                 voice_id: voiceIdHash,
@@ -1225,6 +1228,7 @@ export default function GenerateContentV2Page() {
           // Não precisa de modelo_roteiro/idioma (roteiros já existem)
           payload = {
             canal_id: parseInt(selectedChannelId),
+            tipo_geracao: 'conteudo',
             roteiros: Array.from(selectedScriptIds).map(id => ({
               id: id,
               media: {
@@ -1240,6 +1244,7 @@ export default function GenerateContentV2Page() {
           // Usa 'roteiros' com ids ao invés de 'titulos'
           payload = {
             canal_id: parseInt(selectedChannelId),
+            tipo_geracao: 'conteudo',
             roteiros: Array.from(selectedScriptIds).map(id => ({
               id: id,
               media: {
