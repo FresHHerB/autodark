@@ -71,6 +71,49 @@ export default function ViewScriptsPage() {
     loadScripts();
   }, []);
 
+  // Auto-update every 10 seconds (pause when tab is inactive)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const startInterval = () => {
+      if (interval) return; // Already running
+
+      interval = setInterval(() => {
+        console.log('🔄 Auto-atualizando roteiros...');
+        loadScripts();
+      }, 10000); // 10 seconds
+    };
+
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    // Only update when tab is visible
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('👁️ Aba inativa - pausando auto-update de roteiros');
+        stopInterval();
+      } else {
+        console.log('👁️ Aba ativa - retomando auto-update de roteiros');
+        loadScripts(); // Update immediately when returning
+        startInterval();
+      }
+    };
+
+    // Start interval
+    startInterval();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Close channel dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
