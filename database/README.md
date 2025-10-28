@@ -57,11 +57,53 @@ DELETE canal
 
 ## Row Level Security (RLS)
 
-RLS is **enabled** on all tables but policies are **not** included in schema.sql.
+RLS is **enabled** on all tables and policies **ARE included** in schema.sql.
 
-You must configure RLS policies separately based on your authentication setup.
+### Current Policy Configuration
 
-Example policies can be found at the end of `schema.sql` (commented out).
+**All policies allow authenticated users to access all data** - suitable for:
+- Single-user environments
+- Trusted multi-user setups
+- Internal/admin tools
+
+### Policy Summary
+
+| Table | SELECT | INSERT | UPDATE | DELETE | Notes |
+|-------|--------|--------|--------|--------|-------|
+| **apis** | ✅ | ✅ | ❌ | ❌ | Read + Insert only |
+| **vozes** | ✅ | ✅ | ✅ | ✅ | Full CRUD |
+| **canais** | ✅ | ❌ | ❌ | ❌ | Read-only (writes via webhooks) |
+| **roteiros** | ✅ | ❌ | ❌ | ❌ | Read-only (writes via webhooks) |
+| **videos** | ✅ | ✅ | ✅ | ✅ | Full CRUD (has redundant ALL policy) |
+| **modelos_imagem** | ✅ | ✅ | ✅ | ✅ | Full CRUD |
+
+### Important Notes
+
+⚠️ **Current policies use `USING (true)` and `WITH CHECK (true)`**
+- This means ALL authenticated users can access ALL rows
+- No user-specific filtering or multi-tenancy
+
+⚠️ **videos table has redundant policies**
+- Has both specific policies (SELECT, INSERT) AND an ALL policy
+- Consider cleaning this up in a future migration
+
+⚠️ **canais and roteiros are READ-ONLY via RLS**
+- Write operations are handled by N8N webhooks and backend services
+- Frontend only has SELECT access
+
+### For Multi-Tenant or User-Specific Access
+
+If you need to restrict access per user, modify policies like:
+
+```sql
+-- Example: Only show user's own canais
+DROP POLICY "Enable read access for authenticated" ON public.canais;
+
+CREATE POLICY "Users can view own canais"
+  ON public.canais FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);  -- Requires adding user_id column
+```
 
 ## Migrations
 

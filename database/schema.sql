@@ -281,19 +281,123 @@ ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
 -- RLS is ENABLED on all tables above
--- Configure policies separately based on your authentication setup
+-- The policies below are the CURRENT production policies
 --
--- Example policies (uncomment and adjust as needed):
---
--- -- Allow authenticated users to read their own data
--- CREATE POLICY "Users can view own canais"
---   ON public.canais FOR SELECT
---   USING (auth.uid() = user_id);
---
--- -- Allow service role full access
--- CREATE POLICY "Service role full access"
---   ON public.canais FOR ALL
---   USING (auth.role() = 'service_role');
+-- NOTE: These policies allow ALL authenticated users to access ALL data
+-- This is suitable for single-user or trusted multi-user environments
+-- Adjust as needed for multi-tenant or user-specific access control
+-- ============================================================================
+
+-- ============================================================================
+-- TABLE: apis
+-- ============================================================================
+
+CREATE POLICY "Enable read access for all users"
+  ON public.apis FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Enable insert for authenticated users only"
+  ON public.apis FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+-- ============================================================================
+-- TABLE: vozes
+-- ============================================================================
+
+CREATE POLICY "Enable select for authenticated users only"
+  ON public.vozes FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Enable insert for authenticated users only"
+  ON public.vozes FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Enable update for authenticated users only"
+  ON public.vozes FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Enable dele for authenticated users only"
+  ON public.vozes FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- ============================================================================
+-- TABLE: canais
+-- ============================================================================
+
+CREATE POLICY "Enable read access for authenticated"
+  ON public.canais FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- NOTE: canais table has only SELECT policy
+-- INSERT, UPDATE, DELETE operations are handled via webhooks/backend
+
+-- ============================================================================
+-- TABLE: roteiros
+-- ============================================================================
+
+CREATE POLICY "Enable read access for all users"
+  ON public.roteiros FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- NOTE: roteiros table has only SELECT policy
+-- INSERT, UPDATE, DELETE operations are handled via webhooks/backend
+
+-- ============================================================================
+-- TABLE: videos
+-- ============================================================================
+
+-- NOTE: videos table has multiple policies (including a redundant ALL policy)
+-- Consider cleaning this up in a future migration
+
+CREATE POLICY "Enable select for authenticated users only"
+  ON public.videos FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Enable insert for authenticated users only"
+  ON public.videos FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Enable ALL for authenticated users only"
+  ON public.videos FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- ============================================================================
+-- TABLE: modelos_imagem
+-- ============================================================================
+
+CREATE POLICY "Enable select for authenticated users only"
+  ON public.modelos_imagem FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Enable insert for authenticated users only"
+  ON public.modelos_imagem FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Enable update for authenticated users only"
+  ON public.modelos_imagem FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Enable delete for authenticated users only"
+  ON public.modelos_imagem FOR DELETE
+  TO authenticated
+  USING (true);
 
 -- ============================================================================
 -- NOTES
