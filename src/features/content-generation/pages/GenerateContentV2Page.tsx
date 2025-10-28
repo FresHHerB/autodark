@@ -2205,9 +2205,13 @@ export default function GenerateContentV2Page() {
 
         {/* ============================================ */}
         {/* DRIVE AUDIO SELECTION BY TITLE */}
+        {/* Only show when generating audio (video mode OR content modes with audio) */}
         {/* ============================================ */}
 
         {addedTitles.length > 0 && (
+          generateVideo ||
+          (!generateVideo && ['script-audio', 'script-audio-image'].includes(contentMode))
+        ) && (
           <div className="mb-6">
             <h2 className="text-xl font-light text-white mb-4">Selecionar Trilha Sonora por Título</h2>
 
