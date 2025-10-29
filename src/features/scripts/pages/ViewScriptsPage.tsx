@@ -70,6 +70,9 @@ export default function ViewScriptsPage() {
   const [editingScript, setEditingScript] = useState<{titulo: string, roteiro: string} | null>(null);
   const [savingScript, setSavingScript] = useState(false);
 
+  // Collapsed channels state
+  const [collapsedChannels, setCollapsedChannels] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -84,7 +87,7 @@ export default function ViewScriptsPage() {
 
       interval = setInterval(() => {
         console.log('🔄 Auto-atualizando roteiros...');
-        loadScripts();
+        loadScripts(true); // Silent refresh
       }, 10000); // 10 seconds
     };
 
@@ -102,7 +105,7 @@ export default function ViewScriptsPage() {
         stopInterval();
       } else {
         console.log('👁️ Aba ativa - retomando auto-update de roteiros');
-        loadScripts(); // Update immediately when returning
+        loadScripts(true); // Update immediately when returning (silent)
         startInterval();
       }
     };
@@ -147,9 +150,11 @@ export default function ViewScriptsPage() {
     }
   };
 
-  const loadScripts = async () => {
+  const loadScripts = async (silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
 
       const { data: scriptsData, error: scriptsError } = await supabase
         .from('roteiros')
@@ -197,9 +202,13 @@ export default function ViewScriptsPage() {
       setScripts(enrichedScripts);
     } catch (error) {
       console.error('Erro ao carregar roteiros:', error);
-      alert('Erro ao carregar roteiros. Verifique o console.');
+      if (!silent) {
+        alert('Erro ao carregar roteiros. Verifique o console.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -291,6 +300,18 @@ export default function ViewScriptsPage() {
   const handleCloseModal = () => {
     setSelectedScript(null);
     setEditingScript(null);
+  };
+
+  const toggleChannelCollapse = (channelName: string) => {
+    setCollapsedChannels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(channelName)) {
+        newSet.delete(channelName);
+      } else {
+        newSet.add(channelName);
+      }
+      return newSet;
+    });
   };
 
   const handleSaveScript = async () => {
@@ -702,22 +723,30 @@ export default function ViewScriptsPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {channelNames.map(channelName => (
+            {channelNames.map(channelName => {
+              const isCollapsed = collapsedChannels.has(channelName);
+
+              return (
               <div key={channelName}>
-                {/* Channel Header */}
-                <div className="flex items-center mb-4">
+                {/* Channel Header - Clickable */}
+                <button
+                  onClick={() => toggleChannelCollapse(channelName)}
+                  className="flex items-center mb-4 w-full text-left hover:opacity-80 transition-opacity group"
+                >
                   <div className="flex-1">
                     <h2 className="text-xl font-bold text-white flex items-center">
                       <div className="w-1 h-6 bg-blue-500 rounded-full mr-3"></div>
+                      <ChevronDown className={`w-5 h-5 mr-2 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
                       {channelName}
                     </h2>
-                    <p className="text-gray-400 text-sm ml-6 mt-1">
+                    <p className="text-gray-400 text-sm ml-11 mt-1">
                       {scriptsByChannel[channelName].length} {scriptsByChannel[channelName].length === 1 ? 'roteiro' : 'roteiros'}
                     </p>
                   </div>
-                </div>
+                </button>
 
-                {/* Scripts Grid for this Channel */}
+                {/* Scripts Grid for this Channel - Conditionally rendered */}
+                {!isCollapsed && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
                   {scriptsByChannel[channelName].map(script => (
                     <div
@@ -836,8 +865,10 @@ export default function ViewScriptsPage() {
             </div>
             ))}
           </div>
+                )}
         </div>
-      ))}
+              );
+            })}
         </div>
       )}
 
