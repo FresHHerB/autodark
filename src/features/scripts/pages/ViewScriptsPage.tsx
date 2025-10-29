@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardHeader } from '@features/dashboard/components';
 import { supabase } from '@shared/lib';
 import { apiService } from '@shared/services';
-import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2, ChevronDown, Check, Copy } from 'lucide-react';
+import { FileText, Calendar, Mic, Image as ImageIcon, Video, X, Play, Download, ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit2, Loader2, RefreshCw, Trash2, ChevronDown, Check, Copy, Save } from 'lucide-react';
 import ImageLightbox from '@shared/components/modals/ImageLightbox';
 import VideoPlayer from '@shared/components/modals/VideoPlayer';
 
@@ -67,7 +67,8 @@ export default function ViewScriptsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Script editing state
-  const [editingScript, setEditingScript] = useState<{titulo: string, roteiro: string} | null>(null);
+  const [editedRoteiro, setEditedRoteiro] = useState<string>('');
+  const [hasChanges, setHasChanges] = useState(false);
   const [savingScript, setSavingScript] = useState(false);
 
   // Collapsed channels state
@@ -317,7 +318,21 @@ export default function ViewScriptsPage() {
 
   const handleCloseModal = () => {
     setSelectedScript(null);
-    setEditingScript(null);
+    setEditedRoteiro('');
+    setHasChanges(false);
+  };
+
+  // Initialize edited roteiro when script is selected
+  useEffect(() => {
+    if (selectedScript) {
+      setEditedRoteiro(selectedScript.roteiro);
+      setHasChanges(false);
+    }
+  }, [selectedScript]);
+
+  const handleRoteiroChange = (value: string) => {
+    setEditedRoteiro(value);
+    setHasChanges(selectedScript ? value !== selectedScript.roteiro : false);
   };
 
   const toggleChannelCollapse = (channelName: string) => {
@@ -333,7 +348,7 @@ export default function ViewScriptsPage() {
   };
 
   const handleSaveScript = async () => {
-    if (!selectedScript || !editingScript) return;
+    if (!selectedScript || !hasChanges) return;
 
     try {
       setSavingScript(true);
@@ -341,8 +356,7 @@ export default function ViewScriptsPage() {
 
       await apiService.updateScript({
         id_roteiro: selectedScript.id,
-        titulo: editingScript.titulo,
-        roteiro: editingScript.roteiro,
+        roteiro: editedRoteiro,
       });
 
       // Recarregar dados do roteiro atualizado do banco
@@ -395,10 +409,11 @@ export default function ViewScriptsPage() {
       setSelectedScript(enrichedScript);
 
       // Atualizar também a lista de scripts
-      await loadScripts();
+      await loadScripts(true); // Silent refresh
 
-      // Limpar modo de edição e mostrar sucesso
-      setEditingScript(null);
+      // Limpar estado de alteração e mostrar sucesso
+      setEditedRoteiro(enrichedScript.roteiro);
+      setHasChanges(false);
       setSuccessMessage('Dados atualizados!');
       setTimeout(() => setSuccessMessage(null), 3000);
 
@@ -1045,73 +1060,52 @@ export default function ViewScriptsPage() {
                       <FileText className="w-5 h-5 mr-2 text-purple-400" />
                       Roteiro Completo
                     </h3>
-                    {!editingScript ? (
-                      <>
-                        {/* Regra: roteiro só pode ser editado se:
-                            - audio_path = NULL
-                            - images_path = NULL
-                            - status = 'roteiro_gerado'
-                            - Não existe vídeo (video_id = null)
-                        */}
-                        {selectedScript.audio_path || selectedScript.images_path || selectedScript.status !== 'roteiro_gerado' || selectedScript.video_id ? (
-                          <div className="text-xs text-gray-500 italic">
-                            {selectedScript.video_id
-                              ? 'Roteiro já convertido em vídeo'
-                              : selectedScript.audio_path || selectedScript.images_path
-                              ? 'Roteiro com mídia gerada não pode ser editado'
-                              : 'Roteiro só pode ser editado com status "roteiro_gerado"'}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setEditingScript({ titulo: selectedScript.titulo || '', roteiro: selectedScript.roteiro })}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                            Editar
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setEditingScript(null)}
-                          disabled={savingScript}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={handleSaveScript}
-                          disabled={savingScript}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
-                        >
-                          {savingScript ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Salvando...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4" />
-                              Salvar
-                            </>
-                          )}
-                        </button>
+                    {/* Regra: roteiro só pode ser editado se:
+                        - audio_path = NULL
+                        - images_path = NULL
+                        - status = 'roteiro_gerado'
+                        - Não existe vídeo (video_id = null)
+                    */}
+                    {selectedScript.audio_path || selectedScript.images_path || selectedScript.status !== 'roteiro_gerado' || selectedScript.video_id ? (
+                      <div className="text-xs text-gray-500 italic">
+                        {selectedScript.video_id
+                          ? 'Roteiro já convertido em vídeo'
+                          : selectedScript.audio_path || selectedScript.images_path
+                          ? 'Roteiro com mídia gerada não pode ser editado'
+                          : 'Roteiro só pode ser editado com status "roteiro_gerado"'}
                       </div>
+                    ) : (
+                      <button
+                        onClick={handleSaveScript}
+                        disabled={savingScript || !hasChanges}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                      >
+                        {savingScript ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Atualizar Roteiro
+                          </>
+                        )}
+                      </button>
                     )}
                   </div>
-                  {editingScript ? (
+                  {/* Sempre editável se permitido, readonly se não */}
+                  {selectedScript.audio_path || selectedScript.images_path || selectedScript.status !== 'roteiro_gerado' || selectedScript.video_id ? (
+                    <div className="text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar bg-gray-800/50 rounded-lg p-4">
+                      {selectedScript.roteiro}
+                    </div>
+                  ) : (
                     <textarea
-                      value={editingScript.roteiro}
-                      onChange={(e) => setEditingScript({ ...editingScript, roteiro: e.target.value })}
+                      value={editedRoteiro}
+                      onChange={(e) => handleRoteiroChange(e.target.value)}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-96 font-mono text-sm"
                       placeholder="Digite o roteiro..."
                     />
-                  ) : (
-                    <div className="text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar">
-                      {selectedScript.roteiro}
-                    </div>
                   )}
                 </div>
 
