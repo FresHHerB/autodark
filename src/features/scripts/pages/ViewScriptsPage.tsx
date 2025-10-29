@@ -632,7 +632,7 @@ export default function ViewScriptsPage() {
                         <>
                           {selectedChannel.profile_image ? (
                             <img
-                              src={`${selectedChannel.profile_image}?t=${Date.now()}`}
+                              src={selectedChannel.profile_image}
                               alt={selectedChannel.nome_canal}
                               className="w-6 h-6 rounded-full object-cover"
                             />
@@ -681,7 +681,7 @@ export default function ViewScriptsPage() {
                     >
                       {channel.profile_image ? (
                         <img
-                          src={`${channel.profile_image}?t=${Date.now()}`}
+                          src={channel.profile_image}
                           alt={channel.nome_canal}
                           className="w-6 h-6 rounded-full object-cover"
                         />
@@ -826,7 +826,7 @@ export default function ViewScriptsPage() {
                       <div className="flex items-center gap-1">
                         {script.canal_profile_image ? (
                           <img
-                            src={`${script.canal_profile_image}?t=${Date.now()}`}
+                            src={script.canal_profile_image}
                             alt={script.canal_nome}
                             className="w-4 h-4 rounded-full object-cover"
                           />
@@ -917,7 +917,7 @@ export default function ViewScriptsPage() {
                     <div className="flex items-center space-x-3">
                       {selectedScript.canal_profile_image ? (
                         <img
-                          src={`${selectedScript.canal_profile_image}?t=${Date.now()}`}
+                          src={selectedScript.canal_profile_image}
                           alt={selectedScript.canal_nome}
                           className="w-8 h-8 rounded-full object-cover"
                         />
