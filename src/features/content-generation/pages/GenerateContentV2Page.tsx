@@ -401,44 +401,58 @@ export default function GenerateContentV2Page() {
       setExistingScriptsLoading(true);
       setSelectedScriptIds(new Set()); // Reset selection
 
+      // Primeiro, buscar IDs dos vídeos existentes para excluir roteiros já convertidos
+      const { data: videosData } = await supabase
+        .from('videos')
+        .select('id');
+
+      const videoIds = new Set(videosData?.map(v => v.id) || []);
+
       let query = supabase
         .from('roteiros')
         .select('id, titulo, roteiro, canal_id, audio_path, images_path, status, created_at')
         .eq('canal_id', parseInt(canalId))
         .order('created_at', { ascending: false });
 
-      // Filter based on mode
+      // Filter based on mode with new logic
       if (mode === 'audio-only') {
-        // Scripts sem áudio (audio_path is null)
-        query = query.is('audio_path', null);
+        // Roteiros prontos (status = 'roteiro_gerado') sem áudio
+        query = query
+          .eq('status', 'roteiro_gerado')
+          .is('audio_path', null);
       } else if (mode === 'image-only') {
-        // Scripts com áudio mas sem imagens
-        query = query.not('audio_path', 'is', null);
-        // Verificar se images_path é null ou array vazio será feito no frontend
+        // Roteiros com áudio gerado (status = 'audio_gerado'), com áudio não vazio, sem imagens
+        query = query
+          .eq('status', 'audio_gerado')
+          .not('audio_path', 'is', null)
+          .is('images_path', null);
       } else if (mode === 'audio-image') {
-        // Scripts com áudio mas sem imagens (para gerar áudio + imagem)
-        query = query.not('audio_path', 'is', null);
-        // Verificar se images_path é null ou array vazio será feito no frontend
+        // Roteiros prontos (status = 'roteiro_gerado') sem áudio e sem imagens
+        query = query
+          .eq('status', 'roteiro_gerado')
+          .is('audio_path', null)
+          .is('images_path', null);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Filtrar no frontend para image-only e audio-image (scripts sem imagens ou com array vazio)
-      let filteredData = data || [];
-      if (mode === 'image-only' || mode === 'audio-image') {
-        filteredData = filteredData.filter(script => {
-          // Verificar se não tem imagens
-          const hasNoImages = !script.images_path ||
-            (Array.isArray(script.images_path) && script.images_path.length === 0);
+      // Filtrar no frontend:
+      // 1. Remover roteiros que já existem como vídeo (JOIN videos)
+      // 2. Para image-only, validar que audio_path não está vazio
+      let filteredData = (data || []).filter(script => {
+        // Não mostrar se já existe vídeo com esse ID
+        const hasVideo = videoIds.has(script.id);
 
-          // Verificar se status não é video_gerado ou video_completo
-          const isNotVideoGenerated = script.status !== 'video_gerado' && script.status !== 'video_completo';
+        // Para image-only, verificar também se audio_path não está vazio (string)
+        if (mode === 'image-only') {
+          const hasValidAudio = script.audio_path && script.audio_path.trim() !== '';
+          return !hasVideo && hasValidAudio;
+        }
 
-          return hasNoImages && isNotVideoGenerated;
-        });
-      }
+        return !hasVideo;
+      });
 
       setExistingScripts(filteredData);
     } catch (error) {
@@ -1995,7 +2009,7 @@ export default function GenerateContentV2Page() {
                       Apenas Áudio
                     </h3>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      Gera áudio para roteiros existentes sem áudio
+                      Gera áudio para roteiros prontos (status: roteiro_gerado)
                     </p>
                   </div>
                 </div>
@@ -2019,7 +2033,7 @@ export default function GenerateContentV2Page() {
                       Apenas Imagens
                     </h3>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      Gera imagens para roteiros com áudio mas sem imagens
+                      Gera imagens para roteiros com áudio gerado (status: audio_gerado)
                     </p>
                   </div>
                 </div>
@@ -2046,7 +2060,7 @@ export default function GenerateContentV2Page() {
                       Áudio + Imagem
                     </h3>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      Gera áudio e imagens para roteiros existentes com áudio mas sem imagens
+                      Gera áudio e imagens para roteiros prontos (status: roteiro_gerado)
                     </p>
                   </div>
                 </div>
@@ -2066,10 +2080,10 @@ export default function GenerateContentV2Page() {
                 <h2 className="text-lg font-semibold text-white mb-1">Roteiros Existentes</h2>
                 <p className="text-sm text-gray-400">
                   {contentMode === 'audio-only'
-                    ? 'Selecione roteiros sem áudio para gerar'
+                    ? 'Selecione roteiros prontos (status: roteiro_gerado) sem áudio'
                     : contentMode === 'audio-image'
-                    ? 'Selecione roteiros com áudio para gerar áudio e imagens'
-                    : 'Selecione roteiros com áudio para gerar imagens'}
+                    ? 'Selecione roteiros prontos (status: roteiro_gerado) para gerar áudio e imagens'
+                    : 'Selecione roteiros com áudio gerado (status: audio_gerado) para gerar imagens'}
                 </p>
               </div>
               {selectedScriptIds.size > 0 && (
@@ -2092,10 +2106,10 @@ export default function GenerateContentV2Page() {
                 <p className="text-gray-400 mb-2">Nenhum roteiro encontrado</p>
                 <p className="text-gray-500 text-sm">
                   {contentMode === 'audio-only'
-                    ? 'Não há roteiros sem áudio neste canal'
+                    ? 'Não há roteiros prontos (status: roteiro_gerado) sem áudio neste canal'
                     : contentMode === 'audio-image'
-                    ? 'Não há roteiros com áudio e sem imagens neste canal'
-                    : 'Não há roteiros com áudio e sem imagens neste canal'}
+                    ? 'Não há roteiros prontos (status: roteiro_gerado) sem áudio e sem imagens neste canal'
+                    : 'Não há roteiros com áudio gerado (status: audio_gerado) sem imagens neste canal'}
                 </p>
               </div>
             ) : (
