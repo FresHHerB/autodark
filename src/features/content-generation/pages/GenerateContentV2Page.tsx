@@ -2263,87 +2263,140 @@ export default function GenerateContentV2Page() {
         )}
 
         {/* ============================================ */}
-        {/* DRIVE VIDEO SELECTION BY TITLE */}
+        {/* DRIVE VIDEO + AUDIO SELECTION BY TITLE (video-to-video mode) */}
         {/* ============================================ */}
 
         {generateVideo && videoGenerationMethod === 'video-to-video' && addedTitles.length > 0 && (
-          <div className="mb-6 space-y-4">
-            <h2 className="text-xl font-light text-white mb-4">Selecionar Vídeos por Título</h2>
+          <div className="mb-6 space-y-6">
+            <h2 className="text-xl font-light text-white mb-4">Selecionar Vídeos e Trilha Sonora por Título</h2>
 
             {addedTitles.map((title) => (
-              <div key={title.id} className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+              <div key={title.id} className="bg-gray-900 border border-gray-800 rounded-lg p-6 space-y-6">
                 {/* Título da Box */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-white">{title.text}</h3>
-                  <span className={`text-sm px-3 py-1 rounded ${
-                    (driveVideosByTitle[title.id]?.length || 0) > 0
-                      ? 'bg-green-600/20 text-green-400'
-                      : 'bg-red-600/20 text-red-400'
-                  }`}>
-                    {driveVideosByTitle[title.id]?.length || 0} vídeo(s) selecionado(s)
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm px-3 py-1 rounded ${
+                      (driveVideosByTitle[title.id]?.length || 0) > 0
+                        ? 'bg-green-600/20 text-green-400'
+                        : 'bg-red-600/20 text-red-400'
+                    }`}>
+                      {driveVideosByTitle[title.id]?.length || 0} vídeo(s)
+                    </span>
+                    <span className={`text-sm px-3 py-1 rounded ${
+                      selectedAudioByTitle[title.id]
+                        ? 'bg-green-600/20 text-green-400'
+                        : 'bg-gray-700 text-gray-400'
+                    }`}>
+                      {selectedAudioByTitle[title.id] ? '1 trilha' : 'Sem trilha'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Seleção Aleatória */}
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex-1">
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Seleção Aleatória (1-50 vídeos)
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        max="50"
-                        value={randomVideoCountByTitle[title.id] || ''}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || 0;
-                          setRandomVideoCountByTitle({
-                            ...randomVideoCountByTitle,
-                            [title.id]: value
-                          });
-                        }}
-                        placeholder="Ex: 10"
-                        className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
-                      />
-                      <button
-                        onClick={() => handleRandomVideoSelection(title.id)}
-                        disabled={!randomVideoCountByTitle[title.id] || !availableVideosByTitle[title.id]?.length}
-                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <Play className="w-4 h-4" />
-                        Selecionar Aleatoriamente
-                      </button>
+                {/* Seção de Vídeos */}
+                <div className="border-l-2 border-purple-500 pl-4">
+                  <h4 className="text-md font-medium text-white mb-4">📹 Vídeos da Base</h4>
+
+                  {/* Seleção Aleatória */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="block text-sm text-gray-400 mb-2">
+                        Seleção Aleatória (1-50 vídeos)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={randomVideoCountByTitle[title.id] || ''}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            setRandomVideoCountByTitle({
+                              ...randomVideoCountByTitle,
+                              [title.id]: value
+                            });
+                          }}
+                          placeholder="Ex: 10"
+                          className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+                        />
+                        <button
+                          onClick={() => handleRandomVideoSelection(title.id)}
+                          disabled={!randomVideoCountByTitle[title.id] || !availableVideosByTitle[title.id]?.length}
+                          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4" />
+                          Selecionar Aleatoriamente
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {/* DriveVideoSelector */}
+                  {!selectedChannelId ? (
+                    <div className="text-center py-8 text-gray-500">
+                      Selecione um canal primeiro
+                    </div>
+                  ) : (
+                    <DriveVideoSelector
+                      driveUrl={
+                        channels.find((c) => c.id.toString() === selectedChannelId)
+                          ?.drive_url || ''
+                      }
+                      onSelectionChange={(urls) => {
+                        setDriveVideosByTitle({
+                          ...driveVideosByTitle,
+                          [title.id]: urls,
+                        });
+                      }}
+                      initialSelectedUrls={driveVideosByTitle[title.id] || []}
+                      onVideosLoaded={(videos) => {
+                        setAvailableVideosByTitle(prev => ({
+                          ...prev,
+                          [title.id]: videos
+                        }));
+                      }}
+                    />
+                  )}
                 </div>
 
-                {/* DriveVideoSelector */}
-                {!selectedChannelId ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Selecione um canal primeiro
-                  </div>
-                ) : (
-                  <DriveVideoSelector
-                    driveUrl={
-                      channels.find((c) => c.id.toString() === selectedChannelId)
-                        ?.drive_url || ''
-                    }
-                    onSelectionChange={(urls) => {
-                      setDriveVideosByTitle({
-                        ...driveVideosByTitle,
-                        [title.id]: urls,
-                      });
-                    }}
-                    initialSelectedUrls={driveVideosByTitle[title.id] || []}
-                    onVideosLoaded={(videos) => {
-                      setAvailableVideosByTitle(prev => ({
-                        ...prev,
-                        [title.id]: videos
-                      }));
-                    }}
-                  />
-                )}
+                {/* Seção de Trilha Sonora */}
+                <div className="border-l-2 border-blue-500 pl-4">
+                  <h4 className="text-md font-medium text-white mb-4">🎵 Trilha Sonora</h4>
+
+                  {/* DriveAudioSelector */}
+                  {!selectedChannelId ? (
+                    <div className="text-center py-8 text-gray-500">
+                      Selecione um canal primeiro
+                    </div>
+                  ) : (
+                    <DriveAudioSelector
+                      driveUrl={
+                        channels.find((c) => c.id.toString() === selectedChannelId)
+                          ?.trilha_url || ''
+                      }
+                      onSelectionChange={(url) => {
+                        setSelectedAudioByTitle({
+                          ...selectedAudioByTitle,
+                          [title.id]: url,
+                        });
+                      }}
+                      initialSelectedUrl={selectedAudioByTitle[title.id] || null}
+                      onAudiosLoaded={(audios) => {
+                        setAvailableAudiosByTitle(prev => ({
+                          ...prev,
+                          [title.id]: audios
+                        }));
+                      }}
+                      dbOffset={audioDbOffsetByTitle[title.id] || 30}
+                      onDbOffsetChange={(dbOffset) => {
+                        setAudioDbOffsetByTitle({
+                          ...audioDbOffsetByTitle,
+                          [title.id]: dbOffset,
+                        });
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -2351,11 +2404,11 @@ export default function GenerateContentV2Page() {
 
         {/* ============================================ */}
         {/* DRIVE AUDIO SELECTION BY TITLE */}
-        {/* Only show when generating audio (video mode OR content modes with audio) */}
+        {/* Only show when generating audio (EXCEPT video-to-video which has integrated selection above) */}
         {/* ============================================ */}
 
         {addedTitles.length > 0 && (
-          generateVideo ||
+          (generateVideo && videoGenerationMethod !== 'video-to-video') ||
           (!generateVideo && ['script-audio', 'script-audio-image'].includes(contentMode))
         ) && (
           <div className="mb-6">
