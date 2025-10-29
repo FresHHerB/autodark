@@ -184,6 +184,13 @@ export default function GenerateContentV2Page() {
   // Map para armazenar db_offset por título (diferença de volume da trilha)
   const [audioDbOffsetByTitle, setAudioDbOffsetByTitle] = useState<Record<string, number>>({});
 
+  // Drive Audio Selection State for Scripts (audio-only mode)
+  // Map para armazenar trilha sonora selecionada por script_id
+  const [selectedAudioByScriptId, setSelectedAudioByScriptId] = useState<Record<number, string | null>>({});
+
+  // Map para armazenar db_offset por script_id
+  const [audioDbOffsetByScriptId, setAudioDbOffsetByScriptId] = useState<Record<number, number>>({});
+
   // Generation State
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
@@ -302,6 +309,8 @@ export default function GenerateContentV2Page() {
       // Clear existing scripts when not in audio-only or image-only mode
       setExistingScripts([]);
       setSelectedScriptIds(new Set());
+      setSelectedAudioByScriptId({});
+      setAudioDbOffsetByScriptId({});
     }
   }, [generateVideo, selectedChannelId, contentMode]);
 
@@ -1227,15 +1236,25 @@ export default function GenerateContentV2Page() {
           payload = {
             canal_id: parseInt(selectedChannelId),
             tipo_geracao: 'conteudo',
-            roteiros: Array.from(selectedScriptIds).map(id => ({
-              id: id,
-              media: {
-                audio: {
-                  voice_id: voiceIdHash,
-                  speed: audioSpeed
-                }
+            roteiros: Array.from(selectedScriptIds).map(id => {
+              const audioConfig: any = {
+                voice_id: voiceIdHash,
+                speed: audioSpeed
+              };
+
+              // Adicionar trilha_sonora se selecionada
+              if (selectedAudioByScriptId[id]) {
+                audioConfig.trilha_sonora = selectedAudioByScriptId[id];
+                audioConfig.db_offset = audioDbOffsetByScriptId[id] || 30;
               }
-            }))
+
+              return {
+                id: id,
+                media: {
+                  audio: audioConfig
+                }
+              };
+            })
           };
         } else if (contentMode === 'image-only') {
           // Modo 5: Apenas Imagem (para roteiros existentes com áudio)
@@ -2061,6 +2080,61 @@ export default function GenerateContentV2Page() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* TRILHA SONORA FOR EXISTING SCRIPTS (audio-only mode) */}
+        {/* ============================================ */}
+
+        {contentMode === 'audio-only' && selectedScriptIds.size > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xl font-light text-white mb-4">Selecionar Trilha Sonora por Roteiro</h2>
+
+            {existingScripts.filter(script => selectedScriptIds.has(script.id)).map((script) => (
+              <div key={`audio-script-${script.id}`} className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-4">
+                {/* Título da Box */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-white">{script.titulo || 'Sem título'}</h3>
+                  <span className={`text-sm px-3 py-1 rounded ${
+                    selectedAudioByScriptId[script.id]
+                      ? 'bg-green-600/20 text-green-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    {selectedAudioByScriptId[script.id] ? '1 trilha selecionada' : 'Nenhuma trilha selecionada'}
+                  </span>
+                </div>
+
+                {/* DriveAudioSelector */}
+                {!selectedChannelId ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Selecione um canal primeiro
+                  </div>
+                ) : (
+                  <DriveAudioSelector
+                    driveUrl={
+                      channels.find((c) => c.id.toString() === selectedChannelId)
+                        ?.trilha_url || ''
+                    }
+                    onSelectionChange={(url) => {
+                      setSelectedAudioByScriptId({
+                        ...selectedAudioByScriptId,
+                        [script.id]: url,
+                      });
+                    }}
+                    initialSelectedUrl={selectedAudioByScriptId[script.id] || null}
+                    onAudiosLoaded={() => {}}
+                    dbOffset={audioDbOffsetByScriptId[script.id] || 30}
+                    onDbOffsetChange={(dbOffset) => {
+                      setAudioDbOffsetByScriptId({
+                        ...audioDbOffsetByScriptId,
+                        [script.id]: dbOffset,
+                      });
+                    }}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         )}
 
