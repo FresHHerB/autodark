@@ -428,10 +428,16 @@ export default function GenerateContentV2Page() {
       // Filtrar no frontend para image-only e audio-image (scripts sem imagens ou com array vazio)
       let filteredData = data || [];
       if (mode === 'image-only' || mode === 'audio-image') {
-        filteredData = filteredData.filter(script =>
-          !script.images_path ||
-          (Array.isArray(script.images_path) && script.images_path.length === 0)
-        );
+        filteredData = filteredData.filter(script => {
+          // Verificar se não tem imagens
+          const hasNoImages = !script.images_path ||
+            (Array.isArray(script.images_path) && script.images_path.length === 0);
+
+          // Verificar se status não é video_gerado ou video_completo
+          const isNotVideoGenerated = script.status !== 'video_gerado' && script.status !== 'video_completo';
+
+          return hasNoImages && isNotVideoGenerated;
+        });
       }
 
       setExistingScripts(filteredData);
