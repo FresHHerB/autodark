@@ -66,6 +66,10 @@ export default function ViewScriptsPage() {
   // Refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Script editing state
+  const [editingScript, setEditingScript] = useState<{titulo: string, roteiro: string} | null>(null);
+  const [savingScript, setSavingScript] = useState(false);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -281,6 +285,90 @@ export default function ViewScriptsPage() {
       setTimeout(() => setSuccessMessage(null), 3000);
     } finally {
       setDeletingScript(null);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedScript(null);
+    setEditingScript(null);
+  };
+
+  const handleSaveScript = async () => {
+    if (!selectedScript || !editingScript) return;
+
+    try {
+      setSavingScript(true);
+      setSuccessMessage('Salvando alterações...');
+
+      await apiService.updateScript({
+        id_roteiro: selectedScript.id,
+        titulo: editingScript.titulo,
+        roteiro: editingScript.roteiro,
+      });
+
+      // Recarregar dados do roteiro atualizado do banco
+      const { data: updatedScript, error } = await supabase
+        .from('roteiros')
+        .select(`
+          id,
+          titulo,
+          roteiro,
+          canal_id,
+          created_at,
+          updated_at,
+          status,
+          audio_path,
+          text_thumb,
+          images_path,
+          transcricao_timestamp,
+          images_info
+        `)
+        .eq('id', selectedScript.id)
+        .single();
+
+      if (error) throw error;
+
+      // Buscar dados do canal
+      const { data: channelData } = await supabase
+        .from('canais')
+        .select('id, nome_canal, profile_image')
+        .eq('id', updatedScript.canal_id)
+        .single();
+
+      // Buscar dados do vídeo
+      const { data: videoData } = await supabase
+        .from('videos')
+        .select('id, status, video_path, thumb_path')
+        .eq('id', updatedScript.id)
+        .single();
+
+      // Atualizar o script selecionado com os dados atualizados
+      const enrichedScript: Script = {
+        ...updatedScript,
+        canal_nome: channelData?.nome_canal || 'Desconhecido',
+        canal_profile_image: channelData?.profile_image || null,
+        video_id: videoData?.id || null,
+        video_status: videoData?.status || null,
+        video_path: videoData?.video_path || null,
+        thumb_path: videoData?.thumb_path || null,
+      };
+
+      setSelectedScript(enrichedScript);
+
+      // Atualizar também a lista de scripts
+      await loadScripts();
+
+      // Limpar modo de edição e mostrar sucesso
+      setEditingScript(null);
+      setSuccessMessage('Dados atualizados!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+
+    } catch (error) {
+      console.error('Erro ao salvar roteiro:', error);
+      setSuccessMessage('Erro ao salvar alterações. Tente novamente.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } finally {
+      setSavingScript(false);
     }
   };
 
@@ -755,7 +843,7 @@ export default function ViewScriptsPage() {
 
         {/* Modal */}
         {selectedScript && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedScript(null)}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleCloseModal}>
             <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               {/* Modal Header */}
               <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 z-10">
@@ -779,7 +867,7 @@ export default function ViewScriptsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setSelectedScript(null)}
+                    onClick={handleCloseModal}
                     className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
                   >
                     <X className="w-6 h-6" />
@@ -890,13 +978,79 @@ export default function ViewScriptsPage() {
 
                 {/* Script Text */}
                 <div className="bg-black/40 rounded-xl p-6">
-                  <h3 className="text-white font-semibold mb-3 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-purple-400" />
-                    Roteiro Completo
-                  </h3>
-                  <div className="text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar">
-                    {selectedScript.roteiro}
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-semibold flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-purple-400" />
+                      Roteiro Completo
+                    </h3>
+                    {!editingScript ? (
+                      <>
+                        {/* Regra: roteiro só pode ser editado se:
+                            - audio_path = NULL
+                            - images_path = NULL
+                            - status = 'roteiro_gerado'
+                            - Não existe vídeo (video_id = null)
+                        */}
+                        {selectedScript.audio_path || selectedScript.images_path || selectedScript.status !== 'roteiro_gerado' || selectedScript.video_id ? (
+                          <div className="text-xs text-gray-500 italic">
+                            {selectedScript.video_id
+                              ? 'Roteiro já convertido em vídeo'
+                              : selectedScript.audio_path || selectedScript.images_path
+                              ? 'Roteiro com mídia gerada não pode ser editado'
+                              : 'Roteiro só pode ser editado com status "roteiro_gerado"'}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingScript({ titulo: selectedScript.titulo || '', roteiro: selectedScript.roteiro })}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Editar
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setEditingScript(null)}
+                          disabled={savingScript}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handleSaveScript}
+                          disabled={savingScript}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                        >
+                          {savingScript ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              Salvar
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  {editingScript ? (
+                    <textarea
+                      value={editingScript.roteiro}
+                      onChange={(e) => setEditingScript({ ...editingScript, roteiro: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-96 font-mono text-sm"
+                      placeholder="Digite o roteiro..."
+                    />
+                  ) : (
+                    <div className="text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto custom-scrollbar">
+                      {selectedScript.roteiro}
+                    </div>
+                  )}
                 </div>
 
                 {/* Audio */}

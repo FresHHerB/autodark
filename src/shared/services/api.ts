@@ -191,6 +191,21 @@ class ApiService {
     });
   }
 
+  // Update script content
+  async updateScript(payload: {
+    id_roteiro: number;
+    titulo: string;
+    roteiro: string;
+  }) {
+    return this.call(this.getWebhook('update'), {
+      method: 'POST',
+      body: JSON.stringify({
+        update_type: 'roteiro',
+        ...payload,
+      }),
+    });
+  }
+
   // Video generation methods
   async generateVideos(payload: {
     videos: Array<{
