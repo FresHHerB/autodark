@@ -83,38 +83,32 @@ export default function ViewScriptsPage() {
 
   // Auto-update every 10 seconds (pause when tab is inactive)
   useEffect(() => {
-    let updateInterval: NodeJS.Timeout | null = null;
     let countdownInterval: NodeJS.Timeout | null = null;
 
-    const startIntervals = () => {
-      if (updateInterval) return; // Already running
+    const startInterval = () => {
+      if (countdownInterval) return; // Already running
 
       // Reset countdown
       setNextUpdateIn(10);
 
-      // Countdown interval (every second)
+      // Single interval (every second) - handles both countdown and update
       countdownInterval = setInterval(() => {
         setNextUpdateIn(prev => {
-          if (prev <= 1) {
-            return 10; // Reset to 10 when reaching 0
+          const newValue = prev - 1;
+
+          // When countdown reaches 0, trigger update and reset
+          if (newValue <= 0) {
+            console.log('🔄 Auto-atualizando roteiros...');
+            loadScripts(true); // Silent refresh
+            return 10; // Reset to 10
           }
-          return prev - 1;
+
+          return newValue; // Decrement normally
         });
       }, 1000);
-
-      // Update interval (every 10 seconds)
-      updateInterval = setInterval(() => {
-        console.log('🔄 Auto-atualizando roteiros...');
-        loadScripts(true); // Silent refresh
-        setNextUpdateIn(10); // Reset countdown
-      }, 10000);
     };
 
-    const stopIntervals = () => {
-      if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-      }
+    const stopInterval = () => {
       if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
@@ -125,21 +119,21 @@ export default function ViewScriptsPage() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('👁️ Aba inativa - pausando auto-update de roteiros');
-        stopIntervals();
+        stopInterval();
       } else {
         console.log('👁️ Aba ativa - retomando auto-update de roteiros');
         loadScripts(true); // Update immediately when returning (silent)
-        startIntervals();
+        startInterval();
       }
     };
 
-    // Start intervals
-    startIntervals();
+    // Start interval
+    startInterval();
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
-      stopIntervals();
+      stopInterval();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
