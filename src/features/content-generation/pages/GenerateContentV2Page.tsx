@@ -1100,24 +1100,24 @@ export default function GenerateContentV2Page() {
         }
       }
 
-      // Modos que usam roteiros existentes (audio-only, image-only)
-      if (contentMode === 'audio-only' || contentMode === 'image-only') {
+      // Modos que usam roteiros existentes (audio-only, image-only, audio-image)
+      if (contentMode === 'audio-only' || contentMode === 'image-only' || contentMode === 'audio-image') {
         if (selectedScriptIds.size === 0) {
           alert('Por favor, selecione pelo menos um roteiro');
           return;
         }
       }
 
-      // Validação de voz (para script-audio, script-audio-image, audio-only)
-      if (['script-audio', 'script-audio-image', 'audio-only'].includes(contentMode)) {
+      // Validação de voz (para script-audio, script-audio-image, audio-only, audio-image)
+      if (['script-audio', 'script-audio-image', 'audio-only', 'audio-image'].includes(contentMode)) {
         if (!selectedVoiceId) {
           alert('Por favor, selecione uma voz para geração de áudio');
           return;
         }
       }
 
-      // Validação de imagem (para script-audio-image, image-only)
-      if (['script-audio-image', 'image-only'].includes(contentMode)) {
+      // Validação de imagem (para script-audio-image, image-only, audio-image)
+      if (['script-audio-image', 'image-only', 'audio-image'].includes(contentMode)) {
         if (!imageModelId) {
           alert('Por favor, selecione um modelo de imagem');
           return;
@@ -2862,10 +2862,18 @@ export default function GenerateContentV2Page() {
             onClick={handleGenerateContent}
             disabled={
               isGeneratingContent ||
-              addedTitles.length === 0 ||
-              !selectedModel ||
-              (generateAudio && !selectedVoiceId) ||
-              (generateImage && !imageModelId)
+              // Verificar quantidade: títulos ou roteiros selecionados
+              (!generateVideo && (contentMode === 'audio-only' || contentMode === 'image-only' || contentMode === 'audio-image')
+                ? selectedScriptIds.size === 0
+                : addedTitles.length === 0
+              ) ||
+              // Modelo só é necessário para modos com novos roteiros (não para audio-only, image-only, audio-image)
+              (!generateVideo && contentMode !== 'audio-only' && contentMode !== 'image-only' && contentMode !== 'audio-image' && !selectedModel) ||
+              (generateVideo && !selectedModel) ||
+              // Voz necessária para todos os modos (exceto apenas roteiro e apenas imagem)
+              ((generateVideo || ['script-audio', 'script-audio-image', 'audio-only', 'audio-image'].includes(contentMode)) && !selectedVoiceId) ||
+              // Modelo de imagem necessário para modos com imagem
+              (((generateVideo && videoGenerationMethod === 'image-to-video') || ['script-audio-image', 'image-only', 'audio-image'].includes(contentMode)) && !imageModelId)
             }
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-lg font-medium"
           >
@@ -2878,6 +2886,38 @@ export default function GenerateContentV2Page() {
               <>
                 <Play className="w-6 h-6" />
                 Gerar {addedTitles.length} {addedTitles.length === 1 ? 'Vídeo' : 'Vídeos'}
+              </>
+            ) : contentMode === 'audio-only' ? (
+              <>
+                <Mic className="w-6 h-6" />
+                Gerar {selectedScriptIds.size} {selectedScriptIds.size === 1 ? 'Áudio' : 'Áudios'}
+              </>
+            ) : contentMode === 'image-only' ? (
+              <>
+                <ImageIcon className="w-6 h-6" />
+                Gerar Imagens para {selectedScriptIds.size} {selectedScriptIds.size === 1 ? 'Roteiro' : 'Roteiros'}
+              </>
+            ) : contentMode === 'audio-image' ? (
+              <>
+                <Mic className="w-6 h-6" />
+                <ImageIcon className="w-6 h-6" />
+                Gerar Áudio + Imagens para {selectedScriptIds.size} {selectedScriptIds.size === 1 ? 'Roteiro' : 'Roteiros'}
+              </>
+            ) : contentMode === 'script' ? (
+              <>
+                <FileText className="w-6 h-6" />
+                Gerar {addedTitles.length} {addedTitles.length === 1 ? 'Roteiro' : 'Roteiros'}
+              </>
+            ) : contentMode === 'script-audio' ? (
+              <>
+                <FileText className="w-6 h-6" />
+                <Mic className="w-6 h-6" />
+                Gerar {addedTitles.length} Roteiro{addedTitles.length === 1 ? '' : 's'} + Áudio{addedTitles.length === 1 ? '' : 's'}
+              </>
+            ) : contentMode === 'script-audio-image' ? (
+              <>
+                <FileText className="w-6 h-6" />
+                Gerar Conteúdo Completo ({addedTitles.length})
               </>
             ) : (
               <>
