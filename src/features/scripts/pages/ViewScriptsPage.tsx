@@ -73,6 +73,9 @@ export default function ViewScriptsPage() {
   // Collapsed channels state
   const [collapsedChannels, setCollapsedChannels] = useState<Set<string>>(new Set());
 
+  // Auto-update countdown state
+  const [nextUpdateIn, setNextUpdateIn] = useState(10);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -80,21 +83,41 @@ export default function ViewScriptsPage() {
 
   // Auto-update every 10 seconds (pause when tab is inactive)
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let updateInterval: NodeJS.Timeout | null = null;
+    let countdownInterval: NodeJS.Timeout | null = null;
 
-    const startInterval = () => {
-      if (interval) return; // Already running
+    const startIntervals = () => {
+      if (updateInterval) return; // Already running
 
-      interval = setInterval(() => {
+      // Reset countdown
+      setNextUpdateIn(10);
+
+      // Countdown interval (every second)
+      countdownInterval = setInterval(() => {
+        setNextUpdateIn(prev => {
+          if (prev <= 1) {
+            return 10; // Reset to 10 when reaching 0
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Update interval (every 10 seconds)
+      updateInterval = setInterval(() => {
         console.log('🔄 Auto-atualizando roteiros...');
         loadScripts(true); // Silent refresh
-      }, 10000); // 10 seconds
+        setNextUpdateIn(10); // Reset countdown
+      }, 10000);
     };
 
-    const stopInterval = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
+    const stopIntervals = () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
       }
     };
 
@@ -102,21 +125,21 @@ export default function ViewScriptsPage() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('👁️ Aba inativa - pausando auto-update de roteiros');
-        stopInterval();
+        stopIntervals();
       } else {
         console.log('👁️ Aba ativa - retomando auto-update de roteiros');
         loadScripts(true); // Update immediately when returning (silent)
-        startInterval();
+        startIntervals();
       }
     };
 
-    // Start interval
-    startInterval();
+    // Start intervals
+    startIntervals();
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
-      stopInterval();
+      stopIntervals();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -216,6 +239,7 @@ export default function ViewScriptsPage() {
     try {
       setIsRefreshing(true);
       await loadScripts();
+      setNextUpdateIn(10); // Reset countdown when manually refreshing
     } catch (error) {
       console.error('Erro ao recarregar roteiros:', error);
       alert('Erro ao recarregar roteiros. Tente novamente.');
@@ -571,15 +595,28 @@ export default function ViewScriptsPage() {
             <h1 className="text-3xl font-bold text-white mb-2">Visualizar Roteiros</h1>
             <p className="text-gray-400">Gerencie e visualize todos os roteiros criados</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing || loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-            title="Atualizar lista de roteiros"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Countdown Timer */}
+            {!loading && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-300">
+                  Próxima atualização em: <span className="font-semibold text-blue-400">{nextUpdateIn}s</span>
+                </span>
+              </div>
+            )}
+
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              title="Atualizar lista de roteiros"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
