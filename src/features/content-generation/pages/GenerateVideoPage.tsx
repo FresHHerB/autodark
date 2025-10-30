@@ -468,7 +468,7 @@ export default function GenerateVideoPage() {
         )}
 
         {/* Drive Video Selector - For audio-only roteiros */}
-        {selectedChannel && selectedChannel.drive_url && selectedRoteiros.size > 0 && (() => {
+        {selectedChannel && selectedRoteiros.size > 0 && (() => {
           const audioOnlyRoteiros = roteiros.filter(r =>
             selectedRoteiros.has(r.id) && r.tipo === 'audio-only'
           );
@@ -487,55 +487,61 @@ export default function GenerateVideoPage() {
                 </p>
               </div>
 
-              <div className="space-y-6">
-                {audioOnlyRoteiros.map((roteiro) => (
-                  <div key={roteiro.id} className="bg-gray-800 border border-purple-500/30 rounded-lg p-6">
-                    {/* Roteiro Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-white mb-1">
-                          {roteiro.titulo || 'Roteiro sem título'}
-                        </h3>
-                        <p className="text-sm text-gray-400 line-clamp-1">
-                          {roteiro.roteiro.substring(0, 150)}...
-                        </p>
-                      </div>
-                      <div className="ml-4">
-                        <span className={`text-sm px-3 py-1.5 rounded ${
-                          (driveVideosByRoteiro[roteiro.id]?.length || 0) > 0
-                            ? 'bg-purple-600/30 text-purple-300 border border-purple-500'
-                            : 'bg-gray-700 text-gray-400 border border-gray-600'
-                        }`}>
-                          {driveVideosByRoteiro[roteiro.id]?.length || 0} vídeo(s)
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Drive Video Selector */}
-                    <DriveVideoSelector
-                      driveUrl={selectedChannel.drive_url}
-                      onSelectionChange={(urls) => {
-                        setDriveVideosByRoteiro(prev => ({
-                          ...prev,
-                          [roteiro.id]: urls
-                        }));
-                      }}
-                      initialSelectedUrls={driveVideosByRoteiro[roteiro.id] || []}
-                    />
-                  </div>
-                ))}
-              </div>
-
               {/* Warning if no Drive URL */}
-              {!selectedChannel.drive_url && (
-                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg flex items-start gap-3">
+              {!selectedChannel.drive_url ? (
+                <div className="p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-yellow-400 font-medium">URL do Google Drive não configurada</p>
                     <p className="text-yellow-300 text-sm mt-1">
                       Configure a URL do Google Drive nas configurações do canal para usar vídeos do banco.
                     </p>
+                    <button
+                      onClick={() => navigate('/manage-channel')}
+                      className="mt-3 text-sm text-yellow-400 hover:text-yellow-300 underline transition-colors"
+                    >
+                      Ir para configurações de canais
+                    </button>
                   </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {audioOnlyRoteiros.map((roteiro) => (
+                    <div key={roteiro.id} className="bg-gray-800 border border-purple-500/30 rounded-lg p-6">
+                      {/* Roteiro Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-white mb-1">
+                            {roteiro.titulo || 'Roteiro sem título'}
+                          </h3>
+                          <p className="text-sm text-gray-400 line-clamp-1">
+                            {roteiro.roteiro.substring(0, 150)}...
+                          </p>
+                        </div>
+                        <div className="ml-4">
+                          <span className={`text-sm px-3 py-1.5 rounded ${
+                            (driveVideosByRoteiro[roteiro.id]?.length || 0) > 0
+                              ? 'bg-purple-600/30 text-purple-300 border border-purple-500'
+                              : 'bg-gray-700 text-gray-400 border border-gray-600'
+                          }`}>
+                            {driveVideosByRoteiro[roteiro.id]?.length || 0} vídeo(s)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Drive Video Selector */}
+                      <DriveVideoSelector
+                        driveUrl={selectedChannel.drive_url}
+                        onSelectionChange={(urls) => {
+                          setDriveVideosByRoteiro(prev => ({
+                            ...prev,
+                            [roteiro.id]: urls
+                          }));
+                        }}
+                        initialSelectedUrls={driveVideosByRoteiro[roteiro.id] || []}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
