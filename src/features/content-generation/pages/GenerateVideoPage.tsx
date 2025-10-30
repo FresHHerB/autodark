@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle, Clock, Play, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Loader2, Calendar, FileCheck, Image as ImageIcon, Volume2, CheckCircle, Play, AlertTriangle, Video } from 'lucide-react';
 import { DashboardHeader } from '@features/dashboard/components';
+import { DriveVideoSelector } from '@features/content-generation/components';
 import { supabase } from '@shared/lib/supabase';
 import { apiService } from '@shared/services';
 
@@ -10,7 +11,9 @@ interface Channel {
   nome_canal: string;
   url_canal?: string;
   media_chars?: number;
-  caption_style?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  caption_style?: any; // JSONB field with flexible structure
+  drive_url?: string;
 }
 
 interface Roteiro {
@@ -22,24 +25,8 @@ interface Roteiro {
   audio_path: string | null;
   images_path: string[] | null;
   transcricao_timestamp: string | null;
+  tipo?: 'completo' | 'audio-only'; // Flag para diferenciar tipos
 }
-
-interface VideoSchedule {
-  id: number;
-  data: string;
-  hora: string;
-}
-
-interface VideoZoomTypes {
-  id: number;
-  zoomTypes: string[];
-}
-
-const ZOOM_OPTIONS = [
-  { value: 'zoomin', label: 'Zoom In' },
-  { value: 'zoomout', label: 'Zoom Out' },
-  { value: 'zoompanright', label: 'Zoom Pan Right' }
-] as const;
 
 export default function GenerateVideoPage() {
   const navigate = useNavigate();
@@ -51,6 +38,7 @@ export default function GenerateVideoPage() {
   const [selectedRoteiros, setSelectedRoteiros] = useState<Set<number>>(new Set());
   const [generateCaption, setGenerateCaption] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [driveVideosByRoteiro, setDriveVideosByRoteiro] = useState<Record<number, string[]>>({});
 
   const selectedChannel = channels.find(c => c.id === selectedChannelId);
 
@@ -86,22 +74,6 @@ export default function GenerateVideoPage() {
     try {
       setIsLoadingRoteiros(true);
 
-      // Buscar roteiros com status 'conteudo_gerado'
-      const { data: roteirosData, error: roteirosError } = await supabase
-        .from('roteiros')
-        .select('*')
-        .eq('canal_id', canalId)
-        .eq('status', 'conteudo_gerado')
-        .not('audio_path', 'is', null)
-        .not('images_path', 'is', null)
-        .not('transcricao_timestamp', 'is', null)
-        .order('created_at', { ascending: false });
-
-      if (roteirosError) {
-        console.error('Erro ao buscar roteiros:', roteirosError);
-        return;
-      }
-
       // Buscar todos os IDs de roteiros que já possuem vídeos
       const { data: videosData, error: videosError } = await supabase
         .from('videos')
@@ -115,18 +87,63 @@ export default function GenerateVideoPage() {
       // Criar Set com IDs de roteiros que já têm vídeos
       const videosIds = new Set(videosData?.map(v => v.id) || []);
 
-      if (roteirosData) {
-        // Filtrar apenas roteiros que:
-        // 1. Têm arrays de imagens não vazios
-        // 2. NÃO possuem vídeo gerado (id não está na tabela videos)
-        const filteredRoteiros = roteirosData.filter(roteiro =>
-          roteiro.images_path &&
-          Array.isArray(roteiro.images_path) &&
-          roteiro.images_path.length > 0 &&
-          !videosIds.has(roteiro.id) // ✅ Exclui roteiros que já têm vídeos
-        );
-        setRoteiros(filteredRoteiros);
+      // ============================================
+      // TIPO 1: Roteiros completos (áudio + imagens)
+      // ============================================
+      const { data: roteirosCompletos, error: errorCompletos } = await supabase
+        .from('roteiros')
+        .select('*')
+        .eq('canal_id', canalId)
+        .eq('status', 'conteudo_gerado')
+        .not('audio_path', 'is', null)
+        .not('images_path', 'is', null)
+        .not('transcricao_timestamp', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (errorCompletos) {
+        console.error('Erro ao buscar roteiros completos:', errorCompletos);
+        return;
       }
+
+      // ============================================
+      // TIPO 2: Roteiros com áudio apenas (sem imagens)
+      // ============================================
+      const { data: roteirosAudioOnly, error: errorAudioOnly } = await supabase
+        .from('roteiros')
+        .select('*')
+        .eq('canal_id', canalId)
+        .not('audio_path', 'is', null)
+        .is('images_path', null)
+        .not('transcricao_timestamp', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (errorAudioOnly) {
+        console.error('Erro ao buscar roteiros audio-only:', errorAudioOnly);
+        return;
+      }
+
+      // Combinar e marcar tipos
+      const roteirosComTipo: Roteiro[] = [
+        ...(roteirosCompletos || [])
+          .filter(r =>
+            r.images_path &&
+            Array.isArray(r.images_path) &&
+            r.images_path.length > 0 &&
+            !videosIds.has(r.id)
+          )
+          .map(r => ({ ...r, tipo: 'completo' as const })),
+
+        ...(roteirosAudioOnly || [])
+          .filter(r => !videosIds.has(r.id))
+          .map(r => ({ ...r, tipo: 'audio-only' as const }))
+      ];
+
+      // Ordenar por data de criação (mais recentes primeiro)
+      roteirosComTipo.sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setRoteiros(roteirosComTipo);
     } catch (error) {
       console.error('Erro ao buscar roteiros:', error);
     } finally {
@@ -139,6 +156,7 @@ export default function GenerateVideoPage() {
     setSelectedChannelId(id || null);
     setRoteiros([]);
     setSelectedRoteiros(new Set());
+    setDriveVideosByRoteiro({}); // Limpar seleção de vídeos
 
     if (id) {
       fetchRoteiros(id);
@@ -150,6 +168,12 @@ export default function GenerateVideoPage() {
       const newSet = new Set(prev);
       if (newSet.has(roteiroId)) {
         newSet.delete(roteiroId);
+        // Limpar vídeos do Drive se desselecionar roteiro audio-only
+        setDriveVideosByRoteiro(prevVideos => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [roteiroId]: _, ...rest } = prevVideos;
+          return rest;
+        });
       } else {
         newSet.add(roteiroId);
       }
@@ -163,17 +187,61 @@ export default function GenerateVideoPage() {
       return;
     }
 
+    // Separar roteiros por tipo para validação
+    const roteirosAudioOnly = Array.from(selectedRoteiros).filter(id => {
+      const roteiro = roteiros.find(r => r.id === id);
+      return roteiro?.tipo === 'audio-only';
+    });
+
+    // Validação: roteiros audio-only devem ter vídeos selecionados do Drive
+    const faltamVideos = roteirosAudioOnly.filter(id =>
+      !driveVideosByRoteiro[id] || driveVideosByRoteiro[id].length === 0
+    );
+
+    if (faltamVideos.length > 0) {
+      const titulosFaltantes = faltamVideos
+        .map(id => {
+          const roteiro = roteiros.find(r => r.id === id);
+          return `• ${roteiro?.titulo || 'Roteiro sem título'}`;
+        })
+        .join('\n');
+
+      alert(`Por favor, selecione vídeos do banco para os seguintes roteiros:\n\n${titulosFaltantes}`);
+      return;
+    }
+
     try {
       setIsGenerating(true);
 
-      // Build payload with global video config
-      const payload = {
-        id_roteiro: Array.from(selectedRoteiros),
-        video: {
-          type: "imagem",
-          generate: true,
-          caption: generateCaption
-        }
+      // Build payload diferenciado
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload: any = {
+        roteiros: Array.from(selectedRoteiros).map(id => {
+          const roteiro = roteiros.find(r => r.id === id);
+
+          if (roteiro?.tipo === 'completo') {
+            // Roteiro completo: usa imagens geradas
+            return {
+              id,
+              video: {
+                type: "imagem",
+                generate: true,
+                caption: generateCaption
+              }
+            };
+          } else {
+            // Roteiro audio-only: usa vídeos do Drive
+            return {
+              id,
+              video: {
+                type: "video",
+                generate: true,
+                caption: generateCaption,
+                videos_url: driveVideosByRoteiro[id] || []
+              }
+            };
+          }
+        })
       };
 
       console.log('Enviando payload:', payload);
@@ -185,6 +253,7 @@ export default function GenerateVideoPage() {
 
       // Reset selections
       setSelectedRoteiros(new Set());
+      setDriveVideosByRoteiro({});
     } catch (error) {
       console.error('Erro ao gerar vídeos:', error);
       alert('Erro ao gerar vídeos. Verifique o console para mais detalhes.');
@@ -192,8 +261,6 @@ export default function GenerateVideoPage() {
       setIsGenerating(false);
     }
   };
-
-  const selectedRoteirosArray = Array.from(selectedRoteiros);
 
   return (
     <div className="min-h-screen bg-black">
@@ -280,7 +347,7 @@ export default function GenerateVideoPage() {
                   Roteiros Prontos para Geração
                 </h2>
                 <p className="text-sm text-gray-400">
-                  Apenas roteiros com áudio, imagens e legendas completos
+                  Roteiros completos (áudio + imagens) ou com áudio apenas (necessário selecionar vídeos)
                 </p>
               </div>
               {selectedRoteiros.size > 0 && (
@@ -304,13 +371,15 @@ export default function GenerateVideoPage() {
                   Nenhum roteiro pronto encontrado
                 </p>
                 <p className="text-gray-500 text-sm">
-                  Roteiros precisam ter áudio, imagens e legendas gerados
+                  Roteiros precisam ter áudio e legendas gerados (com ou sem imagens)
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {roteiros.map((roteiro) => {
                   const isSelected = selectedRoteiros.has(roteiro.id);
+                  const isCompleto = roteiro.tipo === 'completo';
+                  const videoCount = driveVideosByRoteiro[roteiro.id]?.length || 0;
 
                   return (
                     <div
@@ -318,18 +387,22 @@ export default function GenerateVideoPage() {
                       onClick={() => toggleRoteiroSelection(roteiro.id)}
                       className={`bg-gray-800 border p-4 rounded-lg transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-blue-500 ring-2 ring-blue-500/30'
+                          ? isCompleto
+                            ? 'border-blue-500 ring-2 ring-blue-500/30'
+                            : 'border-purple-500 ring-2 ring-purple-500/30'
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
                     >
                       <div className="flex flex-col h-full">
-                        {/* Header with checkbox */}
+                        {/* Header with checkbox and badge */}
                         <div className="flex items-start gap-3 mb-3">
                           <div className="flex-shrink-0 pt-0.5">
                             <div
                               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                                 isSelected
-                                  ? 'bg-blue-500 border-blue-500'
+                                  ? isCompleto
+                                    ? 'bg-blue-500 border-blue-500'
+                                    : 'bg-purple-500 border-purple-500'
                                   : 'border-gray-600'
                               }`}
                             >
@@ -338,9 +411,18 @@ export default function GenerateVideoPage() {
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-white font-medium text-sm mb-1 truncate" title={roteiro.titulo || 'Sem título'}>
-                              {roteiro.titulo ? (roteiro.titulo.length > 40 ? `${roteiro.titulo.substring(0, 40)}...` : roteiro.titulo) : 'Sem título'}
-                            </h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-white font-medium text-sm truncate flex-1" title={roteiro.titulo || 'Sem título'}>
+                                {roteiro.titulo ? (roteiro.titulo.length > 40 ? `${roteiro.titulo.substring(0, 40)}...` : roteiro.titulo) : 'Sem título'}
+                              </h3>
+                              <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${
+                                isCompleto
+                                  ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50'
+                                  : 'bg-purple-600/30 text-purple-300 border border-purple-500/50'
+                              }`}>
+                                {isCompleto ? 'Completo' : 'Áudio'}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -358,10 +440,19 @@ export default function GenerateVideoPage() {
                           <div className="flex items-center gap-1 text-xs text-green-400">
                             <Volume2 className="w-3 h-3" />
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-blue-400">
-                            <ImageIcon className="w-3 h-3" />
-                            <span>{roteiro.images_path?.length || 0}</span>
-                          </div>
+                          {isCompleto ? (
+                            <div className="flex items-center gap-1 text-xs text-blue-400">
+                              <ImageIcon className="w-3 h-3" />
+                              <span>{roteiro.images_path?.length || 0}</span>
+                            </div>
+                          ) : (
+                            <div className={`flex items-center gap-1 text-xs ${
+                              videoCount > 0 ? 'text-purple-400' : 'text-gray-500'
+                            }`}>
+                              <Video className="w-3 h-3" />
+                              <span>{videoCount}</span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-1 text-xs text-purple-400">
                             <FileCheck className="w-3 h-3" />
                           </div>
@@ -375,6 +466,81 @@ export default function GenerateVideoPage() {
             )}
           </div>
         )}
+
+        {/* Drive Video Selector - For audio-only roteiros */}
+        {selectedChannel && selectedChannel.drive_url && selectedRoteiros.size > 0 && (() => {
+          const audioOnlyRoteiros = roteiros.filter(r =>
+            selectedRoteiros.has(r.id) && r.tipo === 'audio-only'
+          );
+
+          if (audioOnlyRoteiros.length === 0) return null;
+
+          return (
+            <div className="bg-gray-900 border border-gray-800 p-6 mb-8">
+              <div className="mb-6">
+                <h2 className="text-xl font-light text-white mb-2 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-purple-400" />
+                  Selecionar Vídeos do Banco
+                </h2>
+                <p className="text-sm text-gray-400">
+                  Selecione vídeos do banco do canal para cada roteiro com áudio apenas
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {audioOnlyRoteiros.map((roteiro) => (
+                  <div key={roteiro.id} className="bg-gray-800 border border-purple-500/30 rounded-lg p-6">
+                    {/* Roteiro Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-white mb-1">
+                          {roteiro.titulo || 'Roteiro sem título'}
+                        </h3>
+                        <p className="text-sm text-gray-400 line-clamp-1">
+                          {roteiro.roteiro.substring(0, 150)}...
+                        </p>
+                      </div>
+                      <div className="ml-4">
+                        <span className={`text-sm px-3 py-1.5 rounded ${
+                          (driveVideosByRoteiro[roteiro.id]?.length || 0) > 0
+                            ? 'bg-purple-600/30 text-purple-300 border border-purple-500'
+                            : 'bg-gray-700 text-gray-400 border border-gray-600'
+                        }`}>
+                          {driveVideosByRoteiro[roteiro.id]?.length || 0} vídeo(s)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Drive Video Selector */}
+                    <DriveVideoSelector
+                      driveUrl={selectedChannel.drive_url}
+                      onSelectionChange={(urls) => {
+                        setDriveVideosByRoteiro(prev => ({
+                          ...prev,
+                          [roteiro.id]: urls
+                        }));
+                      }}
+                      initialSelectedUrls={driveVideosByRoteiro[roteiro.id] || []}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Warning if no Drive URL */}
+              {!selectedChannel.drive_url && (
+                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-yellow-400 font-medium">URL do Google Drive não configurada</p>
+                    <p className="text-yellow-300 text-sm mt-1">
+                      Configure a URL do Google Drive nas configurações do canal para usar vídeos do banco.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Generate Section - Modern Design */}
         {selectedRoteiros.size > 0 && (
