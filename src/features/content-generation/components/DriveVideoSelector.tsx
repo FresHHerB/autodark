@@ -319,10 +319,10 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
         </div>
       </div>
 
-      {/* Video Grid - 6 per row, 3 rows visible with scroll */}
+      {/* Video Grid - 10 per row, 3 rows visible with scroll */}
       <div
-        className="grid grid-cols-6 gap-3 overflow-y-auto pr-2"
-        style={{ maxHeight: '360px' }} // 3 rows approximately
+        className="grid grid-cols-10 gap-2 overflow-y-auto pr-2"
+        style={{ maxHeight: '240px' }} // 3 rows approximately with smaller thumbnails
       >
         {videos.map((video) => {
           const isSelected = selectedVideoIds.has(video.id);
@@ -351,15 +351,15 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-3xl">
+                <div className="w-full h-full flex items-center justify-center text-xl">
                   📹
                 </div>
               )}
 
               {/* Play Icon Overlay on Hover */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white ml-1" fill="white" />
+                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                  <Play className="w-4 h-4 text-white ml-0.5" fill="white" />
                 </div>
               </div>
 
@@ -367,21 +367,21 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
               <div
                 onClick={(e) => toggleVideoSelection(e, video.id)}
                 className={`
-                  absolute top-2 right-2 w-6 h-6 rounded flex items-center justify-center cursor-pointer z-10
+                  absolute top-1 right-1 w-5 h-5 rounded flex items-center justify-center cursor-pointer z-10
                   ${isSelected ? 'bg-purple-600' : 'bg-black/60 hover:bg-black/80'}
                   transition-colors
                 `}
               >
                 {isSelected ? (
-                  <CheckSquare className="w-5 h-5 text-white" />
+                  <CheckSquare className="w-4 h-4 text-white" />
                 ) : (
-                  <Square className="w-5 h-5 text-white" />
+                  <Square className="w-4 h-4 text-white" />
                 )}
               </div>
 
               {/* Duration Badge */}
               {video.duration && (
-                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-0.5 rounded">
+                <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1 py-0.5 rounded">
                   {formatDuration(video.duration)}
                 </div>
               )}
