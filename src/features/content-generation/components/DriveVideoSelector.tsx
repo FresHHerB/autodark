@@ -38,6 +38,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [apiKey, setApiKey] = useState<string>('');
+  const [randomVideoCount, setRandomVideoCount] = useState<number>(0);
 
   // Track if videos were already loaded for this driveUrl
   const loadedDriveUrlRef = useRef<string>('');
@@ -231,6 +232,45 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   };
 
   // ============================================
+  // RANDOM SELECTION
+  // ============================================
+
+  const handleRandomSelection = () => {
+    if (!randomVideoCount || randomVideoCount < 1 || randomVideoCount > 50) {
+      alert('Por favor, digite um número entre 1 e 50');
+      return;
+    }
+
+    if (videos.length === 0) {
+      alert('Nenhum vídeo disponível para selecionar');
+      return;
+    }
+
+    // Limitar ao número de vídeos disponíveis
+    const actualCount = Math.min(randomVideoCount, videos.length);
+
+    // Criar uma cópia do array e embaralhar (Fisher-Yates shuffle)
+    const shuffled = [...videos];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Selecionar os primeiros N vídeos embaralhados
+    const selectedVideos = shuffled.slice(0, actualCount);
+
+    // Converter para IDs
+    const newSelectedIds = new Set(selectedVideos.map(v => v.id));
+    setSelectedVideoIds(newSelectedIds);
+
+    // Converter para URLs e notificar parent
+    const selectedUrls = selectedVideos.map(v =>
+      `https://drive.google.com/file/d/${v.id}/view`
+    );
+    onSelectionChange(selectedUrls);
+  };
+
+  // ============================================
   // FORMAT HELPERS
   // ============================================
 
@@ -293,6 +333,32 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
 
   return (
     <div className="bg-gray-800 rounded-lg p-6">
+      {/* Random Selection */}
+      <div className="mb-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Selecionar Aleatoriamente
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="1"
+            max="50"
+            value={randomVideoCount || ''}
+            onChange={(e) => setRandomVideoCount(parseInt(e.target.value) || 0)}
+            placeholder="Quantidade (1-50)"
+            className="flex-1 bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+          />
+          <button
+            onClick={handleRandomSelection}
+            disabled={!randomVideoCount || videos.length === 0}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Play className="w-4 h-4" />
+            Selecionar
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
