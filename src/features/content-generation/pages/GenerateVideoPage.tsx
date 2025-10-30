@@ -222,7 +222,7 @@ export default function GenerateVideoPage() {
           if (roteiro?.tipo === 'completo') {
             // Roteiro completo: usa imagens geradas
             return {
-              id,
+              id_roteiro: id,
               video: {
                 type: "imagem",
                 generate: true,
@@ -232,7 +232,7 @@ export default function GenerateVideoPage() {
           } else {
             // Roteiro audio-only: usa vídeos do Drive
             return {
-              id,
+              id_roteiro: id,
               video: {
                 type: "video",
                 generate: true,
@@ -347,7 +347,7 @@ export default function GenerateVideoPage() {
                   Roteiros Prontos para Geração
                 </h2>
                 <p className="text-sm text-gray-400">
-                  Roteiros completos (áudio + imagens) ou com áudio apenas (necessário selecionar vídeos)
+                  Vídeos através de Imagem (áudio + imagens) ou Vídeos através de vídeos (áudio + vídeos do banco)
                 </p>
               </div>
               {selectedRoteiros.size > 0 && (
@@ -420,7 +420,7 @@ export default function GenerateVideoPage() {
                                   ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50'
                                   : 'bg-purple-600/30 text-purple-300 border border-purple-500/50'
                               }`}>
-                                {isCompleto ? 'Completo' : 'Áudio'}
+                                {isCompleto ? 'Vídeo através de Imagem' : 'Vídeos através de vídeos'}
                               </span>
                             </div>
                           </div>
@@ -483,7 +483,7 @@ export default function GenerateVideoPage() {
                   Selecionar Vídeos do Banco
                 </h2>
                 <p className="text-sm text-gray-400">
-                  Selecione vídeos do banco do canal para cada roteiro com áudio apenas
+                  Selecione vídeos do banco do canal para cada roteiro "Vídeos através de vídeos"
                 </p>
               </div>
 
