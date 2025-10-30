@@ -48,6 +48,10 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   const [iframeKey, setIframeKey] = useState<number>(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Grid container ref for dynamic height calculation
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [gridHeight, setGridHeight] = useState<number>(240);
+
   // ============================================
   // LOAD API KEY
   // ============================================
@@ -111,6 +115,25 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
       loadedDriveUrlRef.current = driveUrl;
     }
   }, [driveUrl, apiKey]);
+
+  // ============================================
+  // CALCULATE GRID HEIGHT FOR 3 ROWS
+  // ============================================
+
+  useEffect(() => {
+    if (videos.length > 0 && gridContainerRef.current) {
+      // Wait for DOM to render
+      setTimeout(() => {
+        const firstItem = gridContainerRef.current?.querySelector('[data-video-item]') as HTMLElement;
+        if (firstItem) {
+          const itemHeight = firstItem.offsetHeight;
+          const gap = 8; // gap-2 = 0.5rem = 8px
+          const heightFor3Rows = (itemHeight * 3) + (gap * 2);
+          setGridHeight(heightFor3Rows);
+        }
+      }, 100);
+    }
+  }, [videos]);
 
   // ============================================
   // EXTRACT FOLDER ID
@@ -390,8 +413,9 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
 
       {/* Video Grid - 10 per row, 3 rows visible with scroll */}
       <div
+        ref={gridContainerRef}
         className="grid grid-cols-10 gap-2 overflow-y-auto pr-2"
-        style={{ maxHeight: '240px' }} // 3 rows approximately with smaller thumbnails
+        style={{ maxHeight: `${gridHeight}px` }}
       >
         {videos.map((video) => {
           const isSelected = selectedVideoIds.has(video.id);
@@ -399,6 +423,7 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
           return (
             <div
               key={video.id}
+              data-video-item
               onClick={() => openVideoPreview(video)}
               className={`
                 relative aspect-video bg-gray-700 rounded overflow-hidden cursor-pointer
