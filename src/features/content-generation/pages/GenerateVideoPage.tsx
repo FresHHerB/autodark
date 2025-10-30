@@ -14,6 +14,7 @@ interface Channel {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   caption_style?: any; // JSONB field with flexible structure
   drive_url?: string;
+  trilha_url?: string;
 }
 
 interface Roteiro {
@@ -52,7 +53,7 @@ export default function GenerateVideoPage() {
       setIsLoadingChannels(true);
       const { data, error } = await supabase
         .from('canais')
-        .select('id, nome_canal, url_canal, media_chars, caption_style')
+        .select('id, nome_canal, url_canal, media_chars, caption_style, drive_url, trilha_url')
         .order('created_at', { ascending: false });
 
       if (error) {
