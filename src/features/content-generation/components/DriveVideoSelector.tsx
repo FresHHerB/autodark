@@ -334,28 +334,31 @@ export const DriveVideoSelector: React.FC<DriveVideoSelectorProps> = ({
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       {/* Random Selection */}
-      <div className="mb-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Selecionar Aleatoriamente
-        </label>
-        <div className="flex gap-2">
+      <div className="mb-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-300 whitespace-nowrap">
+            Selecionar Aleatoriamente:
+          </label>
           <input
             type="number"
             min="1"
             max="50"
             value={randomVideoCount || ''}
             onChange={(e) => setRandomVideoCount(parseInt(e.target.value) || 0)}
-            placeholder="Quantidade (1-50)"
-            className="flex-1 bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-purple-500"
+            placeholder="Ex: 10"
+            className="w-20 bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-purple-500 text-center"
           />
           <button
             onClick={handleRandomSelection}
             disabled={!randomVideoCount || videos.length === 0}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors flex items-center gap-2"
           >
             <Play className="w-4 h-4" />
             Selecionar
           </button>
+          <span className="text-xs text-gray-400 ml-auto">
+            Máx: 50 vídeos
+          </span>
         </div>
       </div>
 
