@@ -157,36 +157,43 @@ export default function ViewScriptsPage() {
     }
   }, [showChannelDropdown]);
 
-  // Load durations for videos/audios
+  // Load durations for videos/audios (optimized - batch process with limit)
   useEffect(() => {
     const loadDurations = async () => {
-      const newDurations: {[key: number]: string} = {};
+      // Only load durations for scripts that have media and don't have duration yet
+      const scriptsToLoad = scripts.filter(script =>
+        (script.video_path || script.audio_path) && !durations[script.id]
+      );
 
-      for (const script of scripts) {
-        // Skip if we already have this duration
-        if (durations[script.id]) {
-          newDurations[script.id] = durations[script.id];
-          continue;
-        }
+      if (scriptsToLoad.length === 0) return;
 
-        try {
-          // Priority: video_path > audio_path
-          if (script.video_path) {
-            const durationSeconds = await loadMediaDuration(script.video_path, 'video');
-            newDurations[script.id] = formatDuration(durationSeconds);
-          } else if (script.audio_path) {
-            const durationSeconds = await loadMediaDuration(script.audio_path, 'audio');
-            newDurations[script.id] = formatDuration(durationSeconds);
-          }
-        } catch (error) {
-          // Silently fail - duration won't be shown for this script
-          console.error(`Failed to load duration for script ${script.id}:`, error);
-        }
-      }
+      // Limit concurrent loads to avoid overwhelming the browser
+      const BATCH_SIZE = 10;
+      const newDurations: {[key: number]: string} = { ...durations };
 
-      // Only update if we have new durations
-      if (Object.keys(newDurations).length > 0) {
-        setDurations(prev => ({ ...prev, ...newDurations }));
+      for (let i = 0; i < scriptsToLoad.length; i += BATCH_SIZE) {
+        const batch = scriptsToLoad.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(
+          batch.map(async (script) => {
+            try {
+              // Priority: video_path > audio_path
+              const url = script.video_path || script.audio_path;
+              const type = script.video_path ? 'video' : 'audio';
+
+              if (url) {
+                const durationSeconds = await loadMediaDuration(url, type);
+                newDurations[script.id] = formatDuration(durationSeconds);
+              }
+            } catch (error) {
+              // Silently fail - duration won't be shown for this script
+              console.error(`Failed to load duration for script ${script.id}:`, error);
+            }
+          })
+        );
+
+        // Update state after each batch to show progressive loading
+        setDurations({ ...newDurations });
       }
     };
 
@@ -215,6 +222,7 @@ export default function ViewScriptsPage() {
         setLoading(true);
       }
 
+      // Single optimized query with LEFT JOINs - let PostgreSQL do the heavy lifting
       const { data: scriptsData, error: scriptsError } = await supabase
         .from('roteiros')
         .select(`
@@ -229,33 +237,43 @@ export default function ViewScriptsPage() {
           text_thumb,
           images_path,
           transcricao_timestamp,
-          images_info
+          images_info,
+          canais!inner (
+            id,
+            nome_canal,
+            profile_image
+          ),
+          videos (
+            id,
+            status,
+            video_path,
+            thumb_path
+          )
         `)
         .order('updated_at', { ascending: false, nullsFirst: false });
 
       if (scriptsError) throw scriptsError;
 
-      // Load channel names and profile images
-      const { data: channelsData } = await supabase
-        .from('canais')
-        .select('id, nome_canal, profile_image');
-
-      // Load videos
-      const { data: videosData } = await supabase
-        .from('videos')
-        .select('id, status, video_path, thumb_path');
-
-      const channelsMap = new Map(channelsData?.map(c => [c.id, { nome: c.nome_canal, profileImage: c.profile_image }]) || []);
-      const videosMap = new Map(videosData?.map(v => [v.id, v]) || []);
-
-      const enrichedScripts: Script[] = (scriptsData || []).map(script => ({
-        ...script,
-        canal_nome: channelsMap.get(script.canal_id)?.nome || 'Desconhecido',
-        canal_profile_image: channelsMap.get(script.canal_id)?.profileImage || null,
-        video_id: videosMap.has(script.id) ? script.id : null,
-        video_status: videosMap.get(script.id)?.status || null,
-        video_path: videosMap.get(script.id)?.video_path || null,
-        thumb_path: videosMap.get(script.id)?.thumb_path || null,
+      // Transform to Script[] format - minimal processing
+      const enrichedScripts: Script[] = (scriptsData || []).map((script: any) => ({
+        id: script.id,
+        titulo: script.titulo,
+        roteiro: script.roteiro,
+        canal_id: script.canal_id,
+        created_at: script.created_at,
+        updated_at: script.updated_at,
+        status: script.status,
+        audio_path: script.audio_path,
+        text_thumb: script.text_thumb,
+        images_path: script.images_path,
+        transcricao_timestamp: script.transcricao_timestamp,
+        images_info: script.images_info,
+        canal_nome: script.canais?.nome_canal || 'Desconhecido',
+        canal_profile_image: script.canais?.profile_image || null,
+        video_id: script.videos?.id || null,
+        video_status: script.videos?.status || null,
+        video_path: script.videos?.video_path || null,
+        thumb_path: script.videos?.thumb_path || null,
       }));
 
       setScripts(enrichedScripts);
@@ -400,7 +418,7 @@ export default function ViewScriptsPage() {
         roteiro: editedRoteiro,
       });
 
-      // Recarregar dados do roteiro atualizado do banco
+      // Single optimized query with JOINs to reload updated script
       const { data: updatedScript, error } = await supabase
         .from('roteiros')
         .select(`
@@ -415,36 +433,44 @@ export default function ViewScriptsPage() {
           text_thumb,
           images_path,
           transcricao_timestamp,
-          images_info
+          images_info,
+          canais!inner (
+            id,
+            nome_canal,
+            profile_image
+          ),
+          videos (
+            id,
+            status,
+            video_path,
+            thumb_path
+          )
         `)
         .eq('id', selectedScript.id)
         .single();
 
       if (error) throw error;
 
-      // Buscar dados do canal
-      const { data: channelData } = await supabase
-        .from('canais')
-        .select('id, nome_canal, profile_image')
-        .eq('id', updatedScript.canal_id)
-        .single();
-
-      // Buscar dados do vídeo
-      const { data: videoData } = await supabase
-        .from('videos')
-        .select('id, status, video_path, thumb_path')
-        .eq('id', updatedScript.id)
-        .single();
-
-      // Atualizar o script selecionado com os dados atualizados
+      // Transform to Script format
       const enrichedScript: Script = {
-        ...updatedScript,
-        canal_nome: channelData?.nome_canal || 'Desconhecido',
-        canal_profile_image: channelData?.profile_image || null,
-        video_id: videoData?.id || null,
-        video_status: videoData?.status || null,
-        video_path: videoData?.video_path || null,
-        thumb_path: videoData?.thumb_path || null,
+        id: updatedScript.id,
+        titulo: updatedScript.titulo,
+        roteiro: updatedScript.roteiro,
+        canal_id: updatedScript.canal_id,
+        created_at: updatedScript.created_at,
+        updated_at: updatedScript.updated_at,
+        status: updatedScript.status,
+        audio_path: updatedScript.audio_path,
+        text_thumb: updatedScript.text_thumb,
+        images_path: updatedScript.images_path,
+        transcricao_timestamp: updatedScript.transcricao_timestamp,
+        images_info: updatedScript.images_info,
+        canal_nome: (updatedScript as any).canais?.nome_canal || 'Desconhecido',
+        canal_profile_image: (updatedScript as any).canais?.profile_image || null,
+        video_id: (updatedScript as any).videos?.id || null,
+        video_status: (updatedScript as any).videos?.status || null,
+        video_path: (updatedScript as any).videos?.video_path || null,
+        thumb_path: (updatedScript as any).videos?.thumb_path || null,
       };
 
       setSelectedScript(enrichedScript);
