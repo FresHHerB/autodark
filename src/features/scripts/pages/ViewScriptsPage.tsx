@@ -77,6 +77,9 @@ export default function ViewScriptsPage() {
   // Auto-update countdown state
   const [nextUpdateIn, setNextUpdateIn] = useState(10);
 
+  // Video/Audio duration state (script.id -> formatted duration like "3:45")
+  const [durations, setDurations] = useState<{[key: number]: string}>({});
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -153,6 +156,44 @@ export default function ViewScriptsPage() {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [showChannelDropdown]);
+
+  // Load durations for videos/audios
+  useEffect(() => {
+    const loadDurations = async () => {
+      const newDurations: {[key: number]: string} = {};
+
+      for (const script of scripts) {
+        // Skip if we already have this duration
+        if (durations[script.id]) {
+          newDurations[script.id] = durations[script.id];
+          continue;
+        }
+
+        try {
+          // Priority: video_path > audio_path
+          if (script.video_path) {
+            const durationSeconds = await loadMediaDuration(script.video_path, 'video');
+            newDurations[script.id] = formatDuration(durationSeconds);
+          } else if (script.audio_path) {
+            const durationSeconds = await loadMediaDuration(script.audio_path, 'audio');
+            newDurations[script.id] = formatDuration(durationSeconds);
+          }
+        } catch (error) {
+          // Silently fail - duration won't be shown for this script
+          console.error(`Failed to load duration for script ${script.id}:`, error);
+        }
+      }
+
+      // Only update if we have new durations
+      if (Object.keys(newDurations).length > 0) {
+        setDurations(prev => ({ ...prev, ...newDurations }));
+      }
+    };
+
+    if (scripts.length > 0) {
+      loadDurations();
+    }
+  }, [scripts]);
 
   const loadChannels = async () => {
     try {
@@ -544,6 +585,43 @@ export default function ViewScriptsPage() {
     }).format(date);
   };
 
+  // Format duration in seconds to "MM:SS" or "HH:MM:SS"
+  const formatDuration = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Load media duration from audio or video URL
+  const loadMediaDuration = async (url: string, type: 'audio' | 'video'): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const element = type === 'audio'
+        ? document.createElement('audio')
+        : document.createElement('video');
+
+      element.src = url;
+
+      element.addEventListener('loadedmetadata', () => {
+        resolve(element.duration);
+      });
+
+      element.addEventListener('error', () => {
+        console.error(`Failed to load ${type} duration from:`, url);
+        reject(new Error(`Failed to load ${type} duration`));
+      });
+
+      // Trigger metadata load
+      element.load();
+    });
+  };
+
   // Copy functions
   const handleCopyTitle = (title: string) => {
     navigator.clipboard.writeText(title).then(() => {
@@ -824,6 +902,20 @@ export default function ViewScriptsPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all"></div>
+
+                    {/* CC Indicator (bottom-left) */}
+                    {script.transcricao_timestamp && (
+                      <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/80 backdrop-blur-sm rounded text-white text-[10px] font-semibold">
+                        CC
+                      </div>
+                    )}
+
+                    {/* Duration Indicator (bottom-right) */}
+                    {durations[script.id] && (
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 backdrop-blur-sm rounded text-white text-[10px] font-semibold">
+                        {durations[script.id]}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
