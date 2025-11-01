@@ -33,7 +33,7 @@ export const DriveAudioSelector: React.FC<DriveAudioSelectorProps> = ({
   onSelectionChange,
   initialSelectedUrl = null,
   onAudiosLoaded,
-  dbOffset = 30,
+  dbOffset = 25,
   onDbOffsetChange
 }) => {
   const [audios, setAudios] = useState<DriveAudio[]>([]);
@@ -94,6 +94,29 @@ export const DriveAudioSelector: React.FC<DriveAudioSelectorProps> = ({
       setSelectedAudioId(null);
     }
   }, [initialSelectedUrl, audios]);
+
+  // ============================================
+  // AUTO-SELECT RANDOM AUDIO ON LOAD
+  // ============================================
+
+  useEffect(() => {
+    // Only auto-select if:
+    // 1. Audios are loaded
+    // 2. No initial selection provided
+    // 3. No current selection
+    if (audios.length > 0 && !initialSelectedUrl && !selectedAudioId) {
+      // Select random audio
+      const randomIndex = Math.floor(Math.random() * audios.length);
+      const randomAudio = audios[randomIndex];
+
+      // Update selected audio
+      setSelectedAudioId(randomAudio.id);
+
+      // Generate URL and notify parent
+      const selectedUrl = `https://drive.google.com/file/d/${randomAudio.id}/view`;
+      onSelectionChange(selectedUrl);
+    }
+  }, [audios, initialSelectedUrl, selectedAudioId, onSelectionChange]);
 
   // ============================================
   // LOAD AUDIOS WHEN DRIVE URL OR API KEY CHANGES
@@ -345,7 +368,7 @@ export const DriveAudioSelector: React.FC<DriveAudioSelectorProps> = ({
             <input
               type="number"
               value={dbOffset}
-              onChange={(e) => onDbOffsetChange?.(parseInt(e.target.value) || 30)}
+              onChange={(e) => onDbOffsetChange?.(parseInt(e.target.value) || 25)}
               className="w-16 bg-gray-800 border-2 border-blue-500/50 text-white text-sm font-bold px-2 py-1 rounded-md focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30 text-center transition-all"
               min="0"
               max="100"
