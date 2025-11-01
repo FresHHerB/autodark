@@ -106,16 +106,13 @@ export default function VideoPlayer({ isOpen, videoUrl, videoTitle = 'Vídeo', o
   const handleDownload = () => {
     try {
       // Create a temporary anchor element pointing directly to video URL
-      // This uses native browser download (same as player's "..." menu)
+      // This uses native browser download mechanism
       const a = document.createElement('a');
       a.href = videoUrl;
 
       // Sanitize the filename (remove special characters)
       const sanitizedTitle = videoTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       a.download = `${sanitizedTitle}.mp4`;
-
-      // Force download attribute
-      a.target = '_blank';
 
       // Trigger download
       document.body.appendChild(a);

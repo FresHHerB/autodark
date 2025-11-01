@@ -36,11 +36,10 @@ export default function ImageLightbox({ isOpen, imageUrl, imageAlt = 'Imagem', o
 
   const handleDownload = () => {
     try {
-      // Use native browser download (instant, no memory overhead)
+      // Use native browser download mechanism (instant, no memory overhead)
       const link = document.createElement('a');
       link.href = imageUrl;
       link.download = imageAlt || 'imagem.jpg';
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

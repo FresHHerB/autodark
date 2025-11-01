@@ -1446,12 +1446,11 @@ export default function ViewScriptsPage() {
                         <button
                           onClick={() => {
                             try {
-                              // Use native browser download (same as player controls)
+                              // Use native browser download mechanism
                               const a = document.createElement('a');
                               a.href = selectedScript.video_path!;
                               const sanitizedTitle = (selectedScript.titulo || 'video').replace(/[^a-z0-9]/gi, '_').toLowerCase();
                               a.download = `${sanitizedTitle}.mp4`;
-                              a.target = '_blank';
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);
