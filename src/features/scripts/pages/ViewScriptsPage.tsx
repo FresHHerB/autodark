@@ -1011,7 +1011,7 @@ export default function ViewScriptsPage() {
                       {!isShowing ? (
                         <button
                           onClick={() => setShowAddScript(prev => ({ ...prev, [channelId]: true }))}
-                          className="group w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-800/40 via-gray-800/30 to-gray-800/40 hover:from-blue-900/30 hover:via-indigo-900/30 hover:to-purple-900/30 border border-gray-700/60 hover:border-blue-500/60 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
+                          className="group inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-800/40 via-gray-800/30 to-gray-800/40 hover:from-blue-900/30 hover:via-indigo-900/30 hover:to-purple-900/30 border border-gray-700/60 hover:border-blue-500/60 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
                         >
                           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 group-hover:border-blue-400/50 group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all">
                             <FileText className="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
