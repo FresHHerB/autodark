@@ -220,7 +220,8 @@ class ApiService {
 
   // Delete content methods
   async deleteContent(payload: {
-    id: number;
+    id?: number;
+    ids?: number[];
     deleteType: 'deleteScript' | 'deleteVideo' | 'deleteChannel';
   }) {
     return this.call(this.getWebhook('deleteContent'), {

@@ -85,6 +85,10 @@ export default function ViewScriptsPage() {
   const [showAddScript, setShowAddScript] = useState<{[channelId: number]: boolean}>({});
   const [sendingScripts, setSendingScripts] = useState<number | null>(null);
 
+  // Multiple selection state
+  const [selectedScripts, setSelectedScripts] = useState<Set<number>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState<{count: number} | null>(null);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -374,6 +378,55 @@ export default function ViewScriptsPage() {
     } catch (error) {
       console.error('Erro ao deletar roteiro:', error);
       setSuccessMessage('Erro ao excluir roteiro. Tente novamente.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } finally {
+      setDeletingScript(null);
+    }
+  };
+
+  // Toggle single script selection
+  const toggleScriptSelection = (id: number) => {
+    setSelectedScripts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedScripts.size === 0) return;
+
+    try {
+      setDeletingScript(-1); // Use -1 to indicate bulk delete
+
+      // Show loading message
+      setSuccessMessage(`Excluindo ${selectedScripts.size} roteiro${selectedScripts.size > 1 ? 's' : ''}...`);
+
+      // Convert Set to Array for payload
+      const scriptIds = Array.from(selectedScripts);
+
+      await apiService.deleteContent({
+        ids: scriptIds,
+        deleteType: 'deleteScript'
+      } as any);
+
+      // Reload scripts from database
+      await loadScripts();
+      setConfirmBulkDelete(null);
+      setSelectedScripts(new Set());
+
+      // Show success message
+      setSuccessMessage(`${scriptIds.length} roteiro${scriptIds.length > 1 ? 's excluídos' : ' excluído'} com sucesso!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
+    } catch (error) {
+      console.error('Erro ao deletar roteiros:', error);
+      setSuccessMessage('Erro ao excluir roteiros. Tente novamente.');
       setTimeout(() => setSuccessMessage(null), 3000);
     } finally {
       setDeletingScript(null);
@@ -1154,6 +1207,19 @@ export default function ViewScriptsPage() {
                       key={script.id}
                       className="bg-black/40 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 group relative"
                     >
+                      {/* Selection Checkbox */}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-3 left-3 z-20"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedScripts.has(script.id)}
+                          onChange={() => toggleScriptSelection(script.id)}
+                          className="w-5 h-5 rounded border-2 border-white/50 bg-black/50 checked:bg-blue-600 checked:border-blue-600 cursor-pointer hover:border-white transition-colors"
+                        />
+                      </div>
+
                       {/* Delete Button */}
                       <button
                         onClick={(e) => {
@@ -1737,6 +1803,67 @@ export default function ViewScriptsPage() {
           </div>
         )}
       </div>
+
+      {/* Floating Delete Button */}
+      {selectedScripts.size > 0 && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <button
+            onClick={() => setConfirmBulkDelete({ count: selectedScripts.size })}
+            className="flex items-center gap-3 px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-2xl border border-red-500 transition-all hover:scale-105"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span className="font-semibold">Deletar {selectedScripts.size} {selectedScripts.size === 1 ? 'Roteiro' : 'Roteiros'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfirmBulkDelete(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Confirmar Exclusão em Massa</h2>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              Tem certeza que deseja excluir <span className="font-bold text-white">{confirmBulkDelete.count} roteiro{confirmBulkDelete.count > 1 ? 's' : ''}</span>?
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmBulkDelete(null)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                disabled={deletingScript !== null}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={deletingScript !== null}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {deletingScript === -1 ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Excluir {confirmBulkDelete.count}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Lightbox */}
       <ImageLightbox
