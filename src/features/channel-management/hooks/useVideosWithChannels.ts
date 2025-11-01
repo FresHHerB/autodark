@@ -16,6 +16,7 @@ export interface VideoWithChannel {
   title: string;
   thumbnail: string;
   videoUrl?: string;
+  audioUrl?: string;
   status: VideoStatus;
   progress?: number;
   createdAt: string;
@@ -52,6 +53,7 @@ export function useVideosWithChannels() {
             id,
             titulo,
             status,
+            audio_path,
             canal_id,
             canais!inner (
               id,
@@ -76,6 +78,7 @@ export function useVideosWithChannels() {
           title: video.roteiros?.titulo || 'Sem título',
           thumbnail: thumbnailUrl,
           videoUrl: video.video_path || undefined,
+          audioUrl: video.roteiros?.audio_path || undefined,
           status: video.status as VideoStatus,
           createdAt: video.created_at,
           channelId: video.roteiros?.canais?.id || 0,

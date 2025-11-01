@@ -86,6 +86,9 @@ export default function ReviewEditPage() {
   const [uploadingVideoId, setUploadingVideoId] = useState<number | null>(null);
   const [successVideoId, setSuccessVideoId] = useState<number | null>(null);
 
+  // Video/Audio duration state (video.id -> formatted duration like "3:45")
+  const [durations, setDurations] = useState<{[key: number]: string}>({});
+
   // Sync videos from hook to local state
   React.useEffect(() => {
     setVideos(videosFromHook);
@@ -134,6 +137,44 @@ export default function ReviewEditPage() {
     };
   }, [refetch]);
 
+  // Load durations for videos/audios
+  React.useEffect(() => {
+    const loadDurations = async () => {
+      const newDurations: {[key: number]: string} = {};
+
+      for (const video of videos) {
+        // Skip if we already have this duration
+        if (durations[video.id]) {
+          newDurations[video.id] = durations[video.id];
+          continue;
+        }
+
+        try {
+          // Priority: videoUrl > audioUrl
+          if (video.videoUrl) {
+            const durationSeconds = await loadMediaDuration(video.videoUrl, 'video');
+            newDurations[video.id] = formatDuration(durationSeconds);
+          } else if (video.audioUrl) {
+            const durationSeconds = await loadMediaDuration(video.audioUrl, 'audio');
+            newDurations[video.id] = formatDuration(durationSeconds);
+          }
+        } catch (error) {
+          // Silently fail - duration won't be shown for this video
+          console.error(`Failed to load duration for video ${video.id}:`, error);
+        }
+      }
+
+      // Only update if we have new durations
+      if (Object.keys(newDurations).length > 0) {
+        setDurations(prev => ({ ...prev, ...newDurations }));
+      }
+    };
+
+    if (videos.length > 0) {
+      loadDurations();
+    }
+  }, [videos]);
+
   // Extract unique channels from videos
   const channels = useMemo(() => {
     const uniqueChannels = new Map<number, { id: number; name: string; profileImage: string }>();
@@ -154,6 +195,43 @@ export default function ReviewEditPage() {
     if (selectedChannelId === null) return videos;
     return videos.filter(v => v.channelId === selectedChannelId);
   }, [videos, selectedChannelId]);
+
+  // Format duration in seconds to "MM:SS" or "HH:MM:SS"
+  const formatDuration = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Load media duration from audio or video URL
+  const loadMediaDuration = async (url: string, type: 'audio' | 'video'): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const element = type === 'audio'
+        ? document.createElement('audio')
+        : document.createElement('video');
+
+      element.src = url;
+
+      element.addEventListener('loadedmetadata', () => {
+        resolve(element.duration);
+      });
+
+      element.addEventListener('error', () => {
+        console.error(`Failed to load ${type} duration from:`, url);
+        reject(new Error(`Failed to load ${type} duration`));
+      });
+
+      // Trigger metadata load
+      element.load();
+    });
+  };
 
   const handleVideoClick = (video: VideoWithChannel) => {
     if (!statusConfig[video.status].isProcessing && video.videoUrl) {
@@ -378,12 +456,23 @@ export default function ReviewEditPage() {
             <div className="absolute inset-0 bg-black/20 hover:bg-black/10 transition-colors" />
           )}
 
-          {/* Caption Indicator */}
+          {/* Caption Indicator (bottom-left) */}
           {video.caption && (
             <div className="absolute bottom-2 left-2 z-10">
               <div className="bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1">
                 <Subtitles className="w-3 h-3 text-white" />
                 <span className="text-white text-[10px] font-medium">CC</span>
+              </div>
+            </div>
+          )}
+
+          {/* Duration Indicator (bottom-right) */}
+          {durations[video.id] && (
+            <div className="absolute bottom-2 right-2 z-10">
+              <div className="bg-black/80 backdrop-blur-sm rounded px-1.5 py-0.5">
+                <span className="text-white text-[10px] font-semibold">
+                  {durations[video.id]}
+                </span>
               </div>
             </div>
           )}
