@@ -34,18 +34,16 @@ export default function ImageLightbox({ isOpen, imageUrl, imageAlt = 'Imagem', o
     setZoom(prev => Math.max(prev - 0.25, 0.5));
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Use native browser download (instant, no memory overhead)
       const link = document.createElement('a');
-      link.href = url;
+      link.href = imageUrl;
       link.download = imageAlt || 'imagem.jpg';
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Erro ao baixar imagem:', error);
     }

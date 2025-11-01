@@ -1444,19 +1444,17 @@ export default function ViewScriptsPage() {
                           <span>Assistir Vídeo</span>
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={() => {
                             try {
-                              const response = await fetch(selectedScript.video_path!);
-                              const blob = await response.blob();
-                              const url = window.URL.createObjectURL(blob);
+                              // Use native browser download (same as player controls)
                               const a = document.createElement('a');
-                              a.href = url;
+                              a.href = selectedScript.video_path!;
                               const sanitizedTitle = (selectedScript.titulo || 'video').replace(/[^a-z0-9]/gi, '_').toLowerCase();
                               a.download = `${sanitizedTitle}.mp4`;
+                              a.target = '_blank';
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);
-                              window.URL.revokeObjectURL(url);
                             } catch (error) {
                               console.error('Erro ao baixar vídeo:', error);
                               alert('Erro ao baixar vídeo. Tente novamente.');
