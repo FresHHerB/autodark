@@ -679,7 +679,8 @@ export default function ViewScriptsPage() {
         roteiros: scriptsToSend
       });
 
-      if (response.success || response[0]?.success) {
+      // Validate response - webhook returns array of created scripts
+      if (Array.isArray(response) && response.length > 0) {
         // Show success message
         setSuccessMessage(`${scriptsToSend.length} roteiro${scriptsToSend.length > 1 ? 's' : ''} adicionado${scriptsToSend.length > 1 ? 's' : ''} com sucesso!`);
         setTimeout(() => setSuccessMessage(null), 3000);
@@ -688,7 +689,7 @@ export default function ViewScriptsPage() {
         setAddingScripts(prev => ({ ...prev, [channelId]: [] }));
         setShowAddScript(prev => ({ ...prev, [channelId]: false }));
 
-        // Reload scripts
+        // Reload scripts from database
         await loadScripts(true);
       } else {
         alert('Erro ao adicionar roteiros. Tente novamente.');
