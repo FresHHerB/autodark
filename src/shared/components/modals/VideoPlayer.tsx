@@ -103,22 +103,19 @@ export default function VideoPlayer({ isOpen, videoUrl, videoTitle = 'Vídeo', o
     onClose();
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     try {
-      // Fetch the video
-      const response = await fetch(videoUrl);
-      const blob = await response.blob();
-
-      // Create a temporary URL
-      const url = window.URL.createObjectURL(blob);
-
-      // Create a temporary anchor element
+      // Create a temporary anchor element pointing directly to video URL
+      // This uses native browser download (same as player's "..." menu)
       const a = document.createElement('a');
-      a.href = url;
+      a.href = videoUrl;
 
       // Sanitize the filename (remove special characters)
       const sanitizedTitle = videoTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       a.download = `${sanitizedTitle}.mp4`;
+
+      // Force download attribute
+      a.target = '_blank';
 
       // Trigger download
       document.body.appendChild(a);
@@ -126,7 +123,6 @@ export default function VideoPlayer({ isOpen, videoUrl, videoTitle = 'Vídeo', o
 
       // Cleanup
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Erro ao baixar vídeo:', error);
       alert('Erro ao baixar vídeo. Tente novamente.');
