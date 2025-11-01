@@ -1011,9 +1011,14 @@ export default function ViewScriptsPage() {
                       {!isShowing ? (
                         <button
                           onClick={() => setShowAddScript(prev => ({ ...prev, [channelId]: true }))}
-                          className="w-full text-left px-4 py-2 bg-gray-800/30 hover:bg-gray-800/50 border border-gray-700/50 hover:border-blue-500/50 rounded-lg transition-all text-gray-400 hover:text-white text-sm"
+                          className="group w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-800/40 via-gray-800/30 to-gray-800/40 hover:from-blue-900/30 hover:via-indigo-900/30 hover:to-purple-900/30 border border-gray-700/60 hover:border-blue-500/60 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
                         >
-                          + Adicionar Roteiro Manualmente
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 group-hover:border-blue-400/50 group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all">
+                            <FileText className="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
+                            Adicionar Roteiro Manualmente
+                          </span>
                         </button>
                       ) : (
                         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-blue-500/30 rounded-lg p-3 shadow-lg">
