@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApi } from '@shared/hooks';
 import { apiService } from '@shared/services';
 import { DashboardHeader } from '@features/dashboard/components';
@@ -522,7 +522,9 @@ export default function GenerateContentV2Page() {
     setAddedTitles(prev => prev.filter(t => t.id !== titleId));
   };
 
-  const handleAddManualTitle = () => {
+  const handleAddManualTitle = useCallback(() => {
+    console.log('[DEBUG] handleAddManualTitle called, novaIdeia:', novaIdeia);
+    
     // Fechar toast de geração anterior se existir
     setShowToast(false);
 
@@ -531,10 +533,21 @@ export default function GenerateContentV2Page() {
         id: `manual-${Date.now()}`,
         text: novaIdeia.trim()
       };
-      setAddedTitles(prev => [...prev, newTitle]);
+      
+      console.log('[DEBUG] Adding new title:', newTitle);
+      setAddedTitles(prev => {
+        console.log('[DEBUG] Previous titles count:', prev.length);
+        const newTitles = [...prev, newTitle];
+        console.log('[DEBUG] New titles count:', newTitles.length);
+        return newTitles;
+      });
+      
+      console.log('[DEBUG] Clearing novaIdeia field');
       setNovaIdeia('');
+    } else {
+      console.log('[DEBUG] novaIdeia is empty, not adding');
     }
-  };
+  }, [novaIdeia]);
 
   const handleStartEdit = (titleId: string, currentText: string) => {
     setEditingTitleId(titleId);
