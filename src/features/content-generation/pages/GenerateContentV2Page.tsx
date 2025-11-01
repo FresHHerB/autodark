@@ -525,14 +525,16 @@ export default function GenerateContentV2Page() {
 
   const handleAddManualTitle = useCallback(() => {
     console.log('[DEBUG] handleAddManualTitle called, manualTitle:', manualTitle);
-    
+
     // Fechar toast de geração anterior se existir
     setShowToast(false);
 
-    if (manualTitle.trim()) {
+    const sanitized = sanitizeTitle(manualTitle);
+
+    if (sanitized) {
       const newTitle: AddedTitle = {
         id: `manual-${Date.now()}`,
-        text: manualTitle.trim()
+        text: sanitized
       };
       
       console.log('[DEBUG] Adding new title:', newTitle);
