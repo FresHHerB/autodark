@@ -98,6 +98,7 @@ export default function GenerateContentV2Page() {
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [selectedChannel, setSelectedChannel] = useState<Canal | null>(null);
   const [novaIdeia, setNovaIdeia] = useState<string>('');
+  const [manualTitle, setManualTitle] = useState<string>('');
   const [titleIdioma, setTitleIdioma] = useState<string>('Português-Brasil');
   const [isEditingTitleIdioma, setIsEditingTitleIdioma] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<GeneratedTitle[]>([]);
@@ -523,15 +524,15 @@ export default function GenerateContentV2Page() {
   };
 
   const handleAddManualTitle = useCallback(() => {
-    console.log('[DEBUG] handleAddManualTitle called, novaIdeia:', novaIdeia);
+    console.log('[DEBUG] handleAddManualTitle called, manualTitle:', manualTitle);
     
     // Fechar toast de geração anterior se existir
     setShowToast(false);
 
-    if (novaIdeia.trim()) {
+    if (manualTitle.trim()) {
       const newTitle: AddedTitle = {
         id: `manual-${Date.now()}`,
-        text: novaIdeia.trim()
+        text: manualTitle.trim()
       };
       
       console.log('[DEBUG] Adding new title:', newTitle);
@@ -542,12 +543,12 @@ export default function GenerateContentV2Page() {
         return newTitles;
       });
       
-      console.log('[DEBUG] Clearing novaIdeia field');
-      setNovaIdeia('');
+      console.log('[DEBUG] Clearing manualTitle field');
+      setManualTitle('');
     } else {
-      console.log('[DEBUG] novaIdeia is empty, not adding');
+      console.log('[DEBUG] manualTitle is empty, not adding');
     }
-  }, [novaIdeia]);
+  }, [manualTitle]);
 
   const handleStartEdit = (titleId: string, currentText: string) => {
     setEditingTitleId(titleId);
@@ -1822,14 +1823,29 @@ export default function GenerateContentV2Page() {
 
               {/* Manual Title Add - Inside Right Column */}
               <div className="mt-4 pt-4 border-t border-gray-700">
-                <button
-                  onClick={handleAddManualTitle}
-                  disabled={!novaIdeia.trim()}
-                  className="w-full bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed border border-gray-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm">Adicionar Título Manual</span>
-                </button>
+                <label className="block text-xs text-gray-400 mb-2">Adicionar Título Manualmente</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={manualTitle}
+                    onChange={(e) => setManualTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && manualTitle.trim()) {
+                        handleAddManualTitle();
+                      }
+                    }}
+                    placeholder="Digite o título e pressione Enter ou clique em Adicionar"
+                    className="flex-1 bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={handleAddManualTitle}
+                    disabled={!manualTitle.trim()}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                    title="Adicionar título manual"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
