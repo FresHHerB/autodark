@@ -1207,7 +1207,7 @@ export default function GenerateContentV2Page() {
               // Adicionar trilha_sonora se selecionada
               if (selectedAudioByTitle[title.id]) {
                 audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
-                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 25;
               }
 
               return {
@@ -1234,7 +1234,7 @@ export default function GenerateContentV2Page() {
 
               if (selectedAudioByTitle[title.id]) {
                 audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
-                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 25;
               }
 
               return {
@@ -1269,7 +1269,7 @@ export default function GenerateContentV2Page() {
               // Adicionar trilha_sonora se selecionada
               if (selectedAudioByScriptId[id]) {
                 audioConfig.trilha_sonora = selectedAudioByScriptId[id];
-                audioConfig.db_offset = audioDbOffsetByScriptId[id] || 30;
+                audioConfig.db_offset = audioDbOffsetByScriptId[id] || 25;
               }
 
               return {
@@ -1315,7 +1315,7 @@ export default function GenerateContentV2Page() {
               // Adicionar trilha_sonora se selecionada
               if (selectedAudioByScriptId[id]) {
                 audioConfig.trilha_sonora = selectedAudioByScriptId[id];
-                audioConfig.db_offset = audioDbOffsetByScriptId[id] || 30;
+                audioConfig.db_offset = audioDbOffsetByScriptId[id] || 25;
               }
 
               return {
@@ -1377,7 +1377,7 @@ export default function GenerateContentV2Page() {
               // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
               if (selectedAudioByTitle[title.id]) {
                 audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
-                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 25;
               }
 
               return {
@@ -1430,7 +1430,7 @@ export default function GenerateContentV2Page() {
               // Adicionar trilha_sonora e db_offset apenas se houver uma trilha selecionada
               if (selectedAudioByTitle[title.id]) {
                 audioConfig.trilha_sonora = selectedAudioByTitle[title.id];
-                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 30;
+                audioConfig.db_offset = audioDbOffsetByTitle[title.id] || 25;
               }
 
               return {
@@ -2213,7 +2213,7 @@ export default function GenerateContentV2Page() {
                     }}
                     initialSelectedUrl={selectedAudioByScriptId[script.id] || null}
                     onAudiosLoaded={() => {}}
-                    dbOffset={audioDbOffsetByScriptId[script.id] || 30}
+                    dbOffset={audioDbOffsetByScriptId[script.id] || 25}
                     onDbOffsetChange={(dbOffset) => {
                       setAudioDbOffsetByScriptId({
                         ...audioDbOffsetByScriptId,
@@ -2407,7 +2407,7 @@ export default function GenerateContentV2Page() {
                           [title.id]: audios
                         }));
                       }}
-                      dbOffset={audioDbOffsetByTitle[title.id] || 30}
+                      dbOffset={audioDbOffsetByTitle[title.id] || 25}
                       onDbOffsetChange={(dbOffset) => {
                         setAudioDbOffsetByTitle({
                           ...audioDbOffsetByTitle,
@@ -2472,7 +2472,7 @@ export default function GenerateContentV2Page() {
                         [title.id]: audios
                       }));
                     }}
-                    dbOffset={audioDbOffsetByTitle[title.id] || 30}
+                    dbOffset={audioDbOffsetByTitle[title.id] || 25}
                     onDbOffsetChange={(dbOffset) => {
                       setAudioDbOffsetByTitle({
                         ...audioDbOffsetByTitle,

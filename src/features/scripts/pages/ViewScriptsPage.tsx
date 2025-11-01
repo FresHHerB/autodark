@@ -80,6 +80,11 @@ export default function ViewScriptsPage() {
   // Video/Audio duration state (script.id -> formatted duration like "3:45")
   const [durations, setDurations] = useState<{[key: number]: string}>({});
 
+  // Add scripts state (channelId -> array of new scripts)
+  const [addingScripts, setAddingScripts] = useState<{[channelId: number]: Array<{id_titulo: string; text_thumb: string; roteiro: string}>}>({});
+  const [showAddScript, setShowAddScript] = useState<{[channelId: number]: boolean}>({});
+  const [sendingScripts, setSendingScripts] = useState<number | null>(null);
+
   useEffect(() => {
     loadChannels();
     loadScripts();
@@ -600,6 +605,102 @@ export default function ViewScriptsPage() {
     );
   };
 
+  // Handle file drop for adding scripts
+  const handleFileDrop = async (channelId: number, files: FileList) => {
+    const textFiles = Array.from(files).filter(f =>
+      f.name.endsWith('.txt') || f.name.endsWith('.doc') || f.name.endsWith('.docx')
+    );
+
+    for (const file of textFiles) {
+      try {
+        const text = await file.text();
+        const titulo = file.name.replace(/\.(txt|doc|docx)$/i, '');
+
+        setAddingScripts(prev => ({
+          ...prev,
+          [channelId]: [
+            ...(prev[channelId] || []),
+            { id_titulo: titulo, text_thumb: '', roteiro: text }
+          ]
+        }));
+      } catch (error) {
+        console.error('Erro ao ler arquivo:', error);
+      }
+    }
+  };
+
+  // Add script manually
+  const addEmptyScript = (channelId: number) => {
+    setAddingScripts(prev => ({
+      ...prev,
+      [channelId]: [
+        ...(prev[channelId] || []),
+        { id_titulo: '', text_thumb: '', roteiro: '' }
+      ]
+    }));
+  };
+
+  // Remove script from list
+  const removeAddingScript = (channelId: number, index: number) => {
+    setAddingScripts(prev => ({
+      ...prev,
+      [channelId]: (prev[channelId] || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Update script field
+  const updateAddingScript = (channelId: number, index: number, field: 'id_titulo' | 'text_thumb' | 'roteiro', value: string) => {
+    setAddingScripts(prev => ({
+      ...prev,
+      [channelId]: (prev[channelId] || []).map((script, i) =>
+        i === index ? { ...script, [field]: value } : script
+      )
+    }));
+  };
+
+  // Send scripts to webhook
+  const handleSendScripts = async (channelId: number) => {
+    const scriptsToSend = addingScripts[channelId] || [];
+    if (scriptsToSend.length === 0) return;
+
+    // Validate all scripts have at least titulo and roteiro
+    const invalidScripts = scriptsToSend.filter(s => !s.id_titulo.trim() || !s.roteiro.trim());
+    if (invalidScripts.length > 0) {
+      alert('Todos os roteiros precisam ter título e conteúdo!');
+      return;
+    }
+
+    try {
+      setSendingScripts(channelId);
+
+      const response = await apiService.generateContent({
+        id_canal: channelId,
+        tipo_geracao: 'adiciona_roteiro',
+        roteiros: scriptsToSend
+      });
+
+      if (response.success || response[0]?.success) {
+        // Show success message
+        setSuccessMessage(`${scriptsToSend.length} roteiro${scriptsToSend.length > 1 ? 's' : ''} adicionado${scriptsToSend.length > 1 ? 's' : ''} com sucesso!`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+
+        // Clear adding scripts
+        setAddingScripts(prev => ({ ...prev, [channelId]: [] }));
+        setShowAddScript(prev => ({ ...prev, [channelId]: false }));
+
+        // Reload scripts
+        await loadScripts(true);
+      } else {
+        alert('Erro ao adicionar roteiros. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar roteiros:', error);
+      alert('Erro ao adicionar roteiros. Tente novamente.');
+    } finally {
+      setSendingScripts(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
@@ -894,6 +995,117 @@ export default function ViewScriptsPage() {
                     </p>
                   </div>
                 </button>
+
+                {/* Add Script Section - Discreto */}
+                {!isCollapsed && (() => {
+                  const channelId = scriptsByChannel[channelName][0]?.canal_id;
+                  if (!channelId) return null;
+
+                  const channelScripts = addingScripts[channelId] || [];
+                  const isShowing = showAddScript[channelId];
+                  const isSending = sendingScripts === channelId;
+
+                  return (
+                    <div className="mb-4">
+                      {!isShowing ? (
+                        <button
+                          onClick={() => setShowAddScript(prev => ({ ...prev, [channelId]: true }))}
+                          className="w-full text-left px-4 py-2 bg-gray-800/30 hover:bg-gray-800/50 border border-gray-700/50 hover:border-blue-500/50 rounded-lg transition-all text-gray-400 hover:text-white text-sm"
+                        >
+                          + Adicionar Roteiro Manualmente
+                        </button>
+                      ) : (
+                        <div className="bg-gray-800/30 border border-blue-500/30 rounded-lg p-4">
+                          {/* Drop Zone */}
+                          <div
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleFileDrop(channelId, e.dataTransfer.files);
+                            }}
+                            className="border-2 border-dashed border-gray-600 rounded-lg p-4 mb-3 text-center hover:border-blue-500 transition-colors"
+                          >
+                            <p className="text-gray-400 text-sm">Arraste arquivos .txt/.doc aqui ou</p>
+                            <button
+                              onClick={() => addEmptyScript(channelId)}
+                              className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                            >
+                              Adicionar Manualmente
+                            </button>
+                          </div>
+
+                          {/* Scripts List - Compactos */}
+                          {channelScripts.length > 0 && (
+                            <div className="space-y-2 mb-3">
+                              {channelScripts.map((script, index) => (
+                                <div key={index} className="bg-gray-900/50 border border-gray-700 rounded-lg p-3">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Título"
+                                      value={script.id_titulo}
+                                      onChange={(e) => updateAddingScript(channelId, index, 'id_titulo', e.target.value)}
+                                      className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500"
+                                    />
+                                    <button
+                                      onClick={() => removeAddingScript(channelId, index)}
+                                      className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                                      title="Remover"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Descrição da Thumbnail (opcional)"
+                                    value={script.text_thumb}
+                                    onChange={(e) => updateAddingScript(channelId, index, 'text_thumb', e.target.value)}
+                                    className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm mb-2 focus:outline-none focus:border-blue-500"
+                                  />
+                                  <textarea
+                                    placeholder="Roteiro"
+                                    value={script.roteiro}
+                                    onChange={(e) => updateAddingScript(channelId, index, 'roteiro', e.target.value)}
+                                    className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                                    rows={3}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setShowAddScript(prev => ({ ...prev, [channelId]: false }));
+                                setAddingScripts(prev => ({ ...prev, [channelId]: [] }));
+                              }}
+                              disabled={isSending}
+                              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white text-sm rounded-lg transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => handleSendScripts(channelId)}
+                              disabled={isSending || channelScripts.length === 0}
+                              className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                              {isSending ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                `Adicionar ${channelScripts.length} roteiro${channelScripts.length !== 1 ? 's' : ''}`
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Scripts Grid for this Channel - Conditionally rendered */}
                 {!isCollapsed && (
