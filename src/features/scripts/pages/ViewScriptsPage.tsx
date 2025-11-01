@@ -679,8 +679,12 @@ export default function ViewScriptsPage() {
         roteiros: scriptsToSend
       });
 
-      // Validate response - webhook returns array of created scripts
-      if (Array.isArray(response) && response.length > 0) {
+      // Validate response - webhook returns object (single) or array (multiple)
+      const isValidResponse =
+        (response && typeof response === 'object' && response.id && response.canal_id) || // Single script object
+        (Array.isArray(response) && response.length > 0); // Array of scripts
+
+      if (isValidResponse) {
         // Show success message
         setSuccessMessage(`${scriptsToSend.length} roteiro${scriptsToSend.length > 1 ? 's' : ''} adicionado${scriptsToSend.length > 1 ? 's' : ''} com sucesso!`);
         setTimeout(() => setSuccessMessage(null), 3000);
@@ -692,6 +696,7 @@ export default function ViewScriptsPage() {
         // Reload scripts from database
         await loadScripts(true);
       } else {
+        console.error('Resposta inválida do webhook:', response);
         alert('Erro ao adicionar roteiros. Tente novamente.');
       }
     } catch (error) {
