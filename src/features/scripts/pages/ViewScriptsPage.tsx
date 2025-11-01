@@ -1015,89 +1015,117 @@ export default function ViewScriptsPage() {
                           + Adicionar Roteiro Manualmente
                         </button>
                       ) : (
-                        <div className="bg-gray-800/30 border border-blue-500/30 rounded-lg p-4">
-                          {/* Drop Zone */}
+                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-blue-500/30 rounded-lg p-3 shadow-lg">
+                          {/* Drop Zone - Compacto */}
                           <div
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
                               e.preventDefault();
                               handleFileDrop(channelId, e.dataTransfer.files);
                             }}
-                            className="border-2 border-dashed border-gray-600 rounded-lg p-4 mb-3 text-center hover:border-blue-500 transition-colors"
+                            className="border-2 border-dashed border-gray-600/50 rounded-lg p-3 mb-3 text-center hover:border-blue-500/70 hover:bg-blue-500/5 transition-all group"
                           >
-                            <p className="text-gray-400 text-sm">Arraste arquivos .txt/.doc aqui ou</p>
-                            <button
-                              onClick={() => addEmptyScript(channelId)}
-                              className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                            >
-                              Adicionar Manualmente
-                            </button>
+                            <div className="flex items-center justify-center gap-3">
+                              <FileText className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                              <div className="flex-1 text-left">
+                                <p className="text-gray-400 text-xs font-medium">Arraste arquivos .txt/.doc aqui</p>
+                                <p className="text-gray-500 text-[10px]">ou clique para adicionar manualmente</p>
+                              </div>
+                              <button
+                                onClick={() => addEmptyScript(channelId)}
+                                className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs rounded-lg transition-all shadow-sm"
+                              >
+                                + Novo
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Scripts List - Compactos */}
+                          {/* Scripts List - Layout Compacto Grid */}
                           {channelScripts.length > 0 && (
-                            <div className="space-y-2 mb-3">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
                               {channelScripts.map((script, index) => (
-                                <div key={index} className="bg-gray-900/50 border border-gray-700 rounded-lg p-3">
-                                  <div className="flex items-start gap-2 mb-2">
-                                    <input
-                                      type="text"
-                                      placeholder="Título"
-                                      value={script.titulo}
-                                      onChange={(e) => updateAddingScript(channelId, index, 'titulo', e.target.value)}
-                                      className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500"
-                                    />
-                                    <button
-                                      onClick={() => removeAddingScript(channelId, index)}
-                                      className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                                      title="Remover"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
+                                <div key={index} className="relative bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-purple-500/30 rounded-lg p-3 hover:border-purple-500/50 transition-all">
+                                  {/* Remove Button - Top Right */}
+                                  <button
+                                    onClick={() => removeAddingScript(channelId, index)}
+                                    className="absolute top-2 right-2 p-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded transition-colors"
+                                    title="Remover roteiro"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Title and Thumb Description - Side by Side */}
+                                  <div className="grid grid-cols-2 gap-2 mb-2 pr-8">
+                                    <div>
+                                      <label className="text-[10px] text-gray-400 mb-1 block">Título *</label>
+                                      <input
+                                        type="text"
+                                        placeholder="Ex: Título do roteiro"
+                                        value={script.titulo}
+                                        onChange={(e) => updateAddingScript(channelId, index, 'titulo', e.target.value)}
+                                        className="w-full bg-gray-800/80 border border-gray-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] text-gray-400 mb-1 block">Thumb</label>
+                                      <input
+                                        type="text"
+                                        placeholder="Descrição (opcional)"
+                                        value={script.text_thumb}
+                                        onChange={(e) => updateAddingScript(channelId, index, 'text_thumb', e.target.value)}
+                                        className="w-full bg-gray-800/80 border border-gray-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all"
+                                      />
+                                    </div>
                                   </div>
-                                  <input
-                                    type="text"
-                                    placeholder="Descrição da Thumbnail (opcional)"
-                                    value={script.text_thumb}
-                                    onChange={(e) => updateAddingScript(channelId, index, 'text_thumb', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm mb-2 focus:outline-none focus:border-blue-500"
-                                  />
-                                  <textarea
-                                    placeholder="Roteiro"
-                                    value={script.roteiro}
-                                    onChange={(e) => updateAddingScript(channelId, index, 'roteiro', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
-                                    rows={3}
-                                  />
+
+                                  {/* Script Content */}
+                                  <div>
+                                    <label className="text-[10px] text-gray-400 mb-1 block">Roteiro *</label>
+                                    <textarea
+                                      placeholder="Cole ou digite o conteúdo do roteiro aqui..."
+                                      value={script.roteiro}
+                                      onChange={(e) => updateAddingScript(channelId, index, 'roteiro', e.target.value)}
+                                      className="w-full bg-gray-800/80 border border-gray-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 resize-none transition-all"
+                                      rows={4}
+                                    />
+                                  </div>
+
+                                  {/* Script Index Indicator */}
+                                  <div className="absolute bottom-2 right-2 text-[10px] text-gray-500 font-mono">
+                                    #{index + 1}
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           )}
 
-                          {/* Actions */}
-                          <div className="flex gap-2">
+                          {/* Actions - Compactos */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-gray-700/50">
                             <button
                               onClick={() => {
                                 setShowAddScript(prev => ({ ...prev, [channelId]: false }));
                                 setAddingScripts(prev => ({ ...prev, [channelId]: [] }));
                               }}
                               disabled={isSending}
-                              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white text-sm rounded-lg transition-colors"
+                              className="px-4 py-2 bg-gray-700/50 hover:bg-gray-700 disabled:bg-gray-800/50 text-gray-300 text-xs rounded-lg transition-all border border-gray-600/50"
                             >
                               Cancelar
                             </button>
                             <button
                               onClick={() => handleSendScripts(channelId)}
                               disabled={isSending || channelScripts.length === 0}
-                              className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+                              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-all shadow-md disabled:shadow-none flex items-center justify-center gap-2"
                             >
                               {isSending ? (
                                 <>
                                   <Loader2 className="w-4 h-4 animate-spin" />
-                                  Enviando...
+                                  <span>Enviando roteiros...</span>
                                 </>
                               ) : (
-                                `Adicionar ${channelScripts.length} roteiro${channelScripts.length !== 1 ? 's' : ''}`
+                                <>
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Adicionar {channelScripts.length} roteiro{channelScripts.length !== 1 ? 's' : ''}</span>
+                                </>
                               )}
                             </button>
                           </div>
