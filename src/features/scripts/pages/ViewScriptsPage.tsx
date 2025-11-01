@@ -81,7 +81,7 @@ export default function ViewScriptsPage() {
   const [durations, setDurations] = useState<{[key: number]: string}>({});
 
   // Add scripts state (channelId -> array of new scripts)
-  const [addingScripts, setAddingScripts] = useState<{[channelId: number]: Array<{id_titulo: string; text_thumb: string; roteiro: string}>}>({});
+  const [addingScripts, setAddingScripts] = useState<{[channelId: number]: Array<{titulo: string; text_thumb: string; roteiro: string}>}>({});
   const [showAddScript, setShowAddScript] = useState<{[channelId: number]: boolean}>({});
   const [sendingScripts, setSendingScripts] = useState<number | null>(null);
 
@@ -620,7 +620,7 @@ export default function ViewScriptsPage() {
           ...prev,
           [channelId]: [
             ...(prev[channelId] || []),
-            { id_titulo: titulo, text_thumb: '', roteiro: text }
+            { titulo: titulo, text_thumb: '', roteiro: text }
           ]
         }));
       } catch (error) {
@@ -635,7 +635,7 @@ export default function ViewScriptsPage() {
       ...prev,
       [channelId]: [
         ...(prev[channelId] || []),
-        { id_titulo: '', text_thumb: '', roteiro: '' }
+        { titulo: '', text_thumb: '', roteiro: '' }
       ]
     }));
   };
@@ -649,7 +649,7 @@ export default function ViewScriptsPage() {
   };
 
   // Update script field
-  const updateAddingScript = (channelId: number, index: number, field: 'id_titulo' | 'text_thumb' | 'roteiro', value: string) => {
+  const updateAddingScript = (channelId: number, index: number, field: 'titulo' | 'text_thumb' | 'roteiro', value: string) => {
     setAddingScripts(prev => ({
       ...prev,
       [channelId]: (prev[channelId] || []).map((script, i) =>
@@ -664,7 +664,7 @@ export default function ViewScriptsPage() {
     if (scriptsToSend.length === 0) return;
 
     // Validate all scripts have at least titulo and roteiro
-    const invalidScripts = scriptsToSend.filter(s => !s.id_titulo.trim() || !s.roteiro.trim());
+    const invalidScripts = scriptsToSend.filter(s => !s.titulo.trim() || !s.roteiro.trim());
     if (invalidScripts.length > 0) {
       alert('Todos os roteiros precisam ter título e conteúdo!');
       return;
@@ -1043,8 +1043,8 @@ export default function ViewScriptsPage() {
                                     <input
                                       type="text"
                                       placeholder="Título"
-                                      value={script.id_titulo}
-                                      onChange={(e) => updateAddingScript(channelId, index, 'id_titulo', e.target.value)}
+                                      value={script.titulo}
+                                      onChange={(e) => updateAddingScript(channelId, index, 'titulo', e.target.value)}
                                       className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500"
                                     />
                                     <button
