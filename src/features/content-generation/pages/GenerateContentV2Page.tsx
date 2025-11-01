@@ -513,13 +513,13 @@ export default function GenerateContentV2Page() {
 
   const handleAddTitle = (title: GeneratedTitle) => {
     if (!addedTitles.some(t => t.id === title.id)) {
-      setAddedTitles([...addedTitles, { id: title.id, text: title.text }]);
-      setGeneratedTitles(generatedTitles.filter(t => t.id !== title.id));
+      setAddedTitles(prev => [...prev, { id: title.id, text: title.text }]);
+      setGeneratedTitles(prev => prev.filter(t => t.id !== title.id));
     }
   };
 
   const handleRemoveTitle = (titleId: string) => {
-    setAddedTitles(addedTitles.filter(t => t.id !== titleId));
+    setAddedTitles(prev => prev.filter(t => t.id !== titleId));
   };
 
   const handleAddManualTitle = () => {
@@ -531,7 +531,7 @@ export default function GenerateContentV2Page() {
         id: `manual-${Date.now()}`,
         text: novaIdeia.trim()
       };
-      setAddedTitles([...addedTitles, newTitle]);
+      setAddedTitles(prev => [...prev, newTitle]);
       setNovaIdeia('');
     }
   };
@@ -543,7 +543,7 @@ export default function GenerateContentV2Page() {
 
   const handleSaveEdit = () => {
     if (editingTitleId && editingText.trim()) {
-      setAddedTitles(addedTitles.map(title =>
+      setAddedTitles(prev => prev.map(title =>
         title.id === editingTitleId ? { ...title, text: editingText.trim() } : title
       ));
       setEditingTitleId(null);
